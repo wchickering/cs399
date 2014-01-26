@@ -99,4 +99,46 @@ more user activity than a traditional search engine.
 
 \section*{Implementation Ideas}
 
+\section*{Experiment}
+Unfortunately, we do not have user data on which to test our methods, since the system
+has never been used before. Instead, we will simulate user behavior to get a rough
+estimate of performance. To do this, we make the following assumptions:
+
+\begin{enumerate}
+\item There are a number of universal hidden features that describe each product.
+These features could be something as tangible as color or as intangible as
+`hipness'. Note that like latent topics, these features need not be
+representable by an explicit, expressible concept.
+
+\item Each user has a preference for products based on these hidden features. For
+instance, a user could care a lot that a product is `hip', not care
+at all what color it is, and have a mild preference for slim-fitting products,
+assuming these are all hidden features of products.
+\end{enumerate}
+
+For testing, we simplify the model by assuming that there is only one hidden
+feature. We model this as color. Since the learning algorithm is blind to color
+data, this should be as difficult to determine as a less tangible feature, such
+as style, but color is easier for us to use, since it is metadata that we
+have about each product. Next, we create a number of fake users, defined by their color
+preferences. These preferences are modeled as multinomial distributions. For instance, if
+there are only the three colors red, white, and blue, a user could care deeply
+that their product is red by having a (1, 0, 0) distribution over those colors.
+Or, if the user doesn't care what color their product is, their distribution
+would be (0.33, 0.33, 0.33). 
+
+We can then construct a number of users with different distributions, using an
+arbitrary Dirichlet distribution or our creation. This way, we can model the
+phenomenon that preferences are not uniform; many users have the same style
+preferences as each other and some styles are less popular than others.
+
+With this model, we can construct a number of fake users with different
+preference distributions. Based on these distributions, we can
+probabilistically choose which items each user likes and then simulate their
+interaction with the system. Then we can train the system on a number of fake
+users to learn from their behavior. For testing, we then introduce new fake users,
+and measure how well the system can predict the underlying color dtistributions of
+the users. We will aim to increase the accuracy of the predicted distributions and
+reduce the number of shown products needed to learn it.
+
 \end{document}
