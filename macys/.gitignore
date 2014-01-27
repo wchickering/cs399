@@ -1,0 +1,5 @@
+*.csv
+*.pickle
+*.db
+*.dict
+images/
