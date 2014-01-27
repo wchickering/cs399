@@ -13,14 +13,13 @@ class SessionTranslator(object):
    def __init__(self, db_fname):
        """Constructs SessionTranslator, which connects to sqlite3 db."""
        db_conn = sqlite3.connect(db_fname)
-       with db_conn:
-           self.cursor = db_conn.cursor()
+       self.cursor = db_conn.cursor()
 
    def sessionToDesc(self, session):
        """Takes a list of itemsids and returns a list of item descriptions."""
        selectDescStmt = self.selectDescTemplate % ','.join('?'*len(session))
        self.cursor.execute(selectDescStmt, session)
-       return [desc for desc in self.cursor.fetchall()]
+       return [row[0] for row in self.cursor.fetchall()]
 
    def sessionToCats(self, session):
        """Takes a list of itemids and returns a dictionary of category
