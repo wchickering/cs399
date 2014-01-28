@@ -4,8 +4,9 @@ from LDAPredictor import LDAPredictor
 from gensim import corpora, models, similarities
 from gensim.models import ldamodel
 from numpy.random import multinomial
+import operator
 
-class BayesPredictor(LDAPredictor):
+class ArgMaxPredictor(LDAPredictor):
     """An implementation of an LDAPredictor that uses Bayes' rule to generate
     item predictions.
     """
@@ -16,7 +17,7 @@ class BayesPredictor(LDAPredictor):
         Note that predictions associated with a topic are limited to the most
         likely topn_items items.
         """
-        super(BayesPredictor, self).__init__(**kwds)
+        super(ArgMaxPredictor, self).__init__(**kwds)
         self.ignore_dislikes = ignore_dislikes
         self.topn_items = topn_items=1000
 
@@ -26,6 +27,8 @@ class BayesPredictor(LDAPredictor):
         self.session_content = set()
 
     def feedback(self, likes, dislikes):
+        print 'likes =', likes
+        print 'dislikes =', dislikes
         if not self.ignore_dislikes:
             negative_content =\
                 set([self.dictionary.token2id[str(-token)] for token in dislikes])
@@ -53,38 +56,41 @@ class BayesPredictor(LDAPredictor):
     def predict(self, num_items):
         content_vector = [(item, 1) for item in self.session_content]
         topic_dist = self.model[content_vector]
-        topic_probs = [topic[1] for topic in topic_dist]
-        topic_sample = multinomial(num_items, topic_probs)
-        items = set()
+        candidates = {}
+        for topic_cpd in topic_dist:
+            topic = topic_cpd[0]
+            topic_prob = topic_cpd[1]
+            item_dist = self.model.show_topic(topic, topn=self.topn_items)
+            for item_cpd in item_dist:
+                item_prob = item_cpd[0]
+                token_str = item_cpd[1]
+                if not self.ignore_dislikes and int(token_str) < 0:
+                    continue
+                if token_str in candidates:
+                    candidates[token_str] += topic_prob*item_prob
+                else:
+                    candidates[token_str] = topic_prob*item_prob
+        sorted_candidates = sorted(candidates.iteritems(),
+                                   key=operator.itemgetter(1),
+                                   reverse=True)
         predictions = []
-        for i in range(len(topic_sample)):
-            draws = topic_sample[i]
-            if draws == 0:
-                continue
-            topicid = topic_dist[i][0]
-            item_dist = self.model.show_topic(topicid, topn=self.topn_items)
-            item_probs = [item[0] for item in item_dist]
-            taken = 0
-            while taken < draws:
-                item_sample = multinomial(draws - taken, item_probs)
-                for j in range(len(item_sample)):
-                    if item_sample[j] == 0:
-                        continue
-                    token_str = item_dist[j][1]
-                    if not self.ignore_dislikes and int(token_str) < 0:
-                        continue
-                    itemid = self.dictionary.token2id[token_str]
-                    if itemid not in items and \
-                       itemid not in self.session_likes and \
-                       itemid not in self.session_dislikes:
-                        taken += 1
-                        items.add(itemid)
-                        predictions.append(int(token_str))
+        scores = []
+        taken = 0
+        for candidate in sorted_candidates:
+            itemid = self.dictionary.token2id[candidate[0]]
+            if itemid not in self.session_likes and \
+               itemid not in self.session_dislikes:
+                scores.append(candidate[1])
+                taken += 1
+                predictions.append(int(candidate[0]))
+                if taken >= num_items:
+                    break
+        print 'scores =', scores
         return predictions
 
 def main():
     """A simple, sanity-checking test."""
-    predictor = BayesPredictor(dict_fname='tokens.dict', model_fname='lda.pickle')
+    predictor = ArgMaxPredictor(dict_fname='tokens.dict', model_fname='lda.pickle')
     print 'Loading Model. . .'
     predictor.loadModel()
     likes = set([960598,666644,632709,551024,932073,960606,824431,914853,1093859,1053814])
