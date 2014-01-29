@@ -1,3 +1,5 @@
+#!/usr/local/bin/python
+
 import urllib
 import urllib2
 from bs4 import BeautifulSoup, NavigableString

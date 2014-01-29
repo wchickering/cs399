@@ -5,8 +5,8 @@ Conduct a stupidly simple simulation of user-predictor interaction.
 """
 
 from SessionTranslator import SessionTranslator
-from BayesPredictor import BayesPredictor
-#from ArgMaxPredictor import ArgMaxPredictor
+#from BayesPredictor import BayesPredictor
+from ArgMaxPredictor import ArgMaxPredictor
 import sqlite3
 import random
 
@@ -18,12 +18,12 @@ NUM_INIT_ITEMS = 10
 NUM_ITEMS_PER_ROUND = 10
 ROUNDS = 25
                                   # argmax  bayes
-#CATEGORY = 'T-Shirts'            # 0.096   0.356
-#CATEGORY = 'Sunglasses'          # 0.996   0.996
-CATEGORY = 'Calvin Klein'        # 0.5     0.576
-#CATEGORY = 'Swimwear'            # 0.31    0.207
-#CATEGORY = 'Lucky Brand Jeans'   # 0.23    0.254
-#CATEGORY = 'Dress Shirts'        # 0.98    0.884
+#CATEGORY = 'T-Shirts'            # 0.548   0.356   0.420
+CATEGORY = 'Sunglasses'          # 0.996   0.996   0.724
+#CATEGORY = 'Calvin Klein'        # 0.5     0.576   0.404
+#CATEGORY = 'Swimwear'            # 0.31    0.207   0.420
+#CATEGORY = 'Lucky Brand Jeans'   # 0.23    0.254   0.132
+#CATEGORY = 'Dress Shirts'        # 0.98    0.884   0.592
 
 selectItemsStmt = 'SELECT Id FROM Categories WHERE Category = :category'
 selectCatsStmt = 'SELECT Category FROM Categories WHERE Id = :id'
@@ -70,8 +70,8 @@ def main():
     with db_conn:
         cursor = db_conn.cursor()
         translator = SessionTranslator(db_fname)
-        predictor = BayesPredictor(dict_fname=dict_fname, model_fname=model_fname)
-        #predictor = ArgMaxPredictor(dict_fname=dict_fname, model_fname=model_fname)
+        #predictor = BayesPredictor(dict_fname=dict_fname, model_fname=model_fname)
+        predictor = ArgMaxPredictor(dict_fname=dict_fname, model_fname=model_fname)
         print 'Loading LDA Model. . .'
         predictor.loadModel()
         print 'Generating initial items (%s). . .' % CATEGORY

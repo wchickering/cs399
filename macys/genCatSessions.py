@@ -68,7 +68,7 @@ def main():
     with open(options.filename, 'r') as csvIn:
         reader = csv.reader(csvIn)
         logging.info('Writing sessions to %s' % options.outfilename)
-        with open(options.outfilename, 'w') as csvOut:
+        with open(options.outfilename, 'a') as csvOut:
             writer = csv.writer(csvOut)
             category = None
             items = None
