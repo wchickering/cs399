@@ -23,7 +23,7 @@ db_fname = 'macys.db'
 createProductTableStmt =\
     ('CREATE TABLE IF NOT EXISTS Products(Id INT PRIMARY KEY, Url TEXT, '
      'ImgFile TEXT, Description TEXT, Prices TEXT, Available INT, '
-     'Time TIMESTAMP)')
+     'Time TIMESTAMP, HaveRecs INT)')
 createCategoryTableStmt =\
     ('CREATE TABLE IF NOT EXISTS Categories(Id INT, ParentCategory TEXT, '
      'Category TEXT, PRIMARY KEY (Id, ParentCategory, Category), '

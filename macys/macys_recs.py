@@ -18,9 +18,9 @@ createRecommendsTableStmt =\
 selectRecommendStmt = 'SELECT * FROM Recommends WHERE Id1 = :Id1 AND Id2 = :Id2'
 insertRecommendStmt = 'INSERT INTO Recommends(Id1, Id2) VALUES (:Id1, :Id2)'
 selectProductsStmt =\
-    ('SELECT Id FROM Products WHERE Available = 1 AND Id NOT IN '
-     '(SELECT Id1 FROM Recommends GROUP BY Id1 HAVING COUNT(*) = 4)')
+     'SELECT Id FROM Products WHERE Available = 1 AND HaveRecs = 0'
 selectProductStmt = 'SELECT * FROM Products WHERE Id = :Id'
+updateProductStmt = 'UPDATE Products SET HaveRecs = 1 WHERE Id = :Id'
 
 def processRecommend(id1, productTag, db_curs):
     # process productTag
@@ -55,6 +55,8 @@ def getRecommends(productId, db_curs):
             soup.findAll('div', {'class': 'cmioProductThumbnail'}):
             insertCnt +=\
                 processRecommend(productId, productTag, db_curs)
+        if insertCnt > 0:
+            db_curs.execute(updateProductStmt, (productId,))
     except urllib2.HTTPError as e:
         print >> sys.stderr,\
             'WARNING: HTTPError({0}): {1}'.format(e.errno, e.stderror)
