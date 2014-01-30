@@ -55,8 +55,7 @@ def getRecommends(productId, db_curs):
             soup.findAll('div', {'class': 'cmioProductThumbnail'}):
             insertCnt +=\
                 processRecommend(productId, productTag, db_curs)
-        if insertCnt > 0:
-            db_curs.execute(updateProductStmt, (productId,))
+        db_curs.execute(updateProductStmt, (productId,))
     except urllib2.HTTPError as e:
         print >> sys.stderr,\
             'WARNING: HTTPError({0}): {1}'.format(e.errno, e.stderror)
