@@ -22,19 +22,15 @@ def makeGraph(db_curs):
         id2 = row[1]
         if id1 not in graph:
             node_cnt += 1
-            edge_cnt += 1
             graph[id1] = set([id2,])
         elif id2 not in graph[id1]:
-            edge_cnt += 1
             graph[id1].add(id2)
         if id2 not in graph:
             node_cnt += 1
             graph[id2] = set([id1,])
         elif id1 not in graph[id2]:
-            edge_cnt += 1
             graph[id2].add(id1)
-    assert(edge_cnt % 2 == 0)
-    edge_cnt = edge_cnt/2
+        edge_cnt += 1
     print '%d nodes, %d edges' % (node_cnt, edge_cnt)
     return graph
 
