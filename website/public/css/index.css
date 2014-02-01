@@ -1,0 +1,75 @@
+/* applies to anything of class "example-class-selector" */
+.example-class-selector {
+	margin-top: 2em;
+}
+
+/* applies to any <p> descendants of an element of class "example-class-selector" */
+.example-class-selector p {
+	color: #CC00AA;
+}
+
+.jumbotron {
+	position: relative;
+	background: none;
+    text-align: center;
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+
+.jumbotron:after {
+     content:"";
+     top: 0;
+     left: 0;
+     bottom: 0;
+     right: 0;
+     position: absolute;
+     z-index: -1;	
+}
+
+.jumbotron p {
+     color: #6e6e6e;
+}
+
+.product a {
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+}
+
+.buttons {
+    text-align: center;
+    padding-bottom: 10px;
+}
+
+.btn {
+    margin: 2px;
+}
+
+.panel-title {
+    text-align: center;
+}
+
+.img-thumbnail {
+    width: 450px;
+    height: 450px;
+}
+
+#smallImage {
+    width: 50px;
+    height: 50px;
+}
+
+#number1 {
+    color:#a94442;
+    font-weight: bold;
+}
+
+#number2 {
+    color:#3c763d;
+    font-weight: bold;
+}
+
+
+
+

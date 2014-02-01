@@ -1,90 +1,74 @@
 <!doctype html>
 
-<html>
-<head>
-	<title>HCI Project Portfolio</title>	
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link href="/css/bootstrap.min.css" rel="stylesheet">
-	<link href="/css/bootstrap-theme.min.css" rel="stylesheet">
-	<link href="/css/introHCI.css" rel="stylesheet">
-	<!-- this is a comment in HTML -->
+<html lang = "en">
+    <head>
+        <title>Prototype for Flipping Interface</title>	
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="/css/bootstrap.css" rel="stylesheet">
+        <link href="/css/bootstrap-theme.css" rel="stylesheet">
+        <link href="/css/index.css" rel="stylesheet">
 
-    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
-    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-    <!--[if lt IE 9]>
-      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-      <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-    <![endif]-->        
-</head>
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->        
+    </head>
 
-<body>
-	<div class="container">
-		<!-- h1 through h6 are headers. The higher the number, the smaller the header -->
-		<!-- p means paragraph -->
-		<div class="jumbotron">
-			<h1>Michael Bernstein</h1>
-			<p>human-computer interaction &middot; social computing &middot; crowdsourcing</p>
-		</div>
+    <body>
+        <div class="container">
+            <div class="jumbotron">
+                <h1>Left or Right</h1>
+                <p>Flip through products with the buttons or the <span id=number1>1</span>
+                and <span id=number2>2</span> keys</p>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="panel panel-danger">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">Disliked</h4>
+                        </div>
+                        <div class="panel-body" id="disliked">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Product</h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="product">
+                                <a href="http://www.google.com/search?q=1" id="productLink">
+                                    <img src="images/{{project.image}}" alt="Lorem Pixel image" class="img-thumbnail" id="productImage">
+                                </a>
+                            </div>
+                            <p id="test"></p>
 
-        <script>
-            var count = 0;
-            var projects=new Array();
-            projects[0]={name:'Name1', image:'lorempixel.people.1.jpeg', id:'project1'};
-            projects[1]={name:'Name2', image:'lorempixel.city.1.jpeg', id:'project2'};
-            projects[2]={name:'Name3', image:'lorempixel.technics.1.jpeg', id:'project3'};
-            projects[3]={name:'Name4', image:'lorempixel.abstract.1.jpeg', id:'project4'};
-            projects[4]={name:'Name5', image:'lorempixel.abstract.8.jpeg', id:'project5'};
- 
-            function getNextProject() {
-                if (count < projects.length - 1) {
-                    count++;
-                }
-                return projects[count];
-            }
+                            <div class="buttons">
+                                <button type="button" class="btn btn-lg btn-danger" onclick="move('disliked')">Nope</button>
+                                <button type="button" class="btn btn-lg btn-success" onclick="move('liked')">Like!</button>
+                            </div>            
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
 
-            function changeProject() {
-                var nextProject = getNextProject();
-                paragraph = document.getElementById("projectName");
-                image = document.getElementById("projectImage");
-                link = document.getElementById("projectLink");
-                paragraph.innerHTML = nextProject.name;
-                image.setAttribute("src", "images/" + nextProject.image);
-                link.setAttribute("href", "projects/" + nextProject.name);
-            }
-
-            function move(direction) {
-                changeProject();
-                if (direction == "L") {
-                    element = document.getElementById("test");
-                    element.innerHTML = "<p> project name = " + projects[count].name + " </p>";
-                } 
-                else if (direction == "R") {
-                    element = document.getElementById("test");
-                    element.innerHTML = "<p> projects length = " + projects.length + " </p>";
-                }
-            }
-        </script>
-        
-		<h4>Projects</h4>
-		<!-- divs are invisible structuring elements that stack vertically by default. Use them to organize your code -->
-		<!-- img tags are images. Lorem Pixel will deliver random images; handy! -->
-		<!-- a are anchors, also known as hyperlinks. Use the href attribute to tell the browser where to go when the user clicks -->
-        <div class="project">
-            <a href="project/{{project.name}}" class="thumbnail" id="projectLink">
-				<img src="images/{{project.image}}" alt="Lorem Pixel image" class="img" id="projectImage">
-				<p id="projectName">{{project.name}}</p>
-			</a>
-		</div>
-        <p id="test"></p>
-
-        <div class="buttons">
-            <button type="button" onclick="move('L')">Gross</button>
-            <button type="button" onclick="move('R')">Love that!</button>
+                    <div class="panel panel-success">
+                        <div class="panel-heading">
+                            <h2 class="panel-title">Liked</h2>
+                        </div>
+                        <div class="panel-body" id="liked">
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-	</div>
 
-	<script src="https://code.jquery.com/jquery.js"></script>
-	<script src="/js/bootstrap.min.js"></script>
-</body>
+        <script src="https://code.jquery.com/jquery.js"></script>
+        <script src="/js/bootstrap.min.js"></script>
+        <script src="/js/index.js"></script>
+    </body>
 </html>
