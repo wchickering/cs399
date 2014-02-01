@@ -65,7 +65,7 @@ function writeToTest() {
 function move(list) {
     addToList(list);
     changeProduct();
-    getPythonOutput();
+    //getPythonOutput();
     //writeToTest();
 }
 
