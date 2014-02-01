@@ -31,10 +31,25 @@ def getProductID():
     results = query(query_string)
     return results[0].x
 
+def getProduct(productId):
+    query_string = 'select Id, Url, ImgFile, Description, Prices from Products where Id = $productId'
+    results = query(query_string, {'productId': productId})
+    return results[0]
+
+def getNextProduct(productId):
+    query_string = 'select min(Id) as Id, Url, ImgFile, Description, Prices from Products where Id > $productId'
+    results = query(query_string, {'productId': productId})
+    return results[0]
+
 def getProductPrice(productId):
     query_string = 'select Prices from Products where Id = $productId'
     results = query(query_string, {'productId': productId})
     return results[0].Prices
+
+def getProductUrl(productId):
+    query_string = 'select Url from Products where Id = $productId'
+    results = query(query_string, {'productId': productId})
+    return results[0].Url
 
 # returns the current time from your database
 def getTime():

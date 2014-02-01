@@ -3,6 +3,7 @@
 import sys; sys.path.insert(0, 'lib') # this line is necessary for the rest
 import os                             # of the imports to work!
 
+import json
 import web
 import sqlitedb
 from jinja2 import Environment, FileSystemLoader
@@ -63,6 +64,8 @@ urls = ('/currtime', 'curr_time',
         # first parameter => URL, second parameter => class name
         )
 
+count = 0
+
 class left_or_right:
    def GET(self):
        #nextID = sqlitedb.getNextProductID()
@@ -74,11 +77,12 @@ class left_or_right:
        return render_template('index.html', **template_params)
 
    def POST(self):
-       template_params = {}
        post_params = web.input()
        productId = post_params['productId']
-       price = sqlitedb.getProductPrice(productId)
-       return price
+       #product = sqlitedb.getProduct(productId)
+       product = sqlitedb.getNextProduct(productId)
+       json_obj = json.dumps(product)
+       return json_obj
 
 class curr_time:
     def GET(self):
@@ -95,6 +99,7 @@ class select_time:
     def POST(self):
         
         template_params = {}
+
         post_params = web.input()
         MM = post_params['MM']
         dd = post_params['dd']
