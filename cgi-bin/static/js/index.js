@@ -2,7 +2,8 @@ var currentProduct=new Object();
 // Set currentProduct initially to have smalled id
 $.post("/leftorright", 
         {
-            productId:0
+            'productId':0,
+            'liked':"neither"
         },
         function(data,status){
             var product = JSON.parse(data);
@@ -39,10 +40,11 @@ function writeToTest() {
     test.innerHTML = "This is just a test";
 }
 
-function JQAjax() {
+function JQAjax(list) {
     $.post("/leftorright", 
             {
-                productId:currentProduct.Id
+                'productId':currentProduct.Id,
+                'liked':list
             },
             function(data,status){
                 var product = JSON.parse(data);
@@ -55,7 +57,7 @@ function JQAjax() {
 
 function move(list) {
     addToList(list);
-    JQAjax();
+    JQAjax(list);
 }
 
 $(document).keyup(function(e) {

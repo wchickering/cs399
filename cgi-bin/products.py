@@ -64,7 +64,8 @@ class left_or_right:
    def POST(self):
        post_params = web.input()
        productId = post_params['productId']
-       product = sqlitedb.getNextProduct(productId)
+       liked = post_params['liked']
+       product = sqlitedb.getNextProduct(productId, liked)
        json_obj = json.dumps(product)
        return json_obj
 

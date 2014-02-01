@@ -35,10 +35,15 @@ def getProduct(productId):
     results = query(query_string, {'productId': productId})
     return results[0]
 
-def getNextProduct(productId):
+def getNextProduct(productId, liked):
     query_string = 'select min(Id) as Id, Url, ImgFile, Description, Prices from Products where Id > $productId'
     results = query(query_string, {'productId': productId})
-    return results[0]
+    result = results[0]
+    if liked == 'disliked':
+        result.Description += '?'
+    elif liked == 'liked':
+        result.Description += '!'
+    return result
 
 def query(query_string, vars = {}):
     return db.query(query_string, vars)
