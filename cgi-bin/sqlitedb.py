@@ -1,6 +1,10 @@
+from MagicWardrobe import MagicWardrobe
 import web
 
 db = web.database(dbn='sqlite', db='macys.db')
+sessionId = 1
+wardrobe = MagicWardrobe()
+wardrobe.initSession(sessionId)
 
 ######################BEGIN HELPER METHODS######################
 
@@ -36,9 +40,18 @@ def getProduct(productId):
     return results[0]
 
 def getNextProduct(productId, liked):
-    query_string = 'select min(Id) as Id, Url, ImgFile, Description, Prices from Products where Id > $productId'
-    results = query(query_string, {'productId': productId})
-    result = results[0]
+    productId = int(productId)
+    if productId == 0:
+        productId = 1082639 # Magic productId for testing
+    likes = []
+    dislikes = []
+    if liked == 'disliked':
+        dislikes.append(int(productId))
+    else:
+        likes.append(int(productId))
+    wardrobe.feedback(sessionId, likes, dislikes)
+    items = wardrobe.nextItems(sessionId, 1)
+    result = getProduct(items[0])
     if liked == 'disliked':
         result.Description += '?'
     elif liked == 'liked':
