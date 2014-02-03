@@ -10,6 +10,7 @@ import unicodedata
 import math
 import sys
 import os
+import time
 
 # params
 categories_fname = 'categories.json'
@@ -17,14 +18,15 @@ imageFileTemplate = 'images/%d.jpg'
 metaUrlTemplate = 'http://www1.macys.com/catalog/category/facetedmeta?sortBy=NAME&productsPerPage=%d&pageIndex=%d&parentCategoryId=%d&categoryId=%d'
 productsUrlTemplate = 'http://www1.macys.com/shop/catalog/product/thumbnail/1?edge=hybrid&limit=none&suppressColorSwatches=false&categoryId=%d&ids=%s'
 productsPerPage = 100
+pauseTime = 0.2 # number of second to pause between HTTP requests.
 
 # db params
 db_fname = 'macys.db'
-createProductTableStmt =\
+createProductsTableStmt =\
     ('CREATE TABLE IF NOT EXISTS Products(Id INT PRIMARY KEY, Url TEXT, '
      'ImgFile TEXT, Description TEXT, Prices TEXT, Available INT, '
      'Time TIMESTAMP, HaveRecs INT)')
-createCategoryTableStmt =\
+createCategoriesTableStmt =\
     ('CREATE TABLE IF NOT EXISTS Categories(Id INT, ParentCategory TEXT, '
      'Category TEXT, PRIMARY KEY (Id, ParentCategory, Category), '
      'FOREIGN KEY(Id) REFERENCES Products(Id))')
@@ -59,48 +61,52 @@ def stripTags(tag):
     tag.replaceWith(s)
 
 def processProduct(productTag, parentCategoryName, categoryName, db_curs):
-    # parse productTag
     try:
-        product_id = int(productTag['id'])
-    except ValueError:
-        print >> sys.stderr, 'WARNING: Failed to parse product_id'
-        return 0
-    print 'product_id = %d' % product_id
-    imgTag = productTag.find('img')
-    imgSrc = imgTag['src']
-    print 'imgSrc = %s' % imgSrc
-    img_fname = imageFileTemplate % product_id
-    print 'img_fname = %s' % img_fname
-    # retrieve and save image
-    if not os.path.isfile(img_fname):
+        # parse productTag
         try:
-            urllib.urlretrieve(imgSrc, img_fname)
-        except:
-            print >> sys.stderr, 'WARNING: Failed to retrieve product image'
-    shortDescriptionTag = productTag.find('div', {'class' : 'shortDescription'})
-    productUrl = shortDescriptionTag.find('a')['href']
-    print 'productUrl = %s' % productUrl
-    # remove "NEW!" from description
-    newTag = shortDescriptionTag.find('span', text=re.compile("^NEW!"))
-    if newTag:
-        newTag.extract()
-    shortDescription = \
-        normalizeStr(shortDescriptionTag.find('a').renderContents().strip())
-    print 'shortDesciption = %s' % shortDescription
-    priceTag = productTag.find('div', {'class' : 'prices'})
-    prices = []
-    for tag in priceTag.findAll('span'):
-        prices.append(normalizeStr(tag.renderContents()))
-    print 'prices = %s' % prices
-    # insert product into db
-    db_curs.execute(insertProductStmt,\
-        {'Id': product_id, 'Url': productUrl, 'ImgFile': img_fname,\
-         'Description': shortDescription, 'Prices': str(prices)})
-    # insert category into db
-    db_curs.execute(insertCategoryStmt,\
-        {'Id': product_id, 'ParentCategory': parentCategoryName,\
-         'Category': categoryName})
-    return db_curs.rowcount
+            product_id = int(productTag['id'])
+        except ValueError:
+            print >> sys.stderr, 'WARNING: Failed to parse product_id'
+            return 0
+        print 'product_id = %d' % product_id
+        imgTag = productTag.find('img')
+        imgSrc = imgTag['src']
+        print 'imgSrc = %s' % imgSrc
+        img_fname = imageFileTemplate % product_id
+        print 'img_fname = %s' % img_fname
+        # retrieve and save image
+        if not os.path.isfile(img_fname):
+            try:
+                urllib.urlretrieve(imgSrc, img_fname)
+            except:
+                print >> sys.stderr, 'WARNING: Failed to retrieve product image'
+        shortDescriptionTag = productTag.find('div', {'class' : 'shortDescription'})
+        productUrl = shortDescriptionTag.find('a')['href']
+        print 'productUrl = %s' % productUrl
+        # remove "NEW!" from description
+        newTag = shortDescriptionTag.find('span', text=re.compile("^NEW!"))
+        if newTag:
+            newTag.extract()
+        shortDescription = \
+            normalizeStr(shortDescriptionTag.find('a').renderContents().strip())
+        print 'shortDesciption = %s' % shortDescription
+        priceTag = productTag.find('div', {'class' : 'prices'})
+        prices = []
+        for tag in priceTag.findAll('span'):
+            prices.append(normalizeStr(tag.renderContents()))
+        print 'prices = %s' % prices
+        # insert product into db
+        db_curs.execute(insertProductStmt,\
+            {'Id': product_id, 'Url': productUrl, 'ImgFile': img_fname,\
+             'Description': shortDescription, 'Prices': str(prices)})
+        # insert category into db
+        db_curs.execute(insertCategoryStmt,\
+            {'Id': product_id, 'ParentCategory': parentCategoryName,\
+             'Category': categoryName})
+        return db_curs.rowcount
+    except:
+        print >> sys.stderr, 'WARNING: Failed to parse HTML.'
+        return 0
 
 def processCategory(category):
     parentCategoryName = str(category['parentCategoryName'])
@@ -154,6 +160,8 @@ def processCategory(category):
                     soup = BeautifulSoup(html)
                     for productTag in\
                         soup.findAll('div', {'class': 'productThumbnail'}):
+                        # Pause for a moment to be "polite"
+                        time.sleep(pauseTime)
                         insertCnt +=\
                             processProduct(productTag, parentCategoryName,\
                                            categoryName, db_curs)
@@ -174,10 +182,12 @@ def main():
     db_conn = sqlite3.connect(db_fname)
     with db_conn:
         db_curs = db_conn.cursor()
-        # create table if not already exists
-        db_curs.execute(createProductTableStmt)
-        # update products setting all Available values to 0
+        # create Products table if not already exists
+        db_curs.execute(createProductsTableStmt)
+        # update Products setting all Available values to 0
         db_curs.execute(updateAllProductsStmt)
+        # create Categories table if not already exists
+        db_curs.execute(createCategoriesTableStmt)
 
     # Get categories
     with open(categories_fname) as f:
