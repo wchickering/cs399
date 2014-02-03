@@ -2,7 +2,7 @@
 
 from ItemPredictor import ItemPredictor
 from RoundRobinBFS import roundRobinBFS
-import random
+from collections import deque
 
 class RRBFSPredictor(ItemPredictor):
     """An ItemPredictor that is implemented using a round robin BFS algorithm on
@@ -14,12 +14,11 @@ class RRBFSPredictor(ItemPredictor):
         def __init__(self):
             self.likes = set()
             self.dislikes = set()
-            self.sources = []
+            self.sources = deque()
 
     def __init__(self, graph):
         self.graph = graph
         self.sessions = {}
-        random.seed()
 
     def initSession(self, sessionId):
         self.sessions[sessionId] = self.Session()
@@ -35,11 +34,10 @@ class RRBFSPredictor(ItemPredictor):
             self.sessions[sessionId].likes.union(likes)
         self.sessions[sessionId].dislikes =\
             self.sessions[sessionId].dislikes.union(dislikes)
-        [self.sessions[sessionId].sources.append(item) for item in likes]
+        [self.sessions[sessionId].sources.appendleft(item) for item in likes]
 
     def nextItems(self, sessionId, num):
         assert sessionId in self.sessions
-        random.shuffle(self.sessions[sessionId].sources)
         items = roundRobinBFS(self.graph,
                               self.sessions[sessionId].sources,
                               self.sessions[sessionId].dislikes,
