@@ -38,10 +38,19 @@ class RRBFSPredictor(ItemPredictor):
 
     def nextItems(self, sessionId, num):
         assert sessionId in self.sessions
-        items = roundRobinBFS(self.graph,
-                              self.sessions[sessionId].sources,
-                              self.sessions[sessionId].dislikes,
-                              num)
+        items = []
+        firstTry = True
+        while len(items) < num:
+            if not firstTry:
+                # if necessary, moves dislikes to likes to find items
+                item = self.sessions[sessionId].dislikes.pop()
+                self.sessions[sessionId].likes.add(item)
+                self.sessions[sessionId].sources.appendleft(item)
+            items += roundRobinBFS(self.graph,
+                                   self.sessions[sessionId].sources,
+                                   self.sessions[sessionId].dislikes,
+                                   num - len(items))
+            firstTry = False
         return items
         
         
