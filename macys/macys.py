@@ -108,7 +108,7 @@ def processProduct(productTag, parentCategoryName, categoryName, db_curs):
         print >> sys.stderr, 'WARNING: Failed to parse HTML.'
         return 0
 
-def processCategory(category):
+def processCategory(category, db_conn):
     parentCategoryName = str(category['parentCategoryName'])
     parentCategoryId = int(category['parentCategoryId'])
     categoryName = str(category['categoryName'])
@@ -118,6 +118,8 @@ def processCategory(category):
     print '      categoryName =', categoryName
     print '        categoryId =', categoryId
 
+    db_curs = db_conn.cursor()
+
     insertCnt = 0
     pageIndex = 1
     while True:
@@ -125,51 +127,58 @@ def processCategory(category):
             (productsPerPage, pageIndex, parentCategoryId, categoryId)
         try:
             # retrieve meta data
+            print 'Opening Url: %s' % meta_url 
             meta_json = urllib2.urlopen(meta_url).read()
             meta = json.loads(meta_json)
 
-            # connect to db
-            db_conn = sqlite3.connect(db_fname)
-            with db_conn:
-                db_curs = db_conn.cursor()
-
-                # check for new products
-                productIds = meta['productIds']
-                newProductIds = []
-                for productId in productIds:
-                    # if already in db, set Available = 1
-                    db_curs.execute(updateProductStmt, (productId,))
-                    if db_curs.rowcount == 0:
-                        newProductIds.append(productId)
-                    else:
-                        # new category?
-                        db_curs.execute(selectCategoryStmt,\
-                            {'Id': productId, 'ParentCategory': parentCategoryName,\
-                             'Category': categoryName})
-                        if not db_curs.fetchone():
-                            db_curs.execute(insertCategoryStmt,\
-                                (productId, parentCategoryName, categoryName))
-
-                if len(newProductIds) > 0:
-                    # retrieve product images and data
-                    productList = ','.join(map(lambda x:'%d_%d' % (categoryId, x),\
-                                               newProductIds))
-                    print 'productList =', productList
-                    url = productsUrlTemplate % (categoryId, productList)
-                    html = urllib2.urlopen(url).read()
-                    soup = BeautifulSoup(html)
-                    for productTag in\
-                        soup.findAll('div', {'class': 'productThumbnail'}):
-                        # Pause for a moment to be "polite"
-                        time.sleep(pauseTime)
-                        insertCnt +=\
-                            processProduct(productTag, parentCategoryName,\
-                                           categoryName, db_curs)
-
-            # check for terminal condition (i.e. all products read)
-            productCount = meta['productCount']
-            if pageIndex*productsPerPage >= productCount:
+            # check for new products
+            pageInsertCnt = 0
+            productIds = meta['productIds']
+            if len(productIds) == 0:
+                print 'No products found.'
                 break
+            newProductIds = []
+            for productId in productIds:
+                # if already in db, set Available = 1
+                db_curs.execute(updateProductStmt, (productId,))
+                if db_curs.rowcount == 0:
+                    newProductIds.append(productId)
+                else:
+                    # new category?
+                    db_curs.execute(selectCategoryStmt,\
+                        {'Id': productId, 'ParentCategory': parentCategoryName,\
+                         'Category': categoryName})
+                    if not db_curs.fetchone():
+                        db_curs.execute(insertCategoryStmt,\
+                            (productId, parentCategoryName, categoryName))
+
+            if len(newProductIds) > 0:
+                # retrieve product images and data
+                productList = ','.join(map(lambda x:'%d_%d' % (categoryId, x),\
+                                           newProductIds))
+                print 'productList =', productList
+                url = productsUrlTemplate % (categoryId, productList)
+                print 'Opening Url: %s' % url
+                html = urllib2.urlopen(url).read()
+                soup = BeautifulSoup(html)
+                for productTag in\
+                    soup.findAll('div', {'class': 'productThumbnail'}):
+                    # Pause for a moment to be "polite"
+                    time.sleep(pauseTime)
+                    cnt = processProduct(productTag, parentCategoryName,
+                                         categoryName, db_curs)
+                    pageInsertCnt += cnt
+                    insertCnt += cnt
+
+                # commit db transaction
+                db_conn.commit()
+
+                print 'Acquired %d out of %d products' % (pageInsertCnt, len(newProductIds))
+
+                # check for terminal condition (i.e. all products read)
+                productCount = meta['productCount']
+                if pageIndex*productsPerPage >= productCount:
+                    break
             pageIndex += 1
         except urllib2.HTTPError as e:
             print >> sys.stderr,\
@@ -179,6 +188,7 @@ def processCategory(category):
 
 def main():
     # connect to db
+    print 'Connecting to %s. . .' % db_fname
     db_conn = sqlite3.connect(db_fname)
     with db_conn:
         db_curs = db_conn.cursor()
@@ -189,15 +199,15 @@ def main():
         # create Categories table if not already exists
         db_curs.execute(createCategoriesTableStmt)
 
-    # Get categories
-    with open(categories_fname) as f:
-        categories_json = f.readlines()
+        # Get categories
+        with open(categories_fname) as f:
+            categories_json = f.readlines()
 
-    # Insert/Update each category
-    insertCnt = 0
-    for category_json in categories_json:
-        category = json.loads(category_json.rstrip())
-        insertCnt += processCategory(category)
+        # Insert/Update each category
+        insertCnt = 0
+        for category_json in categories_json:
+            category = json.loads(category_json.rstrip())
+            insertCnt += processCategory(category, db_conn)
 
 if __name__ == '__main__':
     main()
