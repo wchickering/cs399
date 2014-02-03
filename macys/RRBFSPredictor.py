@@ -2,6 +2,7 @@
 
 from ItemPredictor import ItemPredictor
 from RoundRobinBFS import roundRobinBFS
+import random
 
 class RRBFSPredictor(ItemPredictor):
     """An ItemPredictor that is implemented using a round robin BFS algorithm on
@@ -18,6 +19,7 @@ class RRBFSPredictor(ItemPredictor):
     def __init__(self, graph):
         self.graph = graph
         self.sessions = {}
+        random.seed()
 
     def initSession(self, sessionId):
         self.sessions[sessionId] = self.Session()
@@ -37,13 +39,11 @@ class RRBFSPredictor(ItemPredictor):
 
     def nextItems(self, sessionId, num):
         assert sessionId in self.sessions
-        # TODO: Fix this to rotate sources properly!
-        self.sessions[sessionId].sources.reverse()
+        random.shuffle(self.sessions[sessionId].sources)
         items = roundRobinBFS(self.graph,
                               self.sessions[sessionId].sources,
                               self.sessions[sessionId].dislikes,
                               num)
-        self.sessions[sessionId].sources.reverse()
         return items
         
         
