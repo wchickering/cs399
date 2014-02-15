@@ -22,6 +22,9 @@ def getParser(usage=None):
     parser.add_option('-o', '--output', dest='outfilename', default='turkjob.csv',
         help='Output CSV file.', metavar='OUT_FILE')
     return parser
+
+def writeHeaderRecord(writer):
+    writer.writerow(['item1', 'item2', 'description1', 'description2', 'imageUrl'])
    
 def writeTaskRecord(writer, db_curs, filename):
     basename = filename.split('.')[0]
@@ -77,6 +80,8 @@ def main():
             filenames = [f for f in os.listdir(directory)]
             # Shuffle filenames in place
             random.shuffle(filenames)
+            # Write header record
+            writeHeaderRecord(writer)
             num_tasks = 0
             for filename in filenames:
                 num_tasks += writeTaskRecord(writer, db_curs, filename)
