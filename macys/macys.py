@@ -32,7 +32,6 @@ createCategoriesTableStmt =\
      'FOREIGN KEY(Id) REFERENCES Products(Id))')
 updateAllProductsStmt = 'UPDATE Products SET Available = 0'
 updateProductStmt = 'UPDATE Products SET Available = 1 WHERE Id = ?'
-selectProductStmt = 'SELECT * FROM Products WHERE Id = ?'
 selectCategoryStmt =\
     ('SELECT * FROM Categories WHERE Id = :Id AND '
      'ParentCategory = :ParentCategory AND Category = :Category')
@@ -129,7 +128,7 @@ def processCategory(category, db_conn):
             # retrieve meta data
             print 'Opening Url: %s' % meta_url 
             meta_json = urllib2.urlopen(meta_url).read()
-            meta = json.loads(meta_json)
+            meta = json.loads(unicode(meta_json, "ISO-8859-1"))
 
             # check for new products
             pageInsertCnt = 0
