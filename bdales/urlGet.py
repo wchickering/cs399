@@ -2,8 +2,8 @@
 
 import sys
 import os
-import urllib2
 from optparse import OptionParser
+from selenium import webdriver
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -26,13 +26,12 @@ def main():
         outfile = sys.stdout
 
     # Attempt to open url
-    try:
-        html = urllib2.urlopen(url).read()
-    except ValueError:
-        print >> sys.stderr, 'Failed to open url: %s' % url
-        return
+    browser = webdriver.Firefox()
+    browser.get(url)
+    content = browser.page_source.encode('utf-8')
+    browser.close()
 
-    outfile.write(html)
+    outfile.write(content)
     outfile.close()
 
 if __name__ == '__main__':
