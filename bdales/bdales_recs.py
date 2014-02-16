@@ -83,9 +83,7 @@ def getRecommends(driver, productId, db_curs):
     return insertCnt
 
 
-def worker(master_pipe, worker_pipe):
-    master_pipe.close()
-
+def worker(q):
     # connect to db
     db_conn = sqlite3.connect(db_fname)
     with db_conn:
@@ -96,24 +94,18 @@ def worker(master_pipe, worker_pipe):
         insertCnt = 0
         while True:
             try:
-                productId = worker_pipe.recv()
+                productId = q.get(block=False)
                 insertCnt += getRecommends(driver, productId, db_curs)
                 db_conn.commit()
-            except EOFError:
+            except Queue.Full:
                 break
 
         driver.quit()
 
     #print 'Inserted %d new recommendations.' % insertCnt
 
-    worker_pipe.close()
-        
 
-def master(pipes):
-    # close worker ends of pipes
-    for w in range(numWorkers):
-        pipes[w][1].close()
-
+def master(queues):
     # connect to db
     db_conn = sqlite3.connect(db_fname)
     with db_conn:
@@ -128,33 +120,31 @@ def master(pipes):
         for row in db_curs.fetchall():
             productId = row[0]
             workerIdx = iter % numWorkers
-            pipes[workerIdx][0].send(productId)
+            queues[workerIdx].put(productId)
             iter += 1
 
-    # close master ends of pipes
+    # close queues
     for w in range(numWorkers):
-        pipes[w][0].close()
+        queues[w].close()
 
 
 def main():
-    # create pipes
-    pipes = []
+    # create queues
+    queues = []
     for w in range(numWorkers):
-        master_pipe, worker_pipe = mp.Pipe()
-        pipes.append((master_pipe, worker_pipe))
+        queues.append(mp.Queue())
 
     # create worker processes
     workers = []
     for w in range(numWorkers):
-        w = mp.Process(target=worker, args=(pipes[w][0], pipes[w][1]))
-        workers.append(w)
+        workers.append(mp.Process(target=worker, args=(queues[w],)))
 
     # start worker processes
     for w in range(numWorkers):
         workers[w].start()
 
     # delegate work
-    master(pipes)
+    master(queues)
 
 
 if __name__ == '__main__':
