@@ -37,8 +37,8 @@ selectCategoryStmt =\
      'ParentCategory = :ParentCategory AND Category = :Category')
 insertProductStmt =\
     ('INSERT INTO Products(Id, Url, ImgFile, Description, Prices, Available, '
-     'Time) VALUES (:Id, :Url, :ImgFile, :Description, :Prices, 1, '
-     'CURRENT_TIMESTAMP)')
+     'HaveRecs, Time) VALUES (:Id, :Url, :ImgFile, :Description, :Prices, 1, '
+     '0, CURRENT_TIMESTAMP)')
 insertCategoryStmt =\
     ('INSERT INTO Categories(Id, ParentCategory, Category) '
      'VALUES (:Id, :ParentCategory, :Category)')
