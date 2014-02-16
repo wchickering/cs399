@@ -4,6 +4,7 @@ import sys
 import os
 from optparse import OptionParser
 from selenium import webdriver
+from ghost import Ghost
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -26,10 +27,12 @@ def main():
         outfile = sys.stdout
 
     # Attempt to open url
-    browser = webdriver.Firefox()
-    browser.get(url)
-    content = browser.page_source.encode('utf-8')
-    browser.close()
+    profile = webdriver.FirefoxProfile();
+    profile.set_preference('permissions.default.image', 2);
+    driver = webdriver.Firefox(firefox_profile=profile);
+    driver.get(url)
+    content = driver.page_source.encode('utf-8')
+    driver.close()
 
     outfile.write(content)
     outfile.close()
