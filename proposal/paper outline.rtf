@@ -1,0 +1,71 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1265
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\listtable{\list\listtemplateid1\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{disc\}}{\leveltext\leveltemplateid1\'01\uc0\u8226 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listname ;}\listid1}}
+{\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}}
+\margl1440\margr1440\vieww17820\viewh15240\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+
+\f0\fs36 \cf0 ABSTRACT:\
+[Will write this when the paper is done]\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+\cf0 \
+INTRODUCTION\
+(Motivation, mention that we focus on retailers, introduce three methods)\
+\
+For any large retailer, it is valuable to know the relationship between products they sell or could sell. This information can be used to build recommendations for similar products, understand subsets of products that appeal to certain users, or expand a catalogue to include new products that will be liked by the existing user-base. Currently, many retailers already leverage user traffic and content information to learn these relationships within their catalogue. However, in spaces where competing retailers sell many of the same products, such as department stores or movie vendors, more information can be gleaned by examining the inter-product relationships that competing retailers have built for their own catalogues.\
+\
+In this paper, we focus on department stores. This space is prime for our analysis since there are a number of competing stores that have overlapping catalogues. We model the relationships between products with a \'91recommendation graph\'92, which is directed graph between the products in a catalogue. A directed edge from product A to product B means that if a user likes product A, he/she is likely to like product B. First we construct the recommendation graphs of different department stores using the recommendations given for each product on their websites. With these original graphs, we aim to add meaningful edges within one retailers graph (representing a new recommendation) and between different retailer graphs (representing a candidate to add to a catalogue). \
+\
+We compare three approaches to extending the recommendation graphs. The first approach is a baseline that uses a content-driven similarity function to add edges between items. It ignores any information from the original recommendation graphs. The second approach focuses exclusively on the recommendation graphs. This method uses an identity function to determine which items in different graphs are the same and thus links the graphs together. Using a random walk algorithm, we determine which unlinked items should be linked. The third approach is uses a combination of the first two to leverage both kinds of information.\
+\
+DATA\
+We collect the data by scraping the websites of major departments stores for products with their descriptions, prices, photos, etc. From each product page, we also gather the website\'92s top recommended items for that product. For this paper, we scraped the catalogues of Macy\'92s, Bloomingdale\'92s, etc. Each of these websites requires their own scraper, but the same data is accessible from all of them, including at least four recommended products for each product in the catalogue. This allows us to build a directed recommendation graph for each department store. \
+\
+It is worth noting that in reality, a company would have more data about their own products than what they post on their website. However, the recommendation graph is still quite informative and is accessible to anyone. It is realistic that a company could gather graphs like this from each of their competitors, as we have here.\
+\
+METHODS\
+METHOD 1\
+As a baseline, we use a content-driven similarity function to create similarity scores between items. If items are similar, we add edges in both directions to the recommendation graph. To determine the threshold of how high the score must be before adding an edge, we calculate the average similarity between items that are connected in the original graph. These edges can connect two items in the same catalogue or items across catalogues.\
+\
+[More about the specifics of the function here]\
+\
+METHOD 2\
+The second method uses the recommendation graphs themselves to determine new recommendation edges. Since there is a significant overlap of products between department stores (x% between Macy\'92s and Bloomingdales for example), recognizing which products are the same connects the otherwise disjoint graphs of different companies. To identify which products are identical, we construct an identity function. [This function works like this and was tested like this, so we know it works.]\
+\
+With connected graphs, we can apply a random walk algorithm to determine which new edges would be most appropriate to add. In the random walk, each product node is a source of a \'93walker\'94, which has equal probability of moving down each outgoing edge. We add edges based on the probability that a walker goes from one product to another. Since the bench-mark for an appropriate threshold is less obvious in this method, we use the top X scores, the number of edges above the threshold found in method 1. While this is somewhat arbitrary, it allows for a fair comparison between the methods.\
+\
+[More about the specifics of the random walk algorithm here]\
+\
+METHOD 3\
+The final method leverages both content-similarity and the structure of the recommendation graphs. First, we combine the recommendation graphs using an identity function and run a random-walk algorithm, as in method 2. This determines how \'93far,\'94 in a sense, any product is from any other product. To determine if there should be an edge added from product A to product B, we use the content-similarity function of method 1 to compare A to every other product in the catalogue and sum these scores up with the weights from the random-walk originating at product B. Thus content-similarity from product A to a product that is near product B in the recommendation graph increases the likelihood that product A should be connected to product B. [An equation would probably be good in here]. For this method, we also add the top X edges based on the threshold in method 1.\
+\
+[More about the specifics of the implementation here]\
+\
+EVALUATION\
+Empirically evaluating the methods is somewhat difficult with the data we have access to. With all of the user-traffic data, one could see if an added recommendation edge connects two products that are in fact co-clicked on co-purchased. Without this, the question of whether one product should be recommended for another can be answered with more subjective human judgement.\
+\
+For this experiment, we collect the top edges to be added for each of the three methods. We show a subset of them to a number of people who rate them in exchange for small sexual favors. The tester is asked \'93How true is the following statement: \'91If someone likes product 1, they will probably like product 2\'92\'94, followed by the pictures and descriptions of the two items of the directed edge. The tester answers on a 5 point scale and the results are aggregated. Each tester is shown edges from each of three methods, to decrease bias from a biased tester.\
+\
+[More about how many testers we use]\
+\
+RESULTS\
+[We\'92ll see]\
+\
+\
+CONCLUSION\
+[Will write this when the paper is done]\
+\
+\
+\
+My Concerns/Questions:\
+\pard\tx220\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\li720\fi-720\pardirnatural
+\ls1\ilvl0\cf0 {\listtext	\'95	}The random walk algorithm has a decay parameter. With such an expensive evaluation process, I don\'92t think we can train the model to optimize parameters. How should we determine it?\
+{\listtext	\'95	}Another way we can do method 3 is to simply combine the scores from methods 1 and 2, like add them up with some weights. Again, this runs into a parameter issue. Should we try this method too?\
+{\listtext	\'95	}I\'92m forgetting, did Anand suggest another way to evaluate the methods to supplement asking friends?\
+{\listtext	\'95	}The issue of threshold for determining \'91similar-enough\'92 is a little hairy. Is the way suggested the best? Should we pick just the top k for some arbitrary k from each method? Or is there something more natural that I\'92m missing for methods 2 and 3?\
+{\listtext	\'95	}For evaluation, should we use the top x from each list of edges to add or should we randomly sample from all edges added?\
+{\listtext	\'95	}Should we separately compare edges from one graph to another and edges within a single graph?\
+{\listtext	\'95	}For method 2, consider this common case: one product X is in graph A and graph B. In graph B, it is connected to product Y, which is not in graph A\'92s catalogue. Method 2 will add an edge from X_A to Y. By anyone\'92s standards, Y should be considered a good candidate for recommendation from X since that recommendation is in fact in graph B. Should we \
+{\listtext	\'95	}For testing, should we double/triple up on products? I was thinking since we\'92re doing it with friends who will likely take it a little more seriously, we don\'92t need to. Plus, we won\'92t get very many shots.\
+}
