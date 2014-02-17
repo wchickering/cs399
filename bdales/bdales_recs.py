@@ -2,6 +2,8 @@
 
 import multiprocessing as mp
 import Queue
+import eventlet
+from eventlet.timeout import Timeout
 import time
 import urllib2
 from bs4 import BeautifulSoup
@@ -13,8 +15,8 @@ from selenium import webdriver
 # params
 numWorkers = 6
 productUrlTemplate = 'http://www1.bloomingdales.com/shop/product/?ID=%d'
-workerTimeout = 15
-pageLoadTimeout = 15
+workerTimeout = 30
+webDriverTimeout = 30
 workerQueueSize = 10
 
 # db params
@@ -35,7 +37,10 @@ def getWebDriver():
     profile = webdriver.FirefoxProfile()
     profile.set_preference('permissions.default.image', 2)
     driver = webdriver.Firefox(firefox_profile=profile)
-    driver.set_page_load_timeout(pageLoadTimeout)
+    # TODO: Verify that these timeouts are optimal.
+    driver.implicitly_wait(webDriverTimeout)
+    driver.set_page_load_timeout(webDriverTimeout)
+    driver.set_script_timeout(webDriverTimeout)
     return driver
 
 
@@ -86,28 +91,25 @@ def getRecommends(driver, productId, db_curs):
     return insertCnt
 
 
-def worker(q):
+def worker(driver, q):
     # connect to db
     db_conn = sqlite3.connect(db_fname)
     with db_conn:
         db_curs = db_conn.cursor()
 
-        driver = getWebDriver()
-        try:
-            insertCnt = 0
-            # TODO: Need a terminal condition here.
-            while True:
-                productId = q.get()
-                insertCnt += getRecommends(driver, productId, db_curs)
-                db_conn.commit()
-
-        finally:
-            driver.quit()
+        insertCnt = 0
+        # TODO: Need a terminal condition here.
+        while True:
+            productId = q.get()
+            # TODO: Verify that the next line is useful.
+            driver.switch_to_window(driver.current_window_handle)
+            insertCnt += getRecommends(driver, productId, db_curs)
+            db_conn.commit()
 
     #print 'Inserted %d new recommendations.' % insertCnt
 
 
-def master(workers, queues):
+def master(drivers, queues, workers):
     # connect to db
     db_conn = sqlite3.connect(db_fname)
     with db_conn:
@@ -122,17 +124,23 @@ def master(workers, queues):
         for row in db_curs.fetchall():
             productId = row[0]
             workerIdx = iter % numWorkers
-            try:
-                print 'Sending productId %d to worker %d' % (productId, workerIdx)
-                queues[workerIdx].put(productId, timeout=workerTimeout)
-            except Queue.Full:
-                # replace worker
-                print 'WARNING: Replacing worker %d' % workerIdx
-                workers[workerIdx].terminate()
-                workers[workerIdx] = mp.Process(target=worker, args=(queues[workerIdx],))
-                workers[workerIdx].start()
-                time.sleep(2) # a couple of seconds to start 
-                queues[workerIdx].put(productId, timeout=workerTimeout)
+            while True:
+                try:
+                    print 'Sending productId %d to worker %d' % (productId, workerIdx)
+                    queues[workerIdx].put(productId, timeout=workerTimeout)
+                    break
+                except Queue.Full:
+                    # replace worker
+                    print 'WARNING: Replacing worker %d' % workerIdx
+                    workers[workerIdx].terminate()
+                    timeout = Timeout(10)
+                    with Timeout(10) as timeout:
+                        drivers[workerIdx].quit()
+                    drivers[workerIdx] = getWebDriver()
+                    workers[workerIdx] = mp.Process(target=worker,\
+                            args=(drivers[workerIdx], queues[workerIdx]))
+                    workers[workerIdx].start()
+                    time.sleep(2) # a couple of seconds to start 
             iter += 1
 
     # close queues
@@ -141,6 +149,11 @@ def master(workers, queues):
 
 
 def main():
+    # create webdrivers
+    drivers = []
+    for w in range(numWorkers):
+        drivers.append(getWebDriver())
+
     # create queues
     queues = []
     for w in range(numWorkers):
@@ -149,17 +162,14 @@ def main():
     # create worker processes
     workers = []
     for w in range(numWorkers):
-        workers.append(mp.Process(target=worker, args=(queues[w],)))
+        workers.append(mp.Process(target=worker, args=(drivers[w], queues[w])))
 
     # start worker processes
     for w in range(numWorkers):
         workers[w].start()
 
-    # allow time for browsers to start
-    time.sleep(numWorkers)
-
     # delegate work
-    master(workers, queues)
+    master(drivers, queues, workers)
 
 
 if __name__ == '__main__':
