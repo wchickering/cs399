@@ -13,8 +13,8 @@ from selenium import webdriver
 # params
 numWorkers = 6
 productUrlTemplate = 'http://www1.bloomingdales.com/shop/product/?ID=%d'
-workerTimeout = 30
-pageLoadTimeout = 20
+workerTimeout = 15
+pageLoadTimeout = 15
 workerQueueSize = 10
 
 # db params
@@ -93,15 +93,16 @@ def worker(q):
         db_curs = db_conn.cursor()
 
         driver = getWebDriver()
+        try:
+            insertCnt = 0
+            # TODO: Need a terminal condition here.
+            while True:
+                productId = q.get()
+                insertCnt += getRecommends(driver, productId, db_curs)
+                db_conn.commit()
 
-        insertCnt = 0
-        # TODO: Need a terminal condition here.
-        while True:
-            productId = q.get()
-            insertCnt += getRecommends(driver, productId, db_curs)
-            db_conn.commit()
-
-        driver.quit()
+        finally:
+            driver.quit()
 
     #print 'Inserted %d new recommendations.' % insertCnt
 
@@ -130,7 +131,7 @@ def master(workers, queues):
                 workers[workerIdx].terminate()
                 workers[workerIdx] = mp.Process(target=worker, args=(queues[workerIdx],))
                 workers[workerIdx].start()
-                time.sleep(5)
+                time.sleep(2) # a couple of seconds to start 
                 queues[workerIdx].put(productId, timeout=workerTimeout)
             iter += 1
 
@@ -155,7 +156,7 @@ def main():
         workers[w].start()
 
     # allow time for browsers to start
-    time.sleep(2*numWorkers)
+    time.sleep(numWorkers)
 
     # delegate work
     master(workers, queues)
