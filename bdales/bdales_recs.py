@@ -129,6 +129,8 @@ def master(workers, queues):
                 print 'WARNING: Replacing worker %d' % workerIdx
                 workers[workerIdx].terminate()
                 workers[workerIdx] = mp.Process(target=worker, args=(queues[workerIdx],))
+                workers[workerIdx].start()
+                time.sleep(5)
                 queues[workerIdx].put(productId, timeout=workerTimeout)
             iter += 1
 
