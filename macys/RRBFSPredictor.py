@@ -21,6 +21,7 @@ class RRBFSPredictor(ItemPredictor):
         self.sessions = {}
 
     def initSession(self, sessionId):
+        self.sessions = {}
         self.sessions[sessionId] = self.Session()
 
     def feedback(self, sessionId, likes, dislikes):

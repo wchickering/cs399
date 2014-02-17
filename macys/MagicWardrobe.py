@@ -1,6 +1,6 @@
 #!/usr/local/bin/python
 
-from RRBFSPredictor import RRBFSPredictor
+from WalkPredictor import WalkPredictor
 import pickle
 
 # params
@@ -14,7 +14,7 @@ class MagicWardrobe:
     def __init__(self):
         """Initializes predictor/feedback engine."""
         graph = self._loadGraph()
-        self.predictor = RRBFSPredictor(graph)
+        self.predictor = WalkPredictor(graph)
         pass
 
     def initSession(self, sessionId):

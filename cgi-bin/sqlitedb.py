@@ -29,6 +29,7 @@ def transaction():
 #     t.commit()
 #
 # check out http://webpy.org/cookbook/transactions for examples
+
 def getProductID():
     query_string = 'select min(Id) as x from Products'
     results = query(query_string)
@@ -41,14 +42,17 @@ def getProduct(productId):
 
 def getNextProduct(productId, liked):
     productId = int(productId)
-    if productId == 0:
-        productId = 1082639 # Magic productId for testing
+    if (liked == "first"):
+        global sessionId 
+        sessionId += 1
+        wardrobe.initSession(sessionId)
+        return getProduct(productId)
     likes = []
     dislikes = []
     if liked == 'disliked':
-        dislikes.append(int(productId))
+        dislikes.append(productId)
     else:
-        likes.append(int(productId))
+        likes.append(productId)
     wardrobe.feedback(sessionId, likes, dislikes)
     items = wardrobe.nextItems(sessionId, 1)
     result = getProduct(items[0])

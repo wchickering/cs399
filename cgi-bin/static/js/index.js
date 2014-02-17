@@ -1,18 +1,17 @@
 var currentProduct=new Object();
-// Set currentProduct initially to have smalled id
-$.post("/leftorright", 
-        {
-            'productId':0,
-            'liked':"neither"
-        },
-        function(data,status){
-            var product = JSON.parse(data);
-            document.getElementById("test").innerHTML = "Id = " + product.Id +
-                ", Description = " + product.Description;
-            currentProduct = product;
-            changeProduct(product);
-        });
+var defaultId = 1082639;
 
+// Set currentProduct initially to have smallest id
+var firstId = getIdFromURL();
+getNextProduct(firstId, "first");
+
+function getIdFromURL() {
+    var name = "firstId";
+    name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+    var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+        results = regex.exec(location.search);
+    return results == null ? defaultId : decodeURIComponent(results[1].replace(/\+/g, " "));
+}
 
 function changeProduct(product) {
     image = document.getElementById("productImage");
@@ -40,24 +39,24 @@ function writeToTest() {
     test.innerHTML = "This is just a test";
 }
 
-function JQAjax(list) {
+function getNextProduct(productId, liked) {
     $.post("/leftorright", 
             {
-                'productId':currentProduct.Id,
-                'liked':list
+                'productId':productId,
+    'liked':liked
             },
             function(data,status){
                 var product = JSON.parse(data);
                 document.getElementById("test").innerHTML = "Id = " + product.Id +
-                    ", Description = " + product.Description;
-                changeProduct(product);
-                currentProduct = product;
+        ", Description = " + product.Description;
+    changeProduct(product);
+    currentProduct = product;
             });
 }
 
 function move(list) {
     addToList(list);
-    JQAjax(list);
+    getNextProduct(currentProduct.Id, list);
 }
 
 $(document).keyup(function(e) {

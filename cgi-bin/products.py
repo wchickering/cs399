@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys; sys.path.insert(0, 'lib') # this line is necessary for the rest
+sys.path.append('/Users/jirvine/Desktop/cs399/cs399/macys')
 import os                             # of the imports to work!
 
 import json
@@ -21,12 +22,6 @@ import pprint
 # helper method to convert times from database (which will return a string)
 # into datetime objects. This will allow you to compare times correctly (using
 # ==, !=, <, >, etc.) instead of lexicographically as strings.
-
-# Sample use:
-# current_time = string_to_time(sqlitedb.getTime())
-
-def string_to_time(date_str):
-    return datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
 
 # helper method to render a template in the templates/ directory
 #

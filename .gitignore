@@ -1,5 +1,6 @@
-.DS_Store
-.*.swp
-.*.swo
-*.jpg
-*.pyc
+*.aux
+*.log
+*.pdf
+*.dvi
+*.fls
+*.fdb_latexmk
