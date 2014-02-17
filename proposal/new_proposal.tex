@@ -10,35 +10,35 @@
 \usepackage[T1]{fontenc}                % for \mathrm{}
 \usepackage{courier}                    % for \texttt{}
 \usepackage{bbm}                        % for \mathbbm{1} (indicator function)
-    \usepackage{booktabs}
-    \usepackage{graphicx}
-    \usepackage{caption}
-    \usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
 
-    %\setlength{\parskip}{\baselineskip}     % skip line following paragraphs
-    \setlength{\parskip}{0.0in}
-    \setlength{\parindent}{0.3in}             % Control margins and amount of text
-    \setlength{\topmargin}{-0.8in}
-    \setlength{\oddsidemargin}{-.15in}       % changed from {-.15in}
-    \setlength{\textheight}{9.5in}
-    \setlength{\textwidth}{6.8in}
-    \pagestyle{empty}                       % No page numbers
+%\setlength{\parskip}{\baselineskip}     % skip line following paragraphs
+\setlength{\parskip}{0.0in}
+\setlength{\parindent}{0.3in}           % Control margins and amount of text
+\setlength{\topmargin}{-0.8in}
+\setlength{\oddsidemargin}{-.15in}      % changed from {-.15in}
+\setlength{\textheight}{9.5in}
+\setlength{\textwidth}{6.8in}
+\pagestyle{empty}                       % No page numbers
 
-    \newcommand{\spc}{\vspace{0.25in}}      % Shortcut commands
-    \newcommand{\ds}{\displaystyle}         %\newcommand{\ds}[1]{\displaystyle{#1}}
-    \newcommand{\ra}{\rightarrow}
+\newcommand{\spc}{\vspace{0.25in}}      % Shortcut commands
+\newcommand{\ds}{\displaystyle}         %\newcommand{\ds}[1]{\displaystyle{#1}}
+\newcommand{\ra}{\rightarrow}
 
-    \begin{document}                        % This is where the document begins
+\begin{document}                        % This is where the document begins
 
 {\LARGE\bf
-    \begin{tabbing}
-    \hspace{2.8in} \= \hspace{1.3in} \= \hspace{1.2in} \= \\
+\begin{tabbing}
+\hspace{2.8in} \= \hspace{1.3in} \= \hspace{1.2in} \= \\
 
-        %=========    Heading   ==================================================
-        CS 399 \> PA4 \> Bill Chickering (bchick)\\
-        \normalsize Jan 18, 2014 \> \> Jamie Irvine (jirvine)
-        % =========================================================================
-        \end{tabbing}
+%=========    Heading   ==================================================
+CS 399 \> PA4 \> Bill Chickering (bchick)\\
+\normalsize Jan 18, 2014 \> \> Jamie Irvine (jirvine)
+% =========================================================================
+\end{tabbing}
 } \vspace{.4in}
 
 \section*{Abstract}
@@ -51,120 +51,117 @@ recommendations for similar products, understand subsets of products that
 appeal to certain users, or expand a catalogue to include new products that
 will be liked by the existing user-base. Currently, many retailers already
 leverage user traffic and content information to learn these relationships
-within their catalogue. However, in spaces where competing retailers sell
-many of the same products, such as department stores or movie vendors, more
+within their catalogue. However, in spaces where competing retailers sell many
+of the same products, such as department stores or movie vendors, more
 information can be gleaned by examining the inter-product relationships that
 competing retailers have built for their own catalogues.
 
-In this paper, we focus on department stores. This space is prime for our
-analysis since there are a number of competing stores that have overlapping
+In this paper, we focus on department stores. This space is well suited for our
+analysis since there are a number of competing stores with overlapping
 catalogues. We model the relationships between products with a
-\emph{recommendation graph}, which is directed graph between the products in a
-catalogue. A directed edge from product A to product B means that if a user
+\emph{recommendation graph}, which is a directed graph between the products in
+a catalogue. A directed edge from product A to product B means that if a user
 likes product A, he/she is likely to like product B. First we construct the
-recommendation graphs of different department stores using the
-recommendations given for each product on their websites. With these
-original graphs, we aim to add meaningful edges within one retailers graph
-(representing a new recommendation) and between different retailer graphs
-(representing a candidate to add to a catalogue). 
+recommendation graphs of different department stores using the recommendations
+given for each product on their websites. With these original graphs, we aim to
+add meaningful edges within one retailer's graph (representing a new
+recommendation) and between different retailer graphs (representing a candidate
+to add to a catalogue). 
 
-We compare three approaches to extending the recommendation graphs. The
-first approach is a baseline that uses a content-driven similarity function
-to add edges between items. It ignores any information from the original
+We compare three approaches to extending the recommendation graphs. The first
+approach is a baseline that uses a content-driven similarity function to add
+edges between items. It ignores any information from the original
 recommendation graphs. The second approach focuses exclusively on the
-recommendation graphs. This method uses an identity function to determine
-which items in different graphs are the same and thus links the graphs
-together. Using a random walk algorithm, we determine which unlinked items
-should be linked. The third approach is uses a combination of the first two
-to leverage both kinds of information.
+recommendation graphs. This method uses an identity function to determine which
+items in different graphs are the same and thus links the graphs together.
+Using a random walk algorithm, we determine which unlinked items should be
+linked. The third approach is uses a combination of the first two to leverage
+both kinds of information.
 
 \section*{Data}
 We collect the data by scraping the websites of major departments stores for
-products with their descriptions, prices, photos, etc. From each product
-page, we also gather the website's top recommended items for that product.
-For this paper, we scraped the catalogues of Macy's, Bloomingdale's, etc.
-Each of these websites requires their own scraper, but the same data is
-accessible from all of them, including at least four recommended products
-for each product in the catalogue. This allows us to build a directed
-recommendation graph for each department store. 
+products with their descriptions, prices, photos, etc. From each product page,
+we also gather the website's top recommended items for that product.  For this
+paper, we scraped the catalogues of Macy's, Bloomingdale's, etc.  Each of these
+websites requires their own scraper, but the same data is accessible from all
+of them, including at least four recommended products for each product in the
+catalogue. This allows us to build a directed recommendation graph for each
+department store. 
 
-It is worth noting that in reality, a company would have more data about
-their own products than what they post on their website. However, the
-recommendation graph is still quite informative and is accessible to anyone.
-It is realistic that a company could gather graphs like this from each of
-their competitors, as we have here.
+It is worth noting that in reality, a company would have more data about their
+own products than what they post on their website. However, the recommendation
+graph is still quite informative and is accessible to anyone.  It is realistic
+that a company could gather graphs like this from each of their competitors, as
+we have here.
 
 \section*{Methods}
 \subsection*{Method 1}
-create similarity scores between items. If items are similar, we add edges
-in both directions to the recommendation graph. To determine the threshold
-of how high the score must be before adding an edge, we calculate the
-average similarity between items that are connected in the original graph.
-These edges can connect two items in the same catalogue or items across
-catalogues.
+Create similarity scores between items. If items are similar, we add edges in
+both directions to the recommendation graph. To determine the threshold of how
+high the score must be before adding an edge, we calculate the average
+similarity between items that are connected in the original graph.  These edges
+can connect two items in the same catalogue or items across catalogues.
 
 \emph{More about the specifics of the function here}
 
 \subsection*{Method 2}
 The second method uses the recommendation graphs themselves to determine new
-recommendation edges. Since there is a significant overlap of products
-between department stores (x\% between Macy's and Bloomingdales for example),
-        recognizing which products are the same connects the otherwise disjoint
-        graphs of different companies. To identify which products are identical, we
-        construct an identity function. \emph{This function works like this and was
-            tested like this, so we know it works.}
+recommendation edges. Since there is a significant overlap of products between
+department stores (x\% between Macy's and Bloomingdales for example),
+recognizing which products are the same connects the otherwise disjoint graphs
+of different companies. To identify which products are identical, we construct
+an identity function. \emph{This function works like this and was tested like
+this, so we know it works.}
 
-            With connected graphs, we can apply a random walk algorithm to determine
-            which new edges would be most appropriate to add. In the random walk, each
-            product node is a source of a 'walker', which has equal probability of
-            moving down each outgoing edge. We add edges based on the probability that a
-            walker goes from one product to another. Since the bench-mark for an
-            appropriate threshold is less obvious in this method, we use the top X
-            scores, the number of edges above the threshold found in method 1. While
-            this is somewhat arbitrary, it allows for a fair comparison between the
-            methods.
+With connected graphs, we can apply a random walk algorithm to determine which
+new edges would be most appropriate to add. In the random walk, each product
+node is a source of a 'walker', which has equal probability of moving down each
+outgoing edge. We add edges based on the probability that a walker goes from
+one product to another. Since the bench-mark for an appropriate threshold is
+less obvious in this method, we use the top X scores, the number of edges above
+the threshold found in method 1. While this is somewhat arbitrary, it allows
+for a fair comparison between the methods.
 
-            \emph{More about the specifics of the random walk algorithm here}
+\emph{More about the specifics of the random walk algorithm here}
 
-            \subsection*{Method 3}
-            The final method leverages both content-similarity and the structure of the
-            recommendation graphs. First, we combine the recommendation graphs using an
-            identity function and run a random-walk algorithm, as in method 2. This
-            determines how 'far,' in a sense, any product is from any other product. To
-            determine if there should be an edge added from product A to product B, we
-            use the content-similarity function of method 1 to compare A to every other
-            product in the catalogue and sum these scores up with the weights from the
-            random-walk originating at product B. Thus content-similarity from product A
-            to a product that is near product B in the recommendation graph increases
-            the likelihood that product A should be connected to product B. \emph{An equation
-                would probably be good in here}. For this method, we also add the top X
-                edges based on the threshold in method 1.
+\subsection*{Method 3}
+The final method leverages both content-similarity and the structure of the
+recommendation graphs. First, we combine the recommendation graphs using an
+identity function and run a random-walk algorithm, as in method 2. This
+determines how 'far,' in a sense, any product is from any other product. To
+determine if there should be an edge added from product A to product B, we use
+the content-similarity function of method 1 to compare A to every other product
+in the catalogue and sum these scores up with the weights from the random-walk
+originating at product B. Thus content-similarity from product A to a product
+that is near product B in the recommendation graph increases the likelihood
+that product A should be connected to product B. \emph{An equation would
+probably be good in here}. For this method, we also add the top X edges based
+on the threshold in method 1.
 
-                \emph{More about the specifics of the implementation here}
+\emph{More about the specifics of the implementation here}
 
-                \section*{Evaluation}
-                Empirically evaluating the methods is somewhat difficult with the data we
-                have access to. With all of the user-traffic data, one could see if an added
-                recommendation edge connects two products that are in fact co-clicked on
-                co-purchased. Without this, the question of whether one product should be
-                recommended for another can be answered with more subjective human
-                judgement.
+\section*{Evaluation}
+Empirically evaluating the methods is somewhat difficult with the data we have
+access to. With all of the user-traffic data, one could see if an added
+recommendation edge connects two products that are in fact co-clicked on
+co-purchased. Without this, the question of whether one product should be
+recommended for another can be answered with more subjective human judgement.
 
-                For this experiment, we collect the top edges to be added for each of the
-                three methods. We show a subset of them to a number of people who rate them
-                in exchange for small sexual favors. The tester is asked 'How true is the
-                following statement: If someone likes product 1, they will probably like
-                product 2', followed by the pictures and descriptions of the two items of
-                the directed edge. The tester answers on a 5 point scale and the results are
-                aggregated. Each tester is shown edges from each of three methods, to
-                decrease bias from a biased tester.
+For this experiment, we collect the top edges to be added for each of the three
+methods. We show a subset of them to a number of people who rate them in
+exchange for small sexual favors. The tester is asked 'How true is the
+following statement: If someone likes product 1, they will probably like
+product 2', followed by the pictures and descriptions of the two items of the
+directed edge. The tester answers on a 5 point scale and the results are
+aggregated. Each tester is shown edges from each of three methods, to decrease
+bias from a biased tester.
 
-                \emph{More about how many testers we use}
+\emph{More about how many testers we use}
 
-                \section*{Results}
-                \emph{We'll see}
+\section*{Results}
+\emph{We'll see}
 
-                \section*{Conclusion}
-                \emph{Will write this when the paper is done}
+\section*{Conclusion}
+\emph{Will write this when the paper is done}
 
-                \end{document}
+\end{document}
