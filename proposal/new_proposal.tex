@@ -45,29 +45,56 @@ CS 399 \> PA4 \> Bill Chickering (bchick)\\
 \emph{Will write this when the paper is done}
 
 \section*{Introduction}
-For any large retailer, it is valuable to know the relationship between
-products they sell or could sell. This information can be used to build
-recommendations for similar products, understand subsets of products that
-appeal to certain users, or expand a catalogue to include new products that
-will be liked by the existing user-base. Currently, many retailers already
-leverage user traffic and content information to learn these relationships
-within their catalogue. However, in spaces where competing retailers sell many
-of the same products, such as department stores or movie vendors, more
-information can be gleaned by examining the inter-product relationships that
-competing retailers have built for their own catalogues.
+A key challenge in retail is choosing which items to incorporate into one's
+collection of offered goods and services. These decisions can significantly
+impact a retailer's revenue in the short run as well as effect customer
+experience, and hence, their relationship with the retailer. Several factors
+must be considered including the number of product lines, the vareity of
+products in each line, as well as the consistency and relationships between
+products. In this study, we focus on the latter and explore techniques that
+leverage publicly available product recommendation information for the purpose
+of improving product assortment decisions.
 
-In this paper, we focus on department stores. This space is well suited for our
-analysis since there are a number of competing stores with overlapping
-catalogues. We model the relationships between products with a
-\emph{recommendation graph}, which is a directed graph between the products in
-a catalogue. A directed edge from product A to product B means that if a user
-likes product A, he/she is likely to like product B. First we construct the
-recommendation graphs of different department stores using the recommendations
-given for each product on their websites. With these original graphs, we aim to
-add meaningful edges within one retailer's graph (representing a new
-recommendation) and between different retailer graphs (representing a candidate
-to add to a catalogue). 
+It has become standard practice for online retailers to recommend one or more
+products to prospective customers who have viewed or purchased an item. These
+recommendations are generally derived from collaborative filtering or other
+data-mining techniques employed by the retailer or a third-party service
+provider. Importantly, these recommendations provide a source of publicly
+available business intelligence by relating the items in their catalogue.
+Specifically, these online recommendations logically form a directed graph in
+with the vertices are products and an edge pointing from item A to item B
+indicates that customers who view or purchase item A are recommended item B.
+Given the recommendation graphs of two or more distinct retailers, our goal is
+to determine new, meaningful edges that connect these graphs in a way that would
+allow one retailer to relate their products to those of another retailer.
 
+In this study we choose to focus on department stores, which typically have
+overlapping product catalogues. We intend to exploit this overlap by identifying
+identical inter-retailer products in order to achieve some initial connectivity
+between their recommendation graphs. From there, we will explore and compare a
+vareity of techniques for choosing additional edges to further connect these
+originally disconnected graphs. In addition to relating {\em inter-retailer} items, we
+are also interested in leveraging other retailer's recommendation graphs in
+order to determine new {\em intra-retailer} edges, which can be valuable for
+improving customer recommendations.
+
+\section*{Data}
+We collect the data by scraping the websites of major departments stores for
+products with their descriptions, prices, photos, etc. From each product page,
+we also gather the website's top recommended items for that product.  For this
+paper, we scraped the catalogues of Bloomingdale's, Neiman Marcus, Nordstrom,
+etc.. Each of these websites requires their own scraper, but the same data is
+accessible from all of them, including at least four recommended products for
+each product in the catalogue. This allows us to build a directed recommendation
+graph for each department store. 
+
+It is worth noting that in reality, a company would have more data about their
+own products than what they post on their website. However, the recommendation
+graph is still quite informative and is accessible to anyone.  It is realistic
+that a company could gather graphs like this from each of their competitors, as
+we have here.
+
+\section*{Methods}
 We compare three approaches to extending the recommendation graphs. The first
 approach is a baseline that uses a content-driven similarity function to add
 edges between items. It ignores any information from the original
@@ -78,23 +105,6 @@ Using a random walk algorithm, we determine which unlinked items should be
 linked. The third approach is uses a combination of the first two to leverage
 both kinds of information.
 
-\section*{Data}
-We collect the data by scraping the websites of major departments stores for
-products with their descriptions, prices, photos, etc. From each product page,
-we also gather the website's top recommended items for that product.  For this
-paper, we scraped the catalogues of Macy's, Bloomingdale's, etc.  Each of these
-websites requires their own scraper, but the same data is accessible from all
-of them, including at least four recommended products for each product in the
-catalogue. This allows us to build a directed recommendation graph for each
-department store. 
-
-It is worth noting that in reality, a company would have more data about their
-own products than what they post on their website. However, the recommendation
-graph is still quite informative and is accessible to anyone.  It is realistic
-that a company could gather graphs like this from each of their competitors, as
-we have here.
-
-\section*{Methods}
 \subsection*{Method 1}
 Create similarity scores between items. If items are similar, we add edges in
 both directions to the recommendation graph. To determine the threshold of how
