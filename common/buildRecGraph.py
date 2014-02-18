@@ -5,12 +5,17 @@ Create and save an undirected graph from Recommends relations.
 """
 import sqlite3
 import pickle
-
-# params
-db_fname = 'macys.db'
-save_fname = 'recGraph.pickle'
+from optparse import OptionParser
 
 selectRecommendsStmt = 'SELECT Id1, Id2 FROM Recommends'
+
+def getParser(usage=None):
+    parser = OptionParser(usage=usage)
+    parser.add_option('-d', '--database', dest='dbname', default=None,
+        help='sqlite3 database file containing Recommends table.', metavar='FILE')
+    parser.add_option('-o', '--output', dest='outfilename', default='recGraph.pickle',
+        help='Output pickle file containing recommendation graph.', metavar='OUT_FILE')
+    return parser
 
 def makeGraph(db_curs):
     graph = {}
@@ -35,11 +40,18 @@ def makeGraph(db_curs):
     return graph
 
 def main():
-    db_conn = sqlite3.connect(db_fname)
+    # Parse options
+    usage = 'Usage: %prog [options] -d database'
+    parser = getParser(usage=usage)
+    (options, args) = parser.parse_args()
+    if not options.dbname:
+        parser.error('Database required')
+
+    db_conn = sqlite3.connect(options.dbname)
     with db_conn:
         db_curs = db_conn.cursor()
         graph = makeGraph(db_curs)
-        pickle.dump(graph, open(save_fname, 'w'))
+        pickle.dump(graph, open(options.outfilename, 'w'))
 
 if __name__ == '__main__':
     main()
