@@ -11,8 +11,8 @@ selectRecommendsStmt = 'SELECT Id1, Id2 FROM Recommends'
 
 class Node(object):
     def __init__(self):
-        self.inbound = []
-        self.outbound = []
+        self.incoming = []
+        self.outgoing = []
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -34,11 +34,11 @@ def makeGraph(db_curs):
         if id1 not in graph:
             node_cnt += 1
             graph[id1] = Node()
-        graph[id1].outbound.append(id2)
+        graph[id1].outoing.append(id2)
         if id2 not in graph:
             node_cnt += 1
             graph[id2] = Node()
-        graph[id2].inbound.append(id1)
+        graph[id2].incoming.append(id1)
         edge_cnt += 1
     print '%d nodes, %d edges' % (node_cnt, edge_cnt)
     return graph
