@@ -62,7 +62,7 @@ data-mining techniques employed by the retailer or a third-party service
 provider. Importantly, these recommendations provide a source of publicly
 available business intelligence by relating the items in their catalogue.
 Specifically, these online recommendations logically form a directed graph in
-with the vertices are products and an edge pointing from item A to item B
+which the vertices are products and an edge pointing from item A to item B
 indicates that customers who view or purchase item A are recommended item B.
 Given the recommendation graphs of two or more distinct retailers, our goal is
 to determine new, meaningful edges that connect these graphs in a way that would
@@ -106,7 +106,8 @@ linked. The third approach is uses a combination of the first two to leverage
 both kinds of information.
 
 \subsection*{Method 1}
-Create similarity scores between items. If items are similar, we add edges in
+For the baseline method, we create similarity scores between items based on the
+given content of each item. If items are similar, we add edges in
 both directions to the recommendation graph. To determine the threshold of how
 high the score must be before adding an edge, we calculate the average
 similarity between items that are connected in the original graph.  These edges
@@ -137,6 +138,7 @@ for a fair comparison between the methods.
 \subsection*{Method 3}
 The final method leverages both content-similarity and the structure of the
 recommendation graphs. First, we combine the recommendation graphs using an
+
 identity function and run a random-walk algorithm, as in method 2. This
 determines how 'far,' in a sense, any product is from any other product. To
 determine if there should be an edge added from product A to product B, we use
@@ -158,13 +160,12 @@ co-purchased. Without this, the question of whether one product should be
 recommended for another can be answered with more subjective human judgement.
 
 For this experiment, we collect the top edges to be added for each of the three
-methods. We show a subset of them to a number of people who rate them in
-exchange for small sexual favors. The tester is asked 'How true is the
-following statement: If someone likes product 1, they will probably like
-product 2', followed by the pictures and descriptions of the two items of the
-directed edge. The tester answers on a 5 point scale and the results are
-aggregated. Each tester is shown edges from each of three methods, to decrease
-bias from a biased tester.
+methods. We show a subset of them to a number of people who rate them subjectively. 
+The tester is asked 'How true is the following statement: If someone likes
+product 1, they will probably like product 2', followed by the pictures and
+descriptions of the two items of the directed edge. The tester answers on a 5
+point scale and the results are aggregated. Each tester is shown edges from
+each of three methods, to decrease bias from a biased tester.
 
 \emph{More about how many testers we use}
 
