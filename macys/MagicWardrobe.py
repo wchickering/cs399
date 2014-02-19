@@ -1,10 +1,10 @@
 #!/usr/local/bin/python
 
-from RRBFSPredictor import RRBFSPredictor
+from RRBFSDirectedPredictor import RRBFSDirectedPredictor
 import pickle
 
 # params
-graph_fname = 'recGraph.pickle'
+graph_fname = 'recDirectedGraph.pickle'
 
 class MagicWardrobe:
     """
@@ -14,7 +14,7 @@ class MagicWardrobe:
     def __init__(self):
         """Initializes predictor/feedback engine."""
         graph = self._loadGraph()
-        self.predictor = RRBFSPredictor(graph)
+        self.predictor = RRBFSDirectedPredictor(graph)
         pass
 
     def initSession(self, sessionId):
