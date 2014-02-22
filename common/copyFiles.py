@@ -1,7 +1,8 @@
 #!/usr/local/bin/python
 
 """
-Copies files between directories.
+Copies files between directories. Useful when there are so many
+files that Mac OS X struggles.
 """
 
 import logging
