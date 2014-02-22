@@ -3,6 +3,16 @@
 """
 Emits product pairs with non-zero cosime similarity as per
 user-item collaborative filtering.
+
+This script produces one or more .out files. The idea is to then
+concatenate, sort, and remove duplicate pairs. This can be done with
+the following commands:
+cat *.out > allPairs.out
+sort allPairs.out > allPairs_sort.out
+uniq allPairs_sort.out > allPairs_uniq.out
+
+The script edgeIngest.py can then be used to compute similarity
+scores and insert edge relations into the database.
 """
 
 import multiprocessing as mp
