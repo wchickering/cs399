@@ -103,6 +103,9 @@ def importProductReview(db_curs, category, pr):
     global categories_inserted
     global users_inserted
     global reviews_inserted
+    # ignore reviews by 'unknown' users
+    if pr.userId == 'unknown':
+        return
     # insert product if not already in db
     db_curs.execute(selectProductStmt, (pr.productId,))
     if not db_curs.fetchone():
