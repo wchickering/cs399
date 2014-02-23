@@ -5,7 +5,7 @@ botsPerParentCategoryFilter = 1
 botsPerCategoryFilter = 3
 
 # db params
-db_fname = 'macys.db'
+db_fname = 'data/macys.db'
 createSessionsTableStmt =\
     ('CREATE TABLE IF NOT EXISTS Sessions(sessionId INT, productId INT, '
      'PRIMARY KEY (sessionId, productId))')

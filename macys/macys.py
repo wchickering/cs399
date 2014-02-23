@@ -21,7 +21,7 @@ productsPerPage = 100
 pauseTime = 0.2 # number of second to pause between HTTP requests.
 
 # db params
-db_fname = 'macys.db'
+db_fname = 'data/macys.db'
 createProductsTableStmt =\
     ('CREATE TABLE IF NOT EXISTS Products(Id INT PRIMARY KEY, Url TEXT, '
      'ImgFile TEXT, Description TEXT, Prices TEXT, Available INT, '

@@ -14,7 +14,7 @@ def getParser():
     parser.add_option('-f', '--file', dest='filename', default='categories.csv',
         help='Input CSV file containing <category, item> on each line.',
         metavar='FILE')
-    parser.add_option('-o', '--output', dest='outfilename', default='trainSessions.csv',
+    parser.add_option('-o', '--output', dest='outfilename', default='data/trainSessions.csv',
         help='Output CSV file containing <item, item, item, ...> on each line.',
         metavar='OUT_FILE')
     parser.add_option('-s', '--session-size', dest='session_size', type="int", default=100,

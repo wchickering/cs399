@@ -17,7 +17,7 @@ compareImageFileNameTemplates = 'comparisons/%d_%d.jpg'
 
 def getParser():
     parser = OptionParser()
-    parser.add_option('-d', '--database', dest='dbname', default='macys.db',
+    parser.add_option('-d', '--database', dest='dbname', default='data/macys.db',
         help='Name of Sqlite3 product database.', metavar='DBNAME')
     parser.add_option('-c', '--category', dest='category', default='Skirts',
         help='Category from which to generate item pairs.', metavar='CATEGORY')

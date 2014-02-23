@@ -10,7 +10,7 @@ import sys
 productUrlTemplate = 'http://www1.macys.com/shop/product/?ID=%d'
 
 # db params
-db_fname = 'macys.db'
+db_fname = 'data/macys.db'
 createRecommendsTableStmt =\
     ('CREATE TABLE IF NOT EXISTS Recommends(Id1 INT, Id2 INT, '
      'PRIMARY KEY (Id1, Id2), FOREIGN KEY(Id1) REFERENCES Products(Id), '

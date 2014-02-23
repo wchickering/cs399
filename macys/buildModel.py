@@ -13,14 +13,14 @@ import csv
 
 def getParser():
     parser = OptionParser()
-    parser.add_option('-f', '--file', dest='filename', default='trainSessions.csv',
+    parser.add_option('-f', '--file', dest='filename', default='data/trainSessions.csv',
         help=('CSV file containing training data. Each line consists of tokens '
               'liked in a single session.'), metavar='FILE')
-    parser.add_option('-d', '--dict-fname-in', dest='dict_fname_in', default='tokens.csv',
+    parser.add_option('-d', '--dict-fname-in', dest='dict_fname_in', default='data/tokens.csv',
         help='File containing all tokens in the vocabulary.', metavar='FILE')
-    parser.add_option('--dict-fname-out', dest='dict_fname_out', default='tokens.dict',
+    parser.add_option('--dict-fname-out', dest='dict_fname_out', default='data/tokens.dict',
         help='Save file for dictionary that maps itemids to tokens.', metavar='FILE')
-    parser.add_option('-l', '--lda-file', dest='lda_filename', default='lda.pickle',
+    parser.add_option('-l', '--lda-file', dest='lda_filename', default='data/lda.pickle',
         help='Save file for LDA model.', metavar='FILE')
     parser.add_option('-t', '--num-topics', dest='num_topics', type='int', default=100,
         help='Number of topics in LDA model.', metavar='NUM')

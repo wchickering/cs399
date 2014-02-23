@@ -4,8 +4,8 @@ import sqlite3
 import csv
 
 # params
-db_fname = 'macys.db'
-out_fname = 'recSessions.csv'
+db_fname = 'data/macys.db'
+out_fname = 'data/recSessions.csv'
 
 selectRecommendsStmt = 'SELECT Id1, Id2 FROM Recommends ORDER BY Id1'
 

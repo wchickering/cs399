@@ -84,7 +84,7 @@ class BayesPredictor(LDAPredictor):
 
 def main():
     """A simple, sanity-checking test."""
-    predictor = BayesPredictor(dict_fname='tokens.dict', model_fname='lda.pickle')
+    predictor = BayesPredictor(dict_fname='data/tokens.dict', model_fname='data/lda.pickle')
     print 'Loading Model. . .'
     predictor.loadModel()
     likes = set([960598,666644,632709,551024,932073,960606,824431,914853,1093859,1053814])

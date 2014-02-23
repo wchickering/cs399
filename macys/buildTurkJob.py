@@ -17,9 +17,9 @@ imageUrlTemplate = 'https://dl.dropboxusercontent.com/u/49846997/ComparingSkirts
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-d', '--db-name', dest='db_name', default='macys.db',
+    parser.add_option('-d', '--db-name', dest='db_name', default='data/macys.db',
         help='Name of Sqlite3 product database.', metavar='DBNAME')
-    parser.add_option('-o', '--output', dest='outfilename', default='turkjob.csv',
+    parser.add_option('-o', '--output', dest='outfilename', default='data/turkjob.csv',
         help='Output CSV file.', metavar='OUT_FILE')
     return parser
 

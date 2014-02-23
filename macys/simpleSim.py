@@ -11,9 +11,9 @@ import sqlite3
 import random
 
 # params
-db_fname = 'macys.db'
-dict_fname = 'tokens.dict'
-model_fname = 'lda.pickle'
+db_fname = 'data/macys.db'
+dict_fname = 'data/tokens.dict'
+model_fname = 'data/lda.pickle'
 NUM_INIT_ITEMS = 10
 NUM_ITEMS_PER_ROUND = 10
 ROUNDS = 25

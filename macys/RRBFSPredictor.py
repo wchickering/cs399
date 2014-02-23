@@ -62,7 +62,7 @@ class RRBFSPredictor(ItemPredictor):
 import pickle
 
 # params
-graph_fname = 'recGraph.pickle'
+graph_fname = 'data/recGraph.pickle'
 
 def loadGraph():
     with open(graph_fname, 'r') as f:

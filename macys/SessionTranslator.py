@@ -39,7 +39,7 @@ class SessionTranslator(object):
 def main():
     """A simple, sanity-checking test."""
     print 'Constructing SessionTranslator (and hence, connecting to db). . .'
-    translator = SessionTranslator('macys.db')
+    translator = SessionTranslator('data/macys.db')
     session = [960598,666644,632709,551024,932073,960606,824431,914853,1093859,1053814]
     print 'session =', session
     print 'Translating to category populations. . .'

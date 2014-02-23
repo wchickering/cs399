@@ -4,7 +4,7 @@ from RRBFSDirectedPredictor import RRBFSDirectedPredictor
 import pickle
 
 # params
-graph_fname = 'recDirectedGraph.pickle'
+graph_fname = 'data/recDirectedGraph.pickle'
 
 class MagicWardrobe:
     """

@@ -11,7 +11,6 @@ import random
 import sqlite3
 
 # params
-db_fname = 'macys.db'
 MIN_SESSION_SIZE = 2
 MAX_SESSION_SIZE = 200
 
@@ -19,10 +18,12 @@ selectItemsStmt = 'SELECT Id FROM Products WHERE Description LIKE ? COLLATE NOCA
 
 def getParser():
     parser = OptionParser()
-    parser.add_option('-f', '--file', dest='filename', default='words.txt',
+    parser.add_option('-d', '--database', dest='db_fname', default='data/macys.db',
+        help='sqlite3 database file.', metavar='FILE')
+    parser.add_option('-f', '--file', dest='filename', default='data/words.txt',
         help=('Input file containing unique words from item descriptions, '
               'one per line.'), metavar='FILE')
-    parser.add_option('-o', '--output', dest='outfilename', default='wordSessions.csv',
+    parser.add_option('-o', '--output', dest='outfilename', default='data/wordSessions.csv',
         help='Output CSV file containing <item, item, item, ...> on each line.',
         metavar='OUT_FILE')
     return parser
@@ -49,7 +50,7 @@ def main():
     random.seed()
 
     # Connect to db
-    db_conn = sqlite3.connect(db_fname)
+    db_conn = sqlite3.connect(options.db_fname)
     with db_conn:
         cursor = db_conn.cursor()
         logging.info('Reading data from %s' % options.filename)
