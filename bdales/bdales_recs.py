@@ -20,7 +20,7 @@ webDriverTimeout = 30
 workerQueueSize = 10
 
 # db params
-db_fname = 'bdales.db'
+db_fname = 'data/bdales.db'
 createRecommendsTableStmt =\
     ('CREATE TABLE IF NOT EXISTS Recommends(Id1 INT, Id2 INT, '
      'PRIMARY KEY (Id1, Id2), FOREIGN KEY(Id1) REFERENCES Products(Id), '
