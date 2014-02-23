@@ -15,8 +15,8 @@ import math
 commitInterval = 1000
 createSimilaritiesTableStmt =\
     ('CREATE TABLE IF NOT EXISTS Similarities(ProductId1 INT, ProductId2 INT, '
-     'Similarity REAL, PRIMARY KEY(ProductId1, ProductId2), '
-     'FOREIGN KEY(ProductId1) REFERENCES Products(ProductId), '
+     'CosineSim REAL, ExtJaccard REAL, NumUsers INT, PRIMARY KEY(ProductId1, '
+     'ProductId2), FOREIGN KEY(ProductId1) REFERENCES Products(ProductId), '
      'FOREIGN KEY(ProductId2) REFERENCES Products(ProductId))')
 selectReviewsStmt =\
     ('SELECT UserId, Score FROM Reviews WHERE ProductId = :ProductId '
@@ -25,8 +25,9 @@ selectSimilarityStmt =\
     ('SELECT * FROM Similarities WHERE ProductId1 = :ProductId1 AND '
      'ProductId2 = :ProductId2')
 insertSimilarityStmt =\
-    ('INSERT INTO Similarities (ProductId1, ProductId2, Similarity) '
-     'VALUES (:ProductId1, :ProductId2, :Similarity)')
+    ('INSERT INTO Similarities (ProductId1, ProductId2, CosineSim, '
+     'ExtJaccard, NumReviews) VALUES (:ProductId1, :ProductId2, :CosineSim, '
+     ':ExtJaccard, :NumUsers)')
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -34,10 +35,11 @@ def getParser(usage=None):
         help='sqlite3 database file.', metavar='FILE')
     return parser
 
-def cosSim(scoresA, scoresB):
+def calcSim(scoresA, scoresB):
     """Compute Cosine similarity of sparse vectors in O(n),
        where n is the max nonzero elements of the two vectors.
     """
+    count = 0
     innerProd = 0
     varA = 0
     varB = 0
@@ -51,16 +53,18 @@ def cosSim(scoresA, scoresB):
             varB += scoresB[j][1]**2
             j += 1
         else:
+            count += 1
             innerProd += scoresA[i][1]*scoresB[j][1]
             varA += scoresA[i][1]**2
             varB += scoresB[j][1]**2
             i += 1
             j += 1
     if innerProd == 0:
-        return 0
+        return (0, 0, count)
     else:
-        score = innerProd/(math.sqrt(varA)*math.sqrt(varB))
-        return score
+        cosineSim = innerProd/(math.sqrt(varA)*math.sqrt(varB))
+        extJaccard = innerProd/(varA + varB - innerProd)
+        return (cosineSim, extJaccard, count)
 
 def main():
     # Parse options
@@ -94,12 +98,14 @@ def main():
                     scores1 = [(row[0], row[1]) for row in db_curs.fetchall()]
                     db_curs.execute(selectReviewsStmt, (productId2,))
                     scores2 = [(row[0], row[1]) for row in db_curs.fetchall()]
-                    similarity = cosSim(scores1, scores2)
-                    if similarity == 0:
-                        print 'WARNING: Zero similarity encountered.'
-                        continue
+                    cosineSim, extJaccard, numUsers = calcSim(scores1, scores2)
+                    if cosineSim == 0:
+                        print 'WARNING: Zero cosineSim encountered.'
+                    if extJaccard == 0:
+                        print 'WARNING: Zero extJaccard encountered.'
                     db_curs.execute(insertSimilarityStmt,
-                                    (productId1, productId2, similarity))
+                                    (productId1, productId2, cosineSim,
+                                     extJaccard, numUsers))
                     num_inserts += 1
                     if num_inserts % commitInterval == 0:
                         db_conn.commit()
