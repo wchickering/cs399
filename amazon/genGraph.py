@@ -26,10 +26,10 @@ selectSimilaritiesStmt =\
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-d', '--database', dest='db_fname', default='amazon.db',
+    parser.add_option('-d', '--database', dest='db_fname', default='data/amazon.db',
         help='sqlite3 database file.',
         metavar='FILE')
-    parser.add_option('-o', '--outfile', dest='outfilename', default='graph.pickle',
+    parser.add_option('-o', '--outfile', dest='outfilename', default='data/graph.pickle',
         help='Output filename for pickled graph.',
         metavar='FILE')
     parser.add_option('-w', '--weight', dest='weight', type='int', default=1,

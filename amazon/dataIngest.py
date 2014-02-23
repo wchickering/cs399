@@ -92,7 +92,7 @@ class ProductReview(object):
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-d', '--database', dest='db_fname', default='amazon.db',
+    parser.add_option('-d', '--database', dest='db_fname', default='data/amazon.db',
         help='sqlite3 database file.', metavar='FILE')
     parser.add_option('-c', '--category', dest='category', default=None,
         help='Category of products in datafile.', metavar='FILE')
