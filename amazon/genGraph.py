@@ -6,19 +6,19 @@ relations according to given parameters.
 """
 
 from optparse import OptionParser
+import operator
 import sqlite3
 import pickle
 import sys
 
 # params
-displayInterval = 1
+displayInterval = 1000
 
 # db params
 selectProductsStmt = 'SELECT ProductId FROM Products ORDER BY ProductId'
 selectSimilaritiesStmt =\
     ('SELECT ProductId1, ProductId2, CosineSim, NumUsers '
      'FROM Similarities WHERE '
-     '(ProductId1 = :ProductId OR ProductId2 = :ProductId) AND '
      'CosineSim >= :MinCosineSim AND '
      'ExtJaccard >= :MinExtJaccard AND '
      'NumUsers >= :MinNumUsers '
@@ -57,6 +57,29 @@ def addDirectedEdge(graph, node1, node2, weight):
         graph[node1] = {}
     graph[node1][node2] = weight
 
+def truncateEdges(graph, k):
+    count = 0
+    for node1 in graph:
+        count += 1
+        node1Edges = graph[node1]
+        if len(node1Edges) > k:
+            sortedEdges = sorted(node1Edges.iteritems(), key=operator.itemgetter(1), reverse=True)
+            del sortedEdges[k:]
+            graph[node1] = dict(sortedEdges);
+        if count % displayInterval == 0:
+            print '%d Edges Processed' % count
+
+def printGraph(graph):
+    numLines = 100
+    count = 0
+    for node1 in graph:
+        count += 1
+        if count > numLines:
+            return
+        print 'Node1: ' + node1
+        for node2 in graph[node1]:
+            print '  Node2: ' + node1 + '  Weight: ' + str(graph[node1][node2])
+
 def main():
     # Parse options
     usage = 'Usage: %prog [options]'
@@ -70,33 +93,58 @@ def main():
         db_curs1 = db_conn.cursor()
         graph = {}
         count = 0
-        db_curs1.execute(selectProductsStmt)
+        db_curs1.execute(selectSimilaritiesStmt,
+                          (options.minCosineSim,
+                          options.minExtJaccard,
+                          options.minNumUsers))
         for row in db_curs1.fetchall():
-            productId = row[0]
             count += 1
-            db_curs2 = db_conn.cursor()
-            db_curs2.execute(selectSimilaritiesStmt,
-                             (productId,
-                              options.minCosineSim,
-                              options.minExtJaccard,
-                              options.minNumUsers))
-            for row in db_curs2.fetchall():
-                productId1 = row[0]
-                productId2 = row[1]
-                cosineSim = row[2]
-                numUsers = row[3]
-                if productId1 == productId:
-                    productIdB = productId2
-                else:
-                    productIdB = productId1
-                if options.weight:
-                    weight = cosineSim
-                else:
-                    weight = 1
-                addDirectedEdge(graph, productId, productIdB, weight)
+            productId1 = row[0]
+            productId2 = row[1]
+            cosineSim = row[2]
+            numUsers = row[3]
+            if options.weight:
+                weight = cosineSim
+            else:
+                weight = 1
+            addDirectedEdge(graph, productId1, productId2, weight)
             if count % displayInterval == 0:
-                print '%d Nodes Processed' % count
+                print '%d Edges Processed' % count
+        print 'Truncating Graph...'
+        truncateEdges(graph, options.k)
+    print 'Saving Graph...'
     saveGraph(graph, options.outfilename)
+    print 'Printing Graph...'
+    printGraph(graph)
+
+#        db_curs1.execute(selectProductsStmt)
+#        for row in db_curs1.fetchall():
+#            productId = row[0]
+#            count += 1
+#            db_curs2 = db_conn.cursor()
+#            db_curs2.execute(selectSimilaritiesStmt,
+#                             (productId,
+#                              options.minCosineSim,
+#                              options.minExtJaccard,
+#                              options.minNumUsers))
+#            for row in db_curs2.fetchall():
+#                productId1 = row[0]
+#                productId2 = row[1]
+#                cosineSim = row[2]
+#                numUsers = row[3]
+#                if productId1 == productId:
+#                    productIdB = productId2
+#                else:
+#                    productIdB = productId1
+#
+#                if options.weight:
+#                    weight = cosineSim
+#                else:
+#                    weight = 1
+#                addDirectedEdge(graph, productId, productIdB, weight)
+#            if count % displayInterval == 0:
+#                print '%d Nodes Processed' % count
+#    saveGraph(graph, options.outfilename)
 
 if __name__ == '__main__':
     main()
