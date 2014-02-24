@@ -14,7 +14,7 @@ import sqlite3
 # db params
 createProductsTableStmt =\
     ('CREATE TABLE IF NOT EXISTS Products(ProductId TEXT PRIMARY KEY, Title TEXT, '
-     ' Price TEXT)')
+     ' Price TEXT, StoreId INT)')
 createCategoriesTableStmt =\
     ('CREATE TABLE IF NOT EXISTS Categories(ProductId TEXT, Category TEXT, '
      'PRIMARY KEY (ProductId, Category), FOREIGN KEY(ProductId) REFERENCES '
@@ -29,8 +29,8 @@ createReviewsTableStmt =\
      'Products(ProductId), FOREIGN KEY(UserId) REFERENCES Users(UserId))')
 selectProductStmt = 'SELECT * FROM Products WHERE ProductId = :ProductId'
 insertProductStmt =\
-    ('INSERT INTO Products (ProductId, Title, Price) VALUES (:ProductId, '
-     ':Title, :Price)')
+    ('INSERT INTO Products (ProductId, Title, Price, StoreId) VALUES '
+     '(:ProductId, :Title, :Price, 1)')
 selectCategoryStmt =\
     ('SELECT * FROM Categories WHERE ProductId = :ProductId AND '
      'Category = :Category')
