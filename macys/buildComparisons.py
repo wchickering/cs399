@@ -13,7 +13,7 @@ from ImageConcat import concatImageFiles
 #params
 selectProductsStmt = 'SELECT Id FROM Categories WHERE Category = :Category'
 imageFileNameTemplate = 'images/%d.jpg'
-compareImageFileNameTemplates = 'comparisons/%d_%d.jpg'
+compareImageFileNameTemplates = 'data/comparisons/%d_%d.jpg'
 
 def getParser():
     parser = OptionParser()
