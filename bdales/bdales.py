@@ -14,7 +14,7 @@ import time
 
 # params
 categories_fname = 'categories.json'
-imageFileTemplate = 'images/%d.jpg'
+imageFileTemplate = 'data/images/%d.jpg'
 metaUrlTemplate = 'http://www1.bloomingdales.com/catalog/category/facetedmeta?sortBy=NAME&productsPerPage=%d&pageIndex=%d&parentCategoryId=%d&categoryId=%d'
 productsUrlTemplate = 'http://www1.bloomingdales.com/shop/catalog/product/thumbnail/1?edge=hybrid&limit=none&categoryId=%d&ids=%s'
 productsPerPage = 100
