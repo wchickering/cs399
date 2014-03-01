@@ -117,34 +117,5 @@ def main():
     print 'Printing Graph...'
     printGraph(graph)
 
-#        db_curs1.execute(selectProductsStmt)
-#        for row in db_curs1.fetchall():
-#            productId = row[0]
-#            count += 1
-#            db_curs2 = db_conn.cursor()
-#            db_curs2.execute(selectSimilaritiesStmt,
-#                             (productId,
-#                              options.minCosineSim,
-#                              options.minExtJaccard,
-#                              options.minNumUsers))
-#            for row in db_curs2.fetchall():
-#                productId1 = row[0]
-#                productId2 = row[1]
-#                cosineSim = row[2]
-#                numUsers = row[3]
-#                if productId1 == productId:
-#                    productIdB = productId2
-#                else:
-#                    productIdB = productId1
-#
-#                if options.weight:
-#                    weight = cosineSim
-#                else:
-#                    weight = 1
-#                addDirectedEdge(graph, productId, productIdB, weight)
-#            if count % displayInterval == 0:
-#                print '%d Nodes Processed' % count
-#    saveGraph(graph, options.outfilename)
-
 if __name__ == '__main__':
     main()
