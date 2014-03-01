@@ -18,15 +18,20 @@ createSimilaritiesTableStmt =\
      'CosineSim REAL, ExtJaccard REAL, NumUsers INT, PRIMARY KEY(ProductId1, '
      'ProductId2), FOREIGN KEY(ProductId1) REFERENCES Products(ProductId), '
      'FOREIGN KEY(ProductId2) REFERENCES Products(ProductId))')
+selectGlobalBiasStmt = 'SELECT Value FROM Globals WHERE Key = "Bias"'
 selectReviewsStmt =\
-    ('SELECT UserId, Score FROM Reviews WHERE ProductId = :ProductId '
-     'ORDER BY UserId')
+    ('SELECT R.UserId, R.Score - PB.Bias - UB.Bias '
+     'FROM Reviews AS R, ProductBiases AS PB, UserBiases AS UB '
+     'WHERE R.ProductId = PB.ProductId '
+     'AND R.UserId = UB.UserId '
+     'AND R.ProductId = :ProductId '
+     'ORDER BY R.UserId')
 selectSimilarityStmt =\
     ('SELECT * FROM Similarities WHERE ProductId1 = :ProductId1 AND '
      'ProductId2 = :ProductId2')
 insertSimilarityStmt =\
     ('INSERT INTO Similarities (ProductId1, ProductId2, CosineSim, '
-     'ExtJaccard, NumReviews) VALUES (:ProductId1, :ProductId2, :CosineSim, '
+     'ExtJaccard, NumUsers) VALUES (:ProductId1, :ProductId2, :CosineSim, '
      ':ExtJaccard, :NumUsers)')
 
 def getParser(usage=None):
@@ -85,6 +90,10 @@ def main():
         db_curs = db_conn.cursor()
         # create Similarities table if not already exists
         db_curs.execute(createSimilaritiesTableStmt)
+        # Retrieve the global bias
+        db_curs.execute(selectGlobalBiasStmt)
+        globalBias = float(db_curs.fetchone()[0])
+        print 'Global Bias = %.3f' % globalBias
 
         with open(inputfilename, 'r') as inputfile:
             num_inserts = 0
@@ -95,12 +104,16 @@ def main():
                 db_curs.execute(selectSimilarityStmt, (productId1, productId2))
                 if not db_curs.fetchone():
                     db_curs.execute(selectReviewsStmt, (productId1,))
-                    scores1 = [(row[0], row[1]) for row in db_curs.fetchall()]
+                    scores1 = [(row[0], row[1] - globalBias)\
+                               for row in db_curs.fetchall()]
                     db_curs.execute(selectReviewsStmt, (productId2,))
-                    scores2 = [(row[0], row[1]) for row in db_curs.fetchall()]
+                    scores2 = [(row[0], row[1] - globalBias)\
+                               for row in db_curs.fetchall()]
                     cosineSim, extJaccard, numUsers = calcSim(scores1, scores2)
+                    assert(cosineSim != 0.0)
                     if cosineSim == 0:
                         print 'WARNING: Zero cosineSim encountered.'
+                    assert(extJaccard != 0.0)
                     if extJaccard == 0:
                         print 'WARNING: Zero extJaccard encountered.'
                     db_curs.execute(insertSimilarityStmt,
