@@ -15,8 +15,8 @@ import sqlite3
 createProductsTableStmt =\
     ('CREATE TABLE IF NOT EXISTS Products(ProductId TEXT PRIMARY KEY, Title TEXT, '
      ' Price TEXT)')
-createCategoriesTableStmt =\
-    ('CREATE TABLE IF NOT EXISTS Categories(ProductId TEXT, Category TEXT, '
+createFileCategoriesTableStmt =\
+    ('CREATE TABLE IF NOT EXISTS FileCategories(ProductId TEXT, Category TEXT, '
      'PRIMARY KEY (ProductId, Category), FOREIGN KEY(ProductId) REFERENCES '
      'Products(ProductId))')
 createUsersTableStmt =\
@@ -32,10 +32,10 @@ insertProductStmt =\
     ('INSERT INTO Products (ProductId, Title, Price, StoreId) VALUES '
      '(:ProductId, :Title, :Price)')
 selectCategoryStmt =\
-    ('SELECT * FROM Categories WHERE ProductId = :ProductId AND '
+    ('SELECT * FROM FileCategories WHERE ProductId = :ProductId AND '
      'Category = :Category')
 insertCategoryStmt =\
-    ('INSERT INTO Categories (ProductId, Category) VALUES (:ProductId, '
+    ('INSERT INTO FileCategories (ProductId, Category) VALUES (:ProductId, '
      ':Category)')
 selectUserStmt = 'SELECT * FROM Users WHERE UserId = :UserId'
 insertUserStmt =\
@@ -164,8 +164,8 @@ def main():
         db_curs = db_conn.cursor()
         # create Products table if not already exists
         db_curs.execute(createProductsTableStmt)
-        # create Categories table if not already exists
-        db_curs.execute(createCategoriesTableStmt)
+        # create FileCategories table if not already exists
+        db_curs.execute(createFileCategoriesTableStmt)
         # create Users table if not already exists
         db_curs.execute(createUsersTableStmt)
         # create Reviews table id not already exists
