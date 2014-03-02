@@ -19,12 +19,14 @@ import multiprocessing as mp
 import Queue
 from optparse import OptionParser
 import sqlite3
+import os
 
 # params
 workerTimeout = 30
 workerQueueSize = 100
 
 # db params
+createIndexStmt = 'CREATE INDEX IF NOT EXISTS Reviews_UserId ON Reviews(UserId)'
 selectUsersStmt = 'SELECT UserId FROM Users'
 selectReviewsStmt =\
     'SELECT ProductId FROM Reviews WHERE UserId = :UserId ORDER BY ProductId'
@@ -34,9 +36,11 @@ def getParser(usage=None):
     parser.add_option('-d', '--database', dest='db_fname', default='data/amazon.db',
         help='sqlite3 database file.', metavar='FILE')
     parser.add_option('-w', '--numWorkers', dest='numWorkers', type='int',
-        default=4, help='Number of worker processes.', metavar='NUM_WORKERS')
-    parser.add_option('-o', '--outfilePrefix', dest='outfilePrefix',
+        default=4, help='Number of worker processes.', metavar='NUM')
+    parser.add_option('-p', '--outfilePrefix', dest='outfilePrefix',
         default='nonzeroSims_', help='Prefix of output files.', metavar='PREFIX')
+    parser.add_option('-o', '--outfileDir', dest='outfileDir',
+        default='data', help='Output directory.', metavar='DIR')
     return parser
 
 def worker(db_fname, outfilename, q):
@@ -59,17 +63,17 @@ def worker(db_fname, outfilename, q):
 def master(db_conn, queues, workers):
     db_curs1 = db_conn.cursor()
     db_curs1.execute(selectUsersStmt)
-    iter = 0
+    i = 0
     for row1 in db_curs1.fetchall():
         userId = row1[0]
-        workerIdx = iter % len(workers)
+        workerIdx = i % len(workers)
         while True:
             try:
                 queues[workerIdx].put(userId, timeout=workerTimeout)
                 break
             except Queue.Full:
                 print 'WARNING: Worker Queue Full!'
-        iter += 1
+        i += 1
 
     # close queues
     for q in queues:
@@ -89,7 +93,8 @@ def main():
     # create worker processes
     workers = []
     for w in range(options.numWorkers):
-        outfilename = options.outfilePrefix + str(w) + '.out'
+        outfilename = os.path.join(options.outfileDir, 
+                                   options.outfilePrefix + str(w) + '.out')
         workers.append(mp.Process(target=worker,
             args=(options.db_fname, outfilename, queues[w])))
 
@@ -98,8 +103,13 @@ def main():
         workers[w].start()
 
     # connect to db
+    print 'Connecting to %s. . .' % options.db_fname
     db_conn = sqlite3.connect(options.db_fname)
     with db_conn:
+        db_curs = db_conn.cursor()
+        # create index if not already exists
+        db_curs.execute(createIndexStmt)
+        # do master task
         master(db_conn, queues, workers)
 
 if __name__ == '__main__':
