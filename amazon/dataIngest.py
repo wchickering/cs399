@@ -29,7 +29,7 @@ createReviewsTableStmt =\
      'Products(ProductId), FOREIGN KEY(UserId) REFERENCES Users(UserId))')
 selectProductStmt = 'SELECT * FROM Products WHERE ProductId = :ProductId'
 insertProductStmt =\
-    ('INSERT INTO Products (ProductId, Title, Price, StoreId) VALUES '
+    ('INSERT INTO Products (ProductId, Title, Price) VALUES '
      '(:ProductId, :Title, :Price)')
 selectCategoryStmt =\
     ('SELECT * FROM FileCategories WHERE ProductId = :ProductId AND '
@@ -98,7 +98,7 @@ def getParser(usage=None):
         help='Category of products in datafile.', metavar='FILE')
     return parser
 
-def importProductReview(db_curs, category, pr):
+def importProductReview(db_curs, fileCategory, pr):
     global products_inserted
     global categories_inserted
     global users_inserted
@@ -111,10 +111,10 @@ def importProductReview(db_curs, category, pr):
     if not db_curs.fetchone():
         db_curs.execute(insertProductStmt, (pr.productId, pr.title, pr.price))
         products_inserted += 1
-    # insert category if not already in db
-    db_curs.execute(selectCategoryStmt, (pr.productId, category))
+    # insert fileCategory if not already in db
+    db_curs.execute(selectCategoryStmt, (pr.productId, fileCategory))
     if not db_curs.fetchone():
-        db_curs.execute(insertCategoryStmt, (pr.productId, category))
+        db_curs.execute(insertCategoryStmt, (pr.productId, fileCategory))
         categories_inserted += 1
     # insert user if not already in db
     db_curs.execute(selectUserStmt, (pr.userId,))
@@ -150,12 +150,12 @@ def main():
         print >> sys.stderr, 'Cannot find: %s' % inputfilename
         return
 
-    # determine category
+    # determine fileCategory
     if options.category:
-        category = options.category
+        fileCategory = options.category
     else:
-        category = os.path.basename(inputfilename).split('.')[0]
-    print 'Category: %s' % category
+        fileCategory = os.path.basename(inputfilename).split('.')[0]
+    print 'FileCategory: %s' % fileCategory
 
     # connect to db
     print 'Connecting to %s. . .' % options.db_fname
@@ -185,7 +185,7 @@ def main():
                 value = tokens[1].rstrip()
                 pr.setAttr(attribute, value)
                 if attribute == 'text':
-                    importProductReview(db_curs, category, pr)
+                    importProductReview(db_curs, fileCategory, pr)
                     review_cnt += 1
                     if review_cnt >= maxReviews:
                         break
