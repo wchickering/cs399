@@ -26,7 +26,7 @@ workerTimeout = 30
 workerQueueSize = 100
 
 # db params
-createIndexStmt = 'CREATE INDEX IF NOT EXISTS Reviews_UserId ON Reviews(UserId)'
+createIndexStmt = 'CREATE INDEX IF NOT EXISTS Reviews_UserId_Idx ON Reviews(UserId)'
 selectUsersStmt = 'SELECT UserId FROM Users'
 selectReviewsStmt =\
     'SELECT ProductId FROM Reviews WHERE UserId = :UserId ORDER BY ProductId'
