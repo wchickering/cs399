@@ -19,12 +19,11 @@ workerQueueSize = 1000
 
 # db params
 dbTimeout = 5
-selectGlobalBiasStmt = 'SELECT Value FROM Globals WHERE Key = "Bias"'
 selectReviewsStmt =\
-    ('SELECT R.UserId, R.Score - PB.Bias - UB.Bias, Time, Summary '
-     'FROM Reviews AS R, ProductBiases AS PB, UserBiases AS UB '
+    ('SELECT R.UserId, R.AdjustedScore - PB.Bias, Time, Summary '
+     'FROM Reviews AS R, '
+     'ProductBiases AS PB '
      'WHERE R.ProductId = PB.ProductId '
-     'AND R.UserId = UB.UserId '
      'AND R.ProductId = :ProductId '
      'ORDER BY R.UserId')
 
@@ -46,7 +45,7 @@ def computeSim(reviewsA, reviewsB):
     """Compute Cosine similarity of sparse vectors in O(n),
        where n is the max nonzero elements of the two vectors.
     """
-    numUsers = 0
+    numUsersCommon = 0
     innerProd = 0
     varA = 0
     varB = 0
@@ -73,7 +72,7 @@ def computeSim(reviewsA, reviewsB):
                     i += 1
                     j += 1
                     continue # ignore duplicate reviews
-            numUsers += 1
+            numUsersCommon += 1
             scoreA = reviewsA[i][1]
             scoreB = reviewsB[j][1]
             innerProd += scoreA*scoreB
@@ -82,10 +81,10 @@ def computeSim(reviewsA, reviewsB):
             i += 1
             j += 1
     if innerProd == 0:
-        return (0, numUsers)
+        return (0, numUsersCommon)
     else:
         cosineSim = innerProd/(math.sqrt(varA)*math.sqrt(varB))
-        return (cosineSim, numUsers)
+        return (cosineSim, numUsersCommon)
 
 
 def worker(workerIdx, q, db_fname, minUsers, outputFileName):
@@ -94,9 +93,6 @@ def worker(workerIdx, q, db_fname, minUsers, outputFileName):
     # connect to db
     db_conn = sqlite3.connect(db_fname, dbTimeout)
     db_curs = db_conn.cursor()
-    # Retrieve the global bias
-    db_curs.execute(selectGlobalBiasStmt)
-    globalBias = float(db_curs.fetchone()[0])
 
     print 'Writing to %s . . .' % outputFileName
     with open(outputFileName, 'wb') as csvfile:
@@ -105,19 +101,20 @@ def worker(workerIdx, q, db_fname, minUsers, outputFileName):
         while True:
             (productId1, productId2) = q.get()
             db_curs.execute(selectReviewsStmt, (productId1,))
-            reviews1 = [(row[0], row[1] - globalBias, row[2], row[3])\
+            reviews1 = [(row[0], row[1], row[2], row[3])\
                         for row in db_curs.fetchall()]
             db_curs.execute(selectReviewsStmt, (productId2,))
-            reviews2 = [(row[0], row[1] - globalBias, row[2], row[3])\
+            reviews2 = [(row[0], row[1], row[2], row[3])\
                         for row in db_curs.fetchall()]
-            cosineSim, numUsers = computeSim(reviews1, reviews2)
+            cosineSim, numUsersCommon = computeSim(reviews1, reviews2)
             if numUsers < minUsers:
                 num_skips += 1
                 continue # skip when below minUsers threshold
             if cosineSim == 0:
                 num_skips += 1
                 continue # skip zero similarity edges
-            writer.writerow([productId1, productId2, cosineSim, numUsers])
+            writer.writerow([productId1, productId2, cosineSim,
+                             numUsersCommon, len(reviews1), len(reviews2)])
             num_writes += 1
 
 
