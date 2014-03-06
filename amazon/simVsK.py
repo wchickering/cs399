@@ -12,7 +12,7 @@ import os
 import csv
 
 # params
-outputFileTemplate = '%s_%s.csv'
+outputFileTemplate = '%s_%s_%s.csv'
 
 # db params
 selectGlobalBiasStmt = 'SELECT Value FROM Globals WHERE Key = "Bias"'
@@ -85,13 +85,14 @@ def main():
         print 'Global Bias = %.3f' % globalBias
 
         with open(inputfilename, 'r') as inputfile:
+            progName = os.path.splitext(os.path.basename(__file__))[0]
             for line in inputfile:
                 tokens = line.split(',')
                 productId1 = tokens[0].strip()
                 productId2 = tokens[1].strip()
                 outputFileName = os.path.join(options.outputDir,
                                               outputFileTemplate %
-                                              (productId1, productId2))
+                                              (progName, productId1, productId2))
                 print 'Writing %s . . .' % outputFileName
                 with open(outputFileName, 'wb') as csvfile:
                     writer = csv.writer(csvfile)
