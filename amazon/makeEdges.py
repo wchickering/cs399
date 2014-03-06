@@ -80,6 +80,14 @@ def computeSim(reviewsA, reviewsB):
             varB += scoreB**2
             i += 1
             j += 1
+    while i < len(reviewsA):
+        scoreA = reviewsA[i][1]
+        varA += scoreA**2
+        i += 1
+    while j < len(reviewsB):
+        scoreB = reviewsB[i][1]
+        varB += scoreB**2
+        j += 1
     if innerProd == 0:
         return (0, numUsersCommon)
     else:
