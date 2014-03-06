@@ -1,6 +1,7 @@
 #!/usr/local/bin/python
 
 import multiprocessing as mp
+import Queue
 from optparse import OptionParser
 import sqlite3
 import csv
