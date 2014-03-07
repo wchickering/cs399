@@ -6,10 +6,13 @@ from optparse import OptionParser
 import sqlite3
 import csv
 import os
+import sys
 import math
 import numpy
 
 # params
+K = 160
+sigma = 0.3
 workerTimeout = 15
 workerQueueSize = 100
 outputFileTemplate = '%s_%s_%s.csv'
@@ -34,11 +37,107 @@ def getParser(usage=None):
         help='Output file prefix.', metavar='STR')
     parser.add_option('-s', '--step', dest='step', type='int', default=10,
         help='Step size for K.', metavar='NUM')
+    parser.add_option('-c', '--cosineFunc', dest='cosineFunc',
+        default='prefSim',
+        help='Similarity function to use: "prefSim" (default) or "randSim"',
+        metavar='NAME')
+    parser.add_option('-K', dest='K', type='int', default=None,
+        help='Parameter K for xxxxSimAlt1() functions.', metavar='NUM')
+    parser.add_option('--sigma', dest='sigma', type='float', default=None,
+        help='Parameter sigma for xxxxSimAlt1() functions.', metavar='FLOAT')
     return parser
 
-def computeSim(reviewsA, reviewsB, biasA, biasB):
-    """Compute Cosine similarity of sparse vectors in O(n),
-       where n is the max nonzero elements of the two vectors.
+def randSim(reviewsA, reviewsB, biasA, biasB):
+    """Compute the "random" similarity between items A and B.
+       This similarity function is the cosine similarity that only
+       includes ratings by users who have rated both items.
+    """
+    numUsersCommon = 0
+    innerProd = 0
+    varA = 0
+    varB = 0
+    i = 0
+    j = 0
+    while i < len(reviewsA) and j < len(reviewsB):
+        userIdA = reviewsA[i][1]
+        userIdB = reviewsB[j][1]
+        if userIdA < userIdB:
+            i += 1
+        elif userIdA > userIdB:
+            j += 1
+        else:
+            timeA = reviewsA[i][0]
+            timeB = reviewsB[j][0]
+            if timeA == timeB:
+                i += 1
+                j += 1
+                continue # ignore duplicate reviews
+            numUsersCommon += 1
+            scoreA = reviewsA[i][2] - biasA
+            scoreB = reviewsB[j][2] - biasB
+            innerProd += scoreA*scoreB
+            varA += scoreA**2
+            varB += scoreB**2
+            i += 1
+            j += 1
+    if innerProd == 0:
+        return (0, numUsersCommon)
+    else:
+        cosineSim = innerProd/(math.sqrt(varA)*math.sqrt(varB))
+        return (cosineSim, numUsersCommon)
+
+def randSimAlt1(reviewsA, reviewsB, biasA, biasB):
+    """Compute the "random" similarity between items A and B.
+       This similarity function is the cosine similarity that only
+       includes ratings by users who have rated both items.
+       Altered Version 1: If the length of a reviews vector is less than K,
+           we add (K - len(CommonReviewers))*sigma**2 to its variance as
+           used in the cosine similarity function, where K and sigma are
+           global parameters.
+    """
+    numUsersCommon = 0
+    innerProd = 0
+    varA = 0
+    varB = 0
+    i = 0
+    j = 0
+    while i < len(reviewsA) and j < len(reviewsB):
+        userIdA = reviewsA[i][1]
+        userIdB = reviewsB[j][1]
+        if userIdA < userIdB:
+            i += 1
+        elif userIdA > userIdB:
+            j += 1
+        else:
+            timeA = reviewsA[i][0]
+            timeB = reviewsB[j][0]
+            if timeA == timeB:
+                i += 1
+                j += 1
+                continue # ignore duplicate reviews
+            numUsersCommon += 1
+            scoreA = reviewsA[i][2] - biasA
+            scoreB = reviewsB[j][2] - biasB
+            innerProd += scoreA*scoreB
+            varA += scoreA**2
+            varB += scoreB**2
+            i += 1
+            j += 1
+    # Magical fudge factor
+    if numUsersCommon < K:
+        varA += (K - numUsersCommon)*sigma**2
+        varB += (K - numUsersCommon)*sigma**2
+    if innerProd == 0:
+        return (0, numUsersCommon)
+    else:
+        cosineSim = innerProd/(math.sqrt(varA)*math.sqrt(varB))
+        return (cosineSim, numUsersCommon)
+
+def prefSim(reviewsA, reviewsB, biasA, biasB):
+    """Compute the "preferential" similarity between items A and B.
+       This similarity function is the cosine similarity that includes
+       ratings by users who have rated both items as well as those 
+       by users who have rated only one item.
     """
     numUsersCommon = 0
     innerProd = 0
@@ -86,7 +185,67 @@ def computeSim(reviewsA, reviewsB, biasA, biasB):
         cosineSim = innerProd/(math.sqrt(varA)*math.sqrt(varB))
         return (cosineSim, numUsersCommon)
 
-def doExpt(db_conn, writer, stepSize, productId1, productId2):
+def prefSimAlt1(reviewsA, reviewsB, biasA, biasB):
+    """Compute the "preferential" similarity between items A and B.
+       This similarity function is the cosine similarity that includes
+       ratings by users who have rated both items as well as those 
+       by users who have rated only one item.
+       Altered Version 1: If the length of a reviews vector is less than K,
+           we add (K - len(reviews))*sigma**2 to its variance as used in the
+           cosine similarity function, where K and sigma are global parameters.
+    """
+    numUsersCommon = 0
+    innerProd = 0
+    varA = 0
+    varB = 0
+    i = 0
+    j = 0
+    while i < len(reviewsA) and j < len(reviewsB):
+        userIdA = reviewsA[i][1]
+        userIdB = reviewsB[j][1]
+        if userIdA < userIdB:
+            scoreA = reviewsA[i][2] - biasA
+            varA += scoreA**2
+            i += 1
+        elif userIdA > userIdB:
+            scoreB = reviewsB[j][2] - biasB
+            varB += scoreB**2
+            j += 1
+        else:
+            timeA = reviewsA[i][0]
+            timeB = reviewsB[j][0]
+            if timeA == timeB:
+                i += 1
+                j += 1
+                continue # ignore duplicate reviews
+            numUsersCommon += 1
+            scoreA = reviewsA[i][2] - biasA
+            scoreB = reviewsB[j][2] - biasB
+            innerProd += scoreA*scoreB
+            varA += scoreA**2
+            varB += scoreB**2
+            i += 1
+            j += 1
+    while i < len(reviewsA):
+        scoreA = reviewsA[i][2] - biasA
+        varA += scoreA**2
+        i += 1
+    while j < len(reviewsB):
+        scoreB = reviewsB[j][2] - biasB
+        varB += scoreB**2
+        j += 1
+    # Magical fudge factor
+    if len(reviewsA) < K:
+        varA += (K - len(reviewsA))*sigma**2
+    if len(reviewsB) < K:
+        varB += (K - len(reviewsB))*sigma**2
+    if innerProd == 0:
+        return (0, numUsersCommon)
+    else:
+        cosineSim = innerProd/(math.sqrt(varA)*math.sqrt(varB))
+        return (cosineSim, numUsersCommon)
+
+def doExpt(db_conn, writer, stepSize, cosineFunc, productId1, productId2):
     db_curs = db_conn.cursor()
     # fetch product reviews
     db_curs.execute(selectReviewsStmt, (productId1,))
@@ -134,12 +293,13 @@ def doExpt(db_conn, writer, stepSize, productId1, productId2):
             else:
                 bias2 = 0.0
             # compute cosine similarity at present time slice
+            # using the provided function.
             cosineSim, numUserCommon =\
-                computeSim(pastReviews1, pastReviews2, bias1, bias2)
+                cosineFunc(pastReviews1, pastReviews2, bias1, bias2)
             # write step info
             writer.writerow([count, i, j, numUserCommon, cosineSim])
 
-def worker(workerIdx, q, db_fname, outputDir, prefix, step):
+def worker(workerIdx, q, db_fname, outputDir, prefix, step, cosineFunc):
     num_writes = 0
     num_skips = 0
     # connect to db
@@ -157,7 +317,7 @@ def worker(workerIdx, q, db_fname, outputDir, prefix, step):
             print 'Writing %s . . .' % outputFileName
             with open(outputFileName, 'wb') as csvfile:
                 writer = csv.writer(csvfile)
-                doExpt(db_conn, writer, step, productId1, productId2)
+                doExpt(db_conn, writer, step, cosineFunc, productId1, productId2)
                 num_writes += 1
 
 def master(inputfile, queues, workers):
@@ -196,6 +356,18 @@ def main():
         prefix = options.prefix
     else:
         prefix = os.path.splitext(os.path.basename(__file__))[0]
+    try:
+        cosineFunc = globals()[options.cosineFunc]
+    except KeyError:
+        print >> sys.stderr,\
+            'Invalid Similarity function: %s' % options.cosineFunc
+        return
+    global K
+    if options.K:
+        K = options.K
+    global sigma
+    if options.sigma:
+        sigma = options.sigma
 
     # create queues
     queues = []
@@ -207,7 +379,7 @@ def main():
     for w in range(options.numWorkers):
         workers.append(mp.Process(target=worker,
             args=(w, queues[w], options.db_fname, options.outputDir, prefix,
-                  options.step)))
+                  options.step, cosineFunc)))
 
     # start worker processes
     for w in range(options.numWorkers):
