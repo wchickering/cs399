@@ -1,7 +1,7 @@
 #!/usr/local/bin/python
 
 """
-Aggregates results of experiments into a single data file.
+Aggregates results of experiment 1 into a single data file.
 """
 
 from optparse import OptionParser
