@@ -7,6 +7,7 @@ Useful when too many files for shell argument expansion.
 
 from optparse import OptionParser
 import os
+import sys
 from fnmatch import fnmatch
 
 def getParser(usage=None):

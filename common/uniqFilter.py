@@ -7,6 +7,7 @@ for inclusion in output.
 
 from optparse import OptionParser
 import os
+import sys
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
