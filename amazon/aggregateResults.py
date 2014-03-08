@@ -7,6 +7,7 @@ Aggregates results of experiments into a single data file.
 from optparse import OptionParser
 import csv
 import os
+import sys
 from fnmatch import fnmatch
 
 # params
@@ -19,8 +20,6 @@ simIdx = 4
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-o', '--output-dir', dest='outputDir', default='output',
-        help='Output directory.', metavar='DIR')
     parser.add_option('-p', '--pattern', dest='pattern',
         default='experiment1_*_*.csv', help='Input file pattern.',
         metavar='PATTERN')
@@ -78,7 +77,7 @@ def main():
             continue
         if not fnmatch(filename, options.pattern):
             continue
-        print 'Processing %s . . .' % filename
+        print >> sys.stderr, 'Processing %s . . .' % filename
         filenames.append(filename)
         # record NumUsers for first file only (useful later)
         if not variances:
@@ -166,19 +165,14 @@ def main():
         j += 1
 
     # Write results:
-    progName = os.path.splitext(os.path.basename(__file__))[0]
-    outputFileName = os.path.join(options.outputDir,
-                                  outputFileTemplate % progName)
-    print 'Writing to %s . . .' % outputFileName
-    with open(outputFileName, 'wb') as csvfile:
-        writer = csv.writer(csvfile, quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-        for i in range(len(avgVariance)):
-            writer.writerow([numUsers[i],
-                             avgVariance[i], varVariance[i],
-                             avgError[i], varError[i],
-                             avgCommonUsers[i], varCommonUsers[i],
-                             avgLess[i], varLess[i],
-                             maxVariance[i], maxFilenames[i]])
+    writer = csv.writer(sys.stdout, quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+    for i in range(len(avgVariance)):
+        writer.writerow([numUsers[i],
+                         avgVariance[i], varVariance[i],
+                         avgError[i], varError[i],
+                         avgCommonUsers[i], varCommonUsers[i],
+                         avgLess[i], varLess[i],
+                         maxVariance[i], maxFilenames[i]])
 
 if __name__ == '__main__':
     main()
