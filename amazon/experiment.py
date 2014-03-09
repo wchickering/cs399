@@ -17,6 +17,7 @@ stepSize = 10
 workerTimeout = 15
 workerQueueSize = 100
 outputFileTemplate = '%s_%s_%s.csv'
+END_OF_QUEUE = -1
 
 #db params
 dbTimeout = 5
@@ -193,6 +194,7 @@ def worker(workerIdx, q, db_fname, outputDir, prefix, exptFunc, cosineFunc):
     # TODO: Need a terminal condition here.
     while True:
         (productId1, productId2) = q.get()
+        if productId1 == END_OF_QUEUE: break
         outputFileName = os.path.join(outputDir, outputFileTemplate %
                                       (prefix, productId1, productId2))
         if os.path.isfile(outputFileName):
@@ -224,6 +226,7 @@ def master(inputfile, queues, workers):
 
     # close queues
     for q in queues:
+        q.put((END_OF_QUEUE, END_OF_QUEUE))
         q.close()
 
 def main():
