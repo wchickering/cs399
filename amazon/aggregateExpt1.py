@@ -20,9 +20,8 @@ simIdx = 4
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-p', '--pattern', dest='pattern',
-        default='experiment1_*_*.csv', help='Input file pattern.',
-        metavar='PATTERN')
+    parser.add_option('-p', '--pattern', dest='pattern', default='*.csv',
+        help='Input file pattern.', metavar='PATTERN')
     return parser
 
 def getNumUsers(csvFileName):
