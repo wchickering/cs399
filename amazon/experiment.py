@@ -95,9 +95,11 @@ def expt1(db_conn, writer, cosineFunc, productId1, productId2):
     count = 0
     # TODO: Fix so that we capture the last (partial) step.
     while i < len(reviews1) or j < len(reviews2):
-        if j == len(reviews2) or reviews1[i][0] <= reviews2[j][0]:
+        if j == len(reviews2) or\
+          (i < len(reviews1) and reviews1[i][0] <= reviews2[j][0]):
             i += 1
-        elif i == len(reviews1) or reviews1[i][0] > reviews2[j][0]:
+        elif i == len(reviews1) or\
+            (j < len(reviews2) and reviews1[i][0] > reviews2[j][0]):
             j += 1
         else:
             raise RuntimeError('Unreachable code.')
