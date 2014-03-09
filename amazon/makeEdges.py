@@ -35,7 +35,7 @@ def getParser(usage=None):
     parser.add_option('-o', '--output-dir', dest='outputDir', default='data',
         help='Output directory.', metavar='DIR')
     parser.add_option('-w', '--numWorkers', dest='numWorkers', type='int',
-        default=4, help='Number of worker processes.', metavar='NUM')
+        default=1, help='Number of worker processes.', metavar='NUM')
     parser.add_option('-m', '--minUsers', dest='minUsers', type='int',
         default=1, help='Minimum number of users for a similarity.', metavar='NUM')
     return parser

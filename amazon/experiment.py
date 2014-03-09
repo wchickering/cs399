@@ -34,7 +34,7 @@ selectReviewsOrderByUserStmt =\
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-w', '--numWorkers', dest='numWorkers', type='int',
-        default=4, help='Number of worker processes.', metavar='NUM')
+        default=1, help='Number of worker processes.', metavar='NUM')
     parser.add_option('-d', '--database', dest='db_fname',
         default='data/amazon.db', help='sqlite3 database file.', metavar='FILE')
     parser.add_option('-o', '--output-dir', dest='outputDir', default=None,

@@ -26,7 +26,7 @@ def getParser(usage=None):
     parser.add_option('-o', '--output-dir', dest='outputDir', default='output',
         help='Output directory.', metavar='DIR')
     parser.add_option('-w', '--numWorkers', dest='numWorkers', type='int',
-        default=4, help='Number of worker processes.', metavar='NUM')
+        default=1, help='Number of worker processes.', metavar='NUM')
     parser.add_option('-p', '--prefix', dest='prefix', default=None,
         help='Output file prefix.', metavar='STR')
     return parser
