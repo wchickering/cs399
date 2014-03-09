@@ -15,24 +15,25 @@ import similarity
 
 # params
 randomSeed = 0
-workerTimeout = 15
-workerQueueSize = 100
-outputFileTemplate = '%s_%s.csv'
+workerTimeout = 30
+workerQueueSize = 1000
+outputFileTemplate = '%s_%d.csv'
 END_OF_QUEUE = -1
 
 #db params
 dbTimeout = 5
+selectProductsStmt = 'SELECT ProductId FROM Products'
 selectTargetsStmt =\
     ('SELECT  UserId, AdjustedScore '
      'FROM Reviews '
      'WHERE ProductId = :ProductId ')
 selectNeighborsStmt =\
     ('SELECT ProductId2 as ProductId '
-     'FROM Similarities '
+     'FROM Neighbors '
      'WHERE ProductId1 = :ProductId1 '
      'UNION '
      'SELECT ProductId1 as ProductId '
-     'FROM Similarities '
+     'FROM Neighbors '
      'WHERE ProductId2 = :ProductId2 ')
 selectReviewsStmt =\
     ('SELECT Time, UserId, AdjustedScore '
@@ -43,7 +44,7 @@ selectReviewsStmt =\
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-w', '--numWorkers', dest='numWorkers', type='int',
-        default=4, help='Number of worker processes.', metavar='NUM')
+        default=1, help='Number of worker processes.', metavar='NUM')
     parser.add_option('-d', '--database', dest='db_fname',
         default='data/amazon.db', help='sqlite3 database file.', metavar='FILE')
     parser.add_option('-o', '--output-dir', dest='outputDir',
@@ -52,57 +53,56 @@ def getParser(usage=None):
         help=('Similarity function to use: "prefSim" (default), "randSim", '
               '"prefSimAlt1", or "randSimAlt1"'),
         metavar='FUNCNAME')
-    parser.add_option('-s', '--sampleRate', dest='sampleRate', type='float',
-        default=1.0, help='Fraction of ratings to predict.', metavar='FLOAT')
+    parser.add_option('--productSampleRate', dest='productSampleRate', type='float',
+        default=0.01, help='Fraction of products to predict review scores for.',
+        metavar='FLOAT')
+    parser.add_option('--reviewSampleRate', dest='reviewSampleRate', type='float',
+        default=0.1, help='Fraction of review scores to predict.', metavar='FLOAT')
     parser.add_option('-K', dest='K', type='int', default=None,
         help='Parameter K for prefSimAlt1 or randSimAlt1.', metavar='NUM')
     parser.add_option('--sigma', dest='sigma', type='float', default=None,
         help='Parameter sigma for prefSimAlt1 or randSimAlt1.', metavar='FLOAT')
     return parser
 
-def doExperiment(db_conn, csvfile, cosineFunc, sampleRate, targetProductId):
-
-    writer = csv.writer(csvfile)
-    db_curs = db_conn.cursor()
-
-    # get the neighbors
-    db_curs.execute(selectNeighborsStmt, (targetProductId, targetProductId))
-    neighbors = db_curs.fetchall()
-    assert(neighbors)
-
-    # get target reviews
-    db_curs.execute(selectReviewsStmt, (targetProductId,))
-    targetReviews = [(row[0], row[1], row[2]) for row in db_curs.fetchall()]
-    assert(targetReviews)
-
-    # get prediction targets
+def doExperiment(db_conn, csvfile, cosineFunc, reviewSampleRate, targetProductId):
     count = 0
     skips = 0
     totalError = 0
     totalSquaredError = 0
+    writer = csv.writer(csvfile)
+    # get the neighbors
+    db_curs = db_conn.cursor()
+    db_curs.execute(selectNeighborsStmt, (targetProductId, targetProductId))
+    neighbors = db_curs.fetchall()
+    if not neighbors:
+        #print 'No neighbors for %s.' % targetProductId
+        return 0
+    # get target reviews
+    db_curs.execute(selectReviewsStmt, (targetProductId,))
+    targetReviews = [(row[0], row[1], row[2]) for row in db_curs.fetchall()]
+    if not targetReviews:
+        print 'No target reviews for %s.' % targetProductId
+        return 0
+    # get prediction targets
     db_curs.execute(selectTargetsStmt, (targetProductId,))
     while True:
         row = db_curs.fetchone()
         if not row:
             break
         # decide whether to sample target
-        if random.random() > sampleRate:
+        if random.random() >= reviewSampleRate:
             skips += 1
             continue
         targetUserId = row[0]
         targetAdjustedScore = row[1]
-
         # exclude targetUserId from targetReviews
         targetReviewsPrime = [review for review in targetReviews\
                                      if review[1] != targetUserId]
         assert(targetReviewsPrime)
-
         # compute bias associated with target product
         targetBias = numpy.mean([review[2] for review in targetReviewsPrime])
-
         #compute the target score
         targetScore = targetAdjustedScore - targetBias
-
         # retrieve neighbors
         weights = []
         scores = []
@@ -112,7 +112,9 @@ def doExperiment(db_conn, csvfile, cosineFunc, sampleRate, targetProductId):
             db_curs1 = db_conn.cursor()
             db_curs1.execute(selectReviewsStmt, (productId,))
             reviews = [(row[0], row[1], row[2]) for row in db_curs1.fetchall()]
-            assert(reviews)
+            if not reviews:
+                print 'WARNING: No reviews for neighbor: %s.' % productId
+                continue
             # check for target userId
             proxyList = [row for row in reviews if row[1] == targetUserId]
             if not proxyList:
@@ -129,9 +131,7 @@ def doExperiment(db_conn, csvfile, cosineFunc, sampleRate, targetProductId):
             if cosineSim > 0.0:
                 weights.append(cosineSim)
                 scores.append(proxyScore)
-
         if not weights: continue
-
         # make prediction and print error
         count += 1
         total = 0
@@ -142,56 +142,67 @@ def doExperiment(db_conn, csvfile, cosineFunc, sampleRate, targetProductId):
         squaredError = error**2
         totalError += error
         totalSquaredError += squaredError
-        writer.writerow([targetUserId, targetScore, prediction, len(weights)])
+        writer.writerow([targetProductId, targetUserId, targetScore,
+                         prediction, len(weights)])
         csvfile.flush()
-
-        #print '-------------------------'
-        #print '    UserId: %s' % targetUserId
-        #print 'True Score: %0.3f' % targetScore
-        #print 'Prediction: %0.3f' % prediction
-        #print '     Error: %0.3f' % error
-        #print '   Error^2: %0.3f' % squaredError
-        #sys.stdout.flush()
-
+    if count == 0:
+        #print 'No scores sampled for %s.' % targetProductId
+        return 0
     # Print stats
-    avgError = totalError/count
-    avgSquaredError = totalSquaredError/count
-    print '-------------------------------'
-    print 'targetProductId = %s' % targetProductId
-    print '          count = %d' % count
-    print '          skips = %d' % skips
-    print '        <error> = %0.3f' % avgError
-    print '      <error^2> = %0.3f' % avgSquaredError
+    #avgError = totalError/count
+    #avgSquaredError = totalSquaredError/count
+    #print '-------------------------------'
+    #print 'targetProductId = %s' % targetProductId
+    #print '          count = %d' % count
+    #print '          skips = %d' % skips
+    #print '        <error> = %0.3f' % avgError
+    #print '      <error^2> = %0.3f' % avgSquaredError
+    return count
 
-def worker(workerIdx, q, db_fname, outputDir, cosineFunc, sampleRate):
+def worker(workerIdx, q, db_fname, outputDir, cosineFunc, reviewSampleRate):
     # seed random number generator
     random.seed(randomSeed)
     # connect to db
     db_conn = sqlite3.connect(db_fname, dbTimeout)
-    num_writes = 0
-    num_skips = 0
-    while True:
-        targetProductId = q.get()
-        if targetProductId == END_OF_QUEUE:
-            break
-        outputFileName = os.path.join(outputDir, outputFileTemplate %
-                                      (targetProductId, cosineFunc.__name__))
-        if os.path.isfile(outputFileName):
-            num_skips += 1
-            print 'Skipping %s . . .' % outputFileName
-        else:
-            print 'Writing %s . . .' % outputFileName
-            with open(outputFileName, 'wb') as csvfile:
-                doExperiment(db_conn, csvfile, cosineFunc, sampleRate,
-                             targetProductId)
-                num_writes += 1
+    # open output file
+    outputFileName = os.path.join(outputDir, outputFileTemplate %
+                                  (cosineFunc.__name__, workerIdx))
+    print 'Writing %s . . .' % outputFileName
+    with open(outputFileName, 'wb') as csvfile:
+        predictions = 0
+        products = 0
+        zeros = 0
+        while True:
+            targetProductId = q.get()
+            if targetProductId == END_OF_QUEUE:
+                break
+            c = doExperiment(db_conn, csvfile, cosineFunc,
+                             reviewSampleRate, targetProductId)
+            if c > 0:
+                products += 1
+            else:
+                zeros += 1
+            predictions += c
+    # Print stats
+    print '==========================='
+    print 'Made %d predictions for %d products.' % (predictions, products)
+    print '(%d products skipped b/c no neighbors)' % zeros
+                
 
-def master(inputfile, db_fname, queues, workers):
+def master(db_fname, queues, workers, productSampleRate):
+    # seed random number generator
+    random.seed(randomSeed)
+    # connect to db
+    db_conn = sqlite3.connect(db_fname, dbTimeout)
+    db_curs = db_conn.cursor()
+    db_curs.execute(selectProductsStmt)
     i = 0
-    for line in inputfile:
-        targetProductId = line.strip()
+    while True:
+        row = db_curs.fetchone()
+        if not row: break
+        if random.random() >= productSampleRate: continue
+        targetProductId = row[0]
         workerIdx = i % len(workers)
-
         while True:
             try:
                 queues[workerIdx].put(targetProductId, timeout=workerTimeout)
@@ -207,15 +218,9 @@ def master(inputfile, db_fname, queues, workers):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <csvfile>'
+    usage = 'Usage: %prog [options]'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
-    if len(args) != 1:
-        parser.error('Wrong number of arguments')
-    inputFileName = args[0]
-    if not os.path.isfile(inputFileName):
-        print >> sys.stderr, 'Cannot find input file: %s' % inputFileName
-        return
     try:
         cosineFunc = getattr(similarity, options.cosineFunc)
     except KeyError:
@@ -240,17 +245,14 @@ def main():
     for w in range(options.numWorkers):
         workers.append(mp.Process(target=worker,
             args=(w, queues[w], options.db_fname, options.outputDir,
-                  cosineFunc, options.sampleRate)))
+                  cosineFunc, options.reviewSampleRate)))
 
     # start worker processes
     for w in range(options.numWorkers):
         workers[w].start()
 
-    # open input file
-    print 'Reading from %s. . .' % inputFileName
-    with open(inputFileName, 'r') as inputfile:
-        # do master task
-        master(inputfile, options.db_fname, queues, workers)
+    # do master task
+    master(options.db_fname, queues, workers, options.productSampleRate)
 
 if __name__ == '__main__':
     main()
