@@ -1,8 +1,15 @@
 #!/usr/local/bin/python
 
 """
-Computes the similarity between products as a function of the number of common
-reviewers, K.
+Creates a test file and a set of training files for linear regression. It takes
+as input a directory with files repressenting similarity over time, as output
+by simVsK.py. The training files are csv's, each one for a different number of 
+reviews in common. Each line of a csv represents a product comparison at the
+stage when they have that number of reviews in common. The lines have the form:
+(number_in_common, score, final_score).
+
+70% of product pairs are converted this way to training csv files. The remaining
+30% make up lines in a single test csv file in the test directory.
 """
 
 from optparse import OptionParser
@@ -15,16 +22,6 @@ import csv
 # params
 trainFileTemplate = 'Train_%s_in_common.csv'
 testFileName = 'Testset.csv'
-
-# db params
-selectGlobalBiasStmt = 'SELECT Value FROM Globals WHERE Key = "Bias"'
-selectReviewsStmt =\
-    ('SELECT R.UserId, R.Score - PB.Bias - UB.Bias '
-     'FROM Reviews AS R, ProductBiases AS PB, UserBiases AS UB '
-     'WHERE R.ProductId = PB.ProductId '
-     'AND R.UserId = UB.UserId '
-     'AND R.ProductId = :ProductId '
-     'ORDER BY R.UserId')
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
