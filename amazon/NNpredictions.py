@@ -1,5 +1,9 @@
 #!/usr/local/bin/python
 
+"""
+Make rating predictions using nearest neighbor collaborative filtering.
+"""
+
 import multiprocessing as mp
 import Queue
 from optparse import OptionParser
@@ -48,23 +52,26 @@ def getParser(usage=None):
     parser.add_option('-d', '--database', dest='db_fname',
         default='data/amazon.db', help='sqlite3 database file.', metavar='FILE')
     parser.add_option('-o', '--output-dir', dest='outputDir',
-        default='predictions', help='Output directory.', metavar='DIR')
-    parser.add_option('-c', '--cosineFunc', dest='cosineFunc', default='prefSim',
+        default='NNpredictions', help='Output directory.', metavar='DIR')
+    parser.add_option('-c', '--cosineFunc', dest='cosineFunc',
+        default='prefSim',
         help=('Similarity function to use: "prefSim" (default), "randSim", '
-              '"prefSimAlt1", or "randSimAlt1"'),
-        metavar='FUNCNAME')
-    parser.add_option('--productSampleRate', dest='productSampleRate', type='float',
-        default=0.01, help='Fraction of products to predict review scores for.',
+              '"prefSimAlt1", or "randSimAlt1"'), metavar='FUNCNAME')
+    parser.add_option('--productSampleRate', dest='productSampleRate',
+        type='float', default=0.01,
+        help='Fraction of products to predict review scores for.',
         metavar='FLOAT')
-    parser.add_option('--reviewSampleRate', dest='reviewSampleRate', type='float',
-        default=0.1, help='Fraction of review scores to predict.', metavar='FLOAT')
+    parser.add_option('--reviewSampleRate', dest='reviewSampleRate',
+        type='float', default=0.1, help='Fraction of review scores to predict.',
+        metavar='FLOAT')
     parser.add_option('-K', dest='K', type='int', default=None,
         help='Parameter K for prefSimAlt1 or randSimAlt1.', metavar='NUM')
     parser.add_option('--sigma', dest='sigma', type='float', default=None,
         help='Parameter sigma for prefSimAlt1 or randSimAlt1.', metavar='FLOAT')
     return parser
 
-def doExperiment(db_conn, csvfile, cosineFunc, reviewSampleRate, targetProductId):
+def doExperiment(db_conn, csvfile, cosineFunc, reviewSampleRate,
+                 targetProductId):
     count = 0
     skips = 0
     totalError = 0
