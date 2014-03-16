@@ -11,8 +11,6 @@ import sqlite3
 import csv
 import os
 import sys
-import math
-import numpy
 import random
 
 import similarity
@@ -106,8 +104,6 @@ def doExperiment(db_conn, csvfile, cosineFunc, reviewSampleRate,
         targetReviewsPrime = [review for review in targetReviews\
                                      if review[1] != targetUserId]
         assert(targetReviewsPrime)
-        # compute bias associated with target product
-        targetBias = numpy.mean([review[2] for review in targetReviewsPrime])
         #compute the target score
         targetScore = targetAdjustedScore - targetBias
         # retrieve neighbors
@@ -127,14 +123,11 @@ def doExperiment(db_conn, csvfile, cosineFunc, reviewSampleRate,
             if not proxyList:
                 continue
             assert(len(proxyList) == 1)
-            # compute bias
-            bias = numpy.mean([review[2] for review in reviews])
             # compute proxy score
             proxyScore = proxyList[0][2] - bias
             # compute cosine similarity at present time slice
             # using the provided function.
-            cosineSim, numUserCommon =\
-                cosineFunc(targetReviewsPrime, reviews, targetBias, bias)
+            cosineSim, numUserCommon = cosineFunc(targetReviewsPrime, reviews)
             if cosineSim > 0.0:
                 weights.append(cosineSim)
                 scores.append(proxyScore)

@@ -7,8 +7,6 @@ import sqlite3
 import csv
 import os
 import sys
-import math
-import numpy
 
 import similarity
 
@@ -45,10 +43,10 @@ def getParser(usage=None):
     parser.add_option('-e', '--exptFunc', dest='exptFunc', default='expt1',
         help='Experiment function to use: "expt1" (default) or "expt2"',
         metavar='FUNCNAME')
-    parser.add_option('-c', '--cosineFunc', dest='cosineFunc', default='prefSim',
+    parser.add_option('-c', '--cosineFunc', dest='cosineFunc',
+        default='prefSim',
         help=('Similarity function to use: "prefSim" (default), "randSim", '
-              '"prefSimAlt1", or "randSimAlt1"'),
-        metavar='FUNCNAME')
+              '"prefSimAlt1", or "randSimAlt1"'), metavar='FUNCNAME')
     parser.add_option('-s', '--stepSize', dest='stepSize', type='int',
         default=None, help='Step size prefSim or prefSimAlt1.', metavar='NUM')
     parser.add_option('-K', dest='K', type='int', default=None,
@@ -118,19 +116,9 @@ def expt1(db_conn, writer, cosineFunc, productId1, productId2):
                                   key=lambda x:x[1])
             pastReviews2 = sorted(pastReviews2 + stepReviews2,
                                   key=lambda x:x[1])
-            # compute product biases
-            if pastReviews1:
-                bias1 = numpy.mean([review[2] for review in pastReviews1])
-            else:
-                bias1 = 0.0
-            if pastReviews2:
-                bias2 = numpy.mean([review[2] for review in pastReviews2])
-            else:
-                bias2 = 0.0
             # compute cosine similarity at present time slice
             # using the provided function.
-            cosineSim, numUserCommon =\
-                cosineFunc(pastReviews1, pastReviews2, bias1, bias2)
+            cosineSim, numUserCommon = cosineFunc(pastReviews1, pastReviews2)
             # write step info
             writer.writerow([count, i, j, numUserCommon, cosineSim])
 
@@ -175,13 +163,9 @@ def expt2(db_conn, writer, cosineFunc, productId1, productId2):
         pastReviews2 = sorted(pastReviews2 + stepReviews2,
                               key=lambda x:x[1])
         assert(pastReviews2)
-        # compute biases
-        bias1 = numpy.mean([review[2] for review in pastReviews1])
-        bias2 = numpy.mean([review[2] for review in pastReviews2])
         # compute cosine similarity at present time slice
         # using the provided function.
-        cosineSim, numUserCommon =\
-            cosineFunc(pastReviews1, pastReviews2, bias1, bias2)
+        cosineSim, numUserCommon = cosineFunc(pastReviews1, pastReviews2)
         # write step info
         writer.writerow([i+j, i, j, numUserCommon, cosineSim])
 

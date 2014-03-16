@@ -6,7 +6,6 @@ Generate histogram data for similarity scores from a set of item pairs.
 
 from optparse import OptionParser
 import sqlite3
-import numpy
 import csv
 import os
 import sys
@@ -48,11 +47,8 @@ def makeHistogram(db_conn, inputfile, cosineFunc, bins):
         reviews1 = [(row[0], row[1], row[2]) for row in db_curs.fetchall()]
         db_curs.execute(selectReviewsStmt, (productId2,))
         reviews2 = [(row[0], row[1], row[2]) for row in db_curs.fetchall()]
-        # compute biases
-        bias1 = numpy.mean([review[2] for review in reviews1])
-        bias2 = numpy.mean([review[2] for review in reviews2])
-        cosineSim, numUserCommon =\
-            cosineFunc(reviews1, reviews2, bias1, bias2)
+        # compute cosine similarity using the provided function.
+        cosineSim, numUserCommon = cosineFunc(reviews1, reviews2)
         incrementBin(bins, cosineSim)
     return bins
 
