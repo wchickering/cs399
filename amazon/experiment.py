@@ -175,7 +175,6 @@ def worker(workerIdx, q, db_fname, outputDir, prefix, exptFunc, cosineFunc):
     # connect to db
     db_conn = sqlite3.connect(db_fname, dbTimeout)
 
-    # TODO: Need a terminal condition here.
     while True:
         (productId1, productId2) = q.get()
         if productId1 == END_OF_QUEUE: break
