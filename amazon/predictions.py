@@ -8,14 +8,14 @@ import csv
 import os
 import sys
 import random
-import numpy
+import numpy as np
 
 import similarity
 from cosineSimSim import cosineSimSim
 
 # params
 outputTemplateTemplate = '%s_%%s_%%s.csv'
-workerTimeout = 15
+workerTimeout = 20
 workerQueueSize = 100
 END_OF_QUEUE = -1
 
@@ -37,22 +37,26 @@ def getParser(usage=None):
         default='predictions', help='Output directory.', metavar='DIR')
     parser.add_option('--randomSeed', type='int', dest='randomSeed',
         default=0, help='Seed for random module.', metavar='NUM')
-    parser.add_option('--dimensions', type='int', dest='dimensions',
-        default=1000, help='Number of dimensions.', metavar='NUM')
-    parser.add_option('--sigma', type='float', dest='sigma',
-        default=0.3, help='Standard deviation of guassian distribution.',
-        metavar='FLOAT')
     parser.add_option('-c', '--cosineFunc', dest='cosineFunc',
         default='prefSim',
-        help=('Similarity function to use: "prefSim" (default), "randSim", '
-              '"prefSimAlt1", or "randSimAlt1".'), metavar='FUNCNAME')
+        help='Similarity function to use: "prefSim" (default) or "randSim"',
+              metavar='FUNCNAME')
+    parser.add_option('--dimensions', type='int', dest='dimensions',
+        default=100, help='Number of dimensions.', metavar='NUM')
+    parser.add_option('--sigmaXX', type='float', dest='sigmaXX', default=1.0,
+       help=('Diagonal component of covariance matrix for multivariate '
+             'Gaussian distribution prior for ratings.'), metavar='FLOAT')
+    parser.add_option('--sigmaXY', type='float', dest='sigmaXY', default=0.3,
+       help=('Off-diagonal component of covariance matrix for multivariate '
+             'Gaussian distribution prior for ratings.'), metavar='FLOAT')
     return parser
 
 def getPredictions(dimensions, sigma, reviews1, reviews2):
+    assert(sigma.shape == (2, 2))
     predictions = []
     # compute product biases
-    bias1 = numpy.mean([review[2] for review in reviews1])
-    bias2 = numpy.mean([review[2] for review in reviews2])
+    bias1 = np.mean([review[2] for review in reviews1])
+    bias2 = np.mean([review[2] for review in reviews2])
     # update histograms
     i = 0
     j = 0
@@ -72,15 +76,18 @@ def getPredictions(dimensions, sigma, reviews1, reviews2):
                 continue # ignore duplicate reviews
             rating1 = reviews1[i][2] - bias1
             rating2 = reviews2[j][2] - bias2
+            # make mu vector
+            mu = np.array([rating1, rating2])
             # make prediction
             predictions.append((userId1, rating1, rating2,
-                cosineSimSim(dimensions, sigma, rating1, rating2)))
+                               cosineSimSim(dimensions, mu, sigma)))
             i += 1
             j += 1
     return predictions
 
 def processPair(db_conn, writer, dimensions, sigma, cosineFunc,
                 productId1, productId2):
+    assert(sigma.shape == (2, 2))
     db_curs = db_conn.cursor()
     # fetch product reviews
     db_curs.execute(selectReviewsStmt, (productId1,))
@@ -98,6 +105,7 @@ def processPair(db_conn, writer, dimensions, sigma, cosineFunc,
 
 def worker(workerIdx, q, db_fname, outputDir, outputTemplate, randomSeed,
            dimensions, sigma, cosineFunc):
+    assert(sigma.shape == (2, 2))
     num_writes = 0
     num_skips = 0
     # Seed random module
@@ -116,8 +124,8 @@ def worker(workerIdx, q, db_fname, outputDir, outputTemplate, randomSeed,
             print 'Writing %s . . .' % outputFileName
             with open(outputFileName, 'wb') as csvfile:
                 writer = csv.writer(csvfile)
-                processPair(db_conn, writer, dimensions, sigma, cosineFunc,
-                            productId1, productId2)
+                processPair(db_conn, writer, dimensions, sigma,
+                            cosineFunc, productId1, productId2)
                 num_writes += 1
 
 def master(inputfile, queues, workers):
@@ -169,6 +177,10 @@ def main():
 
     outputTemplate = outputTemplateTemplate % options.cosineFunc
 
+    # form sigma matrix
+    sigma = np.array([[options.sigmaXX, options.sigmaXY],
+                      [options.sigmaXY, options.sigmaXX]])
+
     # create queues
     queues = []
     for w in range(options.numWorkers):
@@ -179,8 +191,7 @@ def main():
     for w in range(options.numWorkers):
         workers.append(mp.Process(target=worker,
             args=(w, queues[w], options.db_fname, outputDir, outputTemplate,
-                  options.randomSeed, options.dimensions, options.sigma,
-                  cosineFunc)))
+                  options.randomSeed, options.dimensions, sigma, cosineFunc)))
 
     # start worker processes
     for w in range(options.numWorkers):
