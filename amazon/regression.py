@@ -14,17 +14,11 @@ import csv
 import numpy as np
 import mlpy
 
-# params
-trainFileTemplate = 'Train_%s_in_common.csv'
-testFileName = 'Testset.csv'
-
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-o', '--outputFile', dest='outFile',
             default='regressionParams.csv', help='Output file for regression' +
             ' parameters', metavar='FILE')
-    parser.add_option('-s', '--step', dest='step', type='int', default=1,
-        help='Step size for K.', metavar='NUM')
     return parser
 
 def linearRegression(x, y):
