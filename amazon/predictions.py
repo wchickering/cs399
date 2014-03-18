@@ -46,13 +46,13 @@ def getParser(usage=None):
     parser.add_option('--sigmaXX', type='float', dest='sigmaXX', default=1.0,
        help=('Diagonal component of covariance matrix for multivariate '
              'Gaussian distribution prior for ratings.'), metavar='FLOAT')
-    parser.add_option('--sigmaXY', type='float', dest='sigmaXY', default=0.3,
-       help=('Off-diagonal component of covariance matrix for multivariate '
-             'Gaussian distribution prior for ratings.'), metavar='FLOAT')
+    parser.add_option('--rho', type='float', dest='rho', default=0.1,
+       help=('Scalar constant for off-diagonal component of covariance matrix '
+             'for multivariate Gaussian distribution prior for ratings.'),
+             metavar='FLOAT')
     return parser
 
-def getPredictions(dimensions, sigma, reviews1, reviews2):
-    assert(sigma.shape == (2, 2))
+def getPredictions(dimensions, sigmaXX, rho, reviews1, reviews2):
     predictions = []
     # compute product biases
     bias1 = np.mean([review[2] for review in reviews1])
@@ -76,18 +76,16 @@ def getPredictions(dimensions, sigma, reviews1, reviews2):
                 continue # ignore duplicate reviews
             rating1 = reviews1[i][2] - bias1
             rating2 = reviews2[j][2] - bias2
-            # make mu vector
-            mu = np.array([rating1, rating2])
             # make prediction
             predictions.append((userId1, rating1, rating2,
-                               cosineSimSim(dimensions, mu, sigma)))
+                               cosineSimSim(dimensions, sigmaXX, rho,
+                                            rating1, rating2)))
             i += 1
             j += 1
     return predictions
 
-def processPair(db_conn, writer, dimensions, sigma, cosineFunc,
+def processPair(db_conn, writer, dimensions, sigmaXX, rho, cosineFunc,
                 productId1, productId2):
-    assert(sigma.shape == (2, 2))
     db_curs = db_conn.cursor()
     # fetch product reviews
     db_curs.execute(selectReviewsStmt, (productId1,))
@@ -97,15 +95,14 @@ def processPair(db_conn, writer, dimensions, sigma, cosineFunc,
     # compute cosine similarity using the provided function.
     cosineSim, numUserCommon = cosineFunc(reviews1, reviews2)
     # get predictions
-    predictions = getPredictions(dimensions, sigma, reviews1, reviews2)
+    predictions = getPredictions(dimensions, sigmaXX, rho, reviews1, reviews2)
     # write output
     for (userId, rating1, rating2, prediction) in predictions:
         error = prediction - cosineSim
         writer.writerow([userId, rating1, rating2, prediction, error])
 
 def worker(workerIdx, q, db_fname, outputDir, outputTemplate, randomSeed,
-           dimensions, sigma, cosineFunc):
-    assert(sigma.shape == (2, 2))
+           dimensions, sigmaXX, rho, cosineFunc):
     num_writes = 0
     num_skips = 0
     # Seed random module
@@ -124,7 +121,7 @@ def worker(workerIdx, q, db_fname, outputDir, outputTemplate, randomSeed,
             print 'Writing %s . . .' % outputFileName
             with open(outputFileName, 'wb') as csvfile:
                 writer = csv.writer(csvfile)
-                processPair(db_conn, writer, dimensions, sigma,
+                processPair(db_conn, writer, dimensions, sigmaXX, rho,
                             cosineFunc, productId1, productId2)
                 num_writes += 1
 
@@ -177,10 +174,6 @@ def main():
 
     outputTemplate = outputTemplateTemplate % options.cosineFunc
 
-    # form sigma matrix
-    sigma = np.array([[options.sigmaXX, options.sigmaXY],
-                      [options.sigmaXY, options.sigmaXX]])
-
     # create queues
     queues = []
     for w in range(options.numWorkers):
@@ -191,7 +184,8 @@ def main():
     for w in range(options.numWorkers):
         workers.append(mp.Process(target=worker,
             args=(w, queues[w], options.db_fname, outputDir, outputTemplate,
-                  options.randomSeed, options.dimensions, sigma, cosineFunc)))
+                  options.randomSeed, options.dimensions, options.sigmaXX,
+                  options.rho, cosineFunc)))
 
     # start worker processes
     for w in range(options.numWorkers):

@@ -16,14 +16,18 @@ def getParser(usage=None):
     parser.add_option('--sigmaXX', type='float', dest='sigmaXX', default=1.0,
        help=('Diagonal component of covariance matrix for multivariate '
              'Gaussian distribution prior for ratings.'), metavar='FLOAT')
-    parser.add_option('--sigmaXY', type='float', dest='sigmaXY', default=0.3,
-       help=('Off-diagonal component of covariance matrix for multivariate '
-             'Gaussian distribution prior for ratings.'), metavar='FLOAT')
+    parser.add_option('--rho', type='float', dest='rho', default=0.1,
+       help=('Scalar constant for off-diagonal component of covariance matrix '
+             'for multivariate Gaussian distribution prior for ratings.'),
+             metavar='FLOAT')
     return parser
 
-def cosineSimSim(dimensions, mu, sigma):
-    assert(sigma.shape == (2, 2))
-    assert(mu.shape == (2,))
+def cosineSimSim(dimensions, sigmaXX, rho, rating1, rating2):
+    # Form mu vector and sigma matrix
+    mu = np.array([rating1, rating2])
+    sigma = np.array([[sigmaXX, rho*rating1*rating2],
+                      [rho*rating1*rating2, sigmaXX]])
+
     innerProd = 0
     var1 = 0
     var2 = 0
@@ -49,13 +53,9 @@ def main():
     # Seed random module
     random.seed(options.randomSeed)
 
-    # Form mu vector and sigma matrix
-    mu = np.array([rating1, rating2])
-    sigma = np.array([[options.sigmaXX, options.sigmaXY],
-                      [options.sigmaXY, options.sigmaXX]])
-
     # Run simulation
-    simsim = cosineSimSim(options.dimensions, mu, sigma)
+    simsim = cosineSimSim(options.dimensions, options.sigmaXX, options.rho,
+                          rating1, rating2)
 
     # Output
     print simsim

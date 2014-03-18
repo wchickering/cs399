@@ -6,10 +6,10 @@ import csv
 import sys
 from collections import defaultdict
 
-import cosineSimSim
 import predictions as pred
 
 # params
+constSimScore = 0.33
 K = 20
 sigma = 1.0
 writer = csv.writer(sys.stdout)
@@ -22,6 +22,13 @@ sigmaXY = 0.3
 userIdIdx = 0
 averageIdx = 2
 varianceIdx = 3
+absAverageIdx = 4
+
+def constSim(reviewsA, reviewsB):
+    """Provides a baseline similarity function by always returning the
+       average item-item similarity.
+    """
+    return (constSimScore, countUsersCommon(reviewsA, reviewsB))
 
 def prefSim(reviewsA, reviewsB):
     """Compute the "preferential" similarity between items A and B.
@@ -74,12 +81,27 @@ def predSim(reviewsA, reviewsB):
     """Compute the average "implicitly" predicted similarity between
        items A and B.
     """
-    print 'DBG: EXECUTING predSim()'
     sigma = np.array([[sigmaXX, sigmaXY],
                       [sigmaXY, sigmaXX]])
     predictions = pred.getPredictions(dimensions, sigma, reviewsA, reviewsB)
     avgPrediction = np.mean([p[3] for p in predictions])
     return (avgPrediction, len(predictions))
+
+def weightedPredSim(reviewsA, reviewsB):
+    """Compute the average "implicitly" predicted similarity between
+       items A and B.
+    """
+    sigma = np.array([[sigmaXX, sigmaXY],
+                      [sigmaXY, sigmaXX]])
+    predictions = pred.getPredictions(dimensions, sigma, reviewsA, reviewsB)
+    printPredictions(predictions, weights)
+    avgPrediction = np.mean([p[3]*weights[p[0]] for p in predictions])
+    return (avgPrediction, len(predictions))
+
+def printPredictions(predictions, weights):
+    for p in predictions:
+        print 'W: %0.3f, R1: % 0.3f, R2: % 0.3f, P: % 0.3f' %\
+            (weights[p[0]], p[1], p[2], p[3])
 
 def cosineSim(reviewsA, reviewsB, onlyCommon=False, fudgeFactor=None,
               weights=None):
@@ -158,6 +180,29 @@ def cosineSim(reviewsA, reviewsB, onlyCommon=False, fudgeFactor=None,
             varB += (K - numUsersCommon)*sigma**2
     return (computeScore(innerProd, varA, varB), numUsersCommon)
 
+def countUsersCommon(reviewsA, reviewsB):
+    numUsersCommon = 0
+    i = 0
+    j = 0
+    while i < len(reviewsA) and j < len(reviewsB):
+        userIdA = reviewsA[i][1]
+        userIdB = reviewsB[j][1]
+        if userIdA < userIdB:
+            i += 1
+        elif userIdA > userIdB:
+            j += 1
+        else:
+            timeA = reviewsA[i][0]
+            timeB = reviewsB[j][0]
+            if timeA == timeB:
+                i += 1
+                j += 1
+                continue # ignore duplicate reviews
+            numUsersCommon += 1
+            i += 1
+            j += 1
+    return numUsersCommon
+
 def computeScore(innerProd, varA, varB):
     if innerProd == 0:
         return 0
@@ -172,8 +217,9 @@ def computeScore(innerProd, varA, varB):
 
 weights = None
 
-def computePredictivity(average, variance, epsilon):
-    adjustedError = abs(average) + math.sqrt(variance)
+def computePredictivity(absAverage, variance, epsilon):
+    #adjustedError = absAverage + math.sqrt(variance)
+    adjustedError = absAverage 
     return math.exp(-adjustedError/epsilon)
 
 def initWeightedSim(errorFileName, epsilon):
@@ -184,9 +230,9 @@ def initWeightedSim(errorFileName, epsilon):
         reader = csv.reader(csvfile)
         for row in reader:
             userId = row[userIdIdx]
-            average = float(row[averageIdx])
+            absAverage = float(row[absAverageIdx])
             variance = float(row[varianceIdx])
-            w[userId] = computePredictivity(average, variance, epsilon)
+            w[userId] = computePredictivity(absAverage, variance, epsilon)
             totalW += w[userId]
     # create entry for unknown users
     averageW = totalW/len(w)
@@ -229,6 +275,11 @@ def getParser(usage=None):
     parser.add_option('--sigmaXY', type='float', dest='sigmaXY', default=0.3,
        help=('Off-diagonal component of covariance matrix for multivariate '
              'Gaussian distribution prior for ratings.'), metavar='FLOAT')
+    parser.add_option('--errorFileName', dest='errorFileName',
+        default='output/aggregatePredictions_train.csv',
+        help='User prediction errors file.', metavar='FILE')
+    parser.add_option('--epsilon', dest='epsilon', type='float', default=0.3,
+        help='Decay constant epsilon for weightedPredSim.', metavar='FLOAT')
     return parser
 
 def main():
@@ -259,6 +310,11 @@ def main():
     dimensions = options.dimensions
     sigmaXX = options.sigmaXX
     sigmaXY = options.sigmaXY
+
+    if options.cosineFunc == 'weightedPredSim':
+        # initialize weights
+            initWeightedSim(options.errorFileName, options.epsilon)
+        
 
     # connect to db
     db_conn = sqlite3.connect(options.db_fname, dbTimeout)
