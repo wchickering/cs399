@@ -1,5 +1,9 @@
 #!/usr/local/bin/python
 
+"""
+Make rating predictions using nearest neighbor collaborative filtering.
+"""
+
 import multiprocessing as mp
 import Queue
 from optparse import OptionParser
@@ -7,8 +11,6 @@ import sqlite3
 import csv
 import os
 import sys
-import math
-import numpy
 import random
 
 import similarity
@@ -48,23 +50,26 @@ def getParser(usage=None):
     parser.add_option('-d', '--database', dest='db_fname',
         default='data/amazon.db', help='sqlite3 database file.', metavar='FILE')
     parser.add_option('-o', '--output-dir', dest='outputDir',
-        default='predictions', help='Output directory.', metavar='DIR')
-    parser.add_option('-c', '--cosineFunc', dest='cosineFunc', default='prefSim',
+        default='NNpredictions', help='Output directory.', metavar='DIR')
+    parser.add_option('-c', '--cosineFunc', dest='cosineFunc',
+        default='prefSim',
         help=('Similarity function to use: "prefSim" (default), "randSim", '
-              '"prefSimAlt1", or "randSimAlt1"'),
-        metavar='FUNCNAME')
-    parser.add_option('--productSampleRate', dest='productSampleRate', type='float',
-        default=0.01, help='Fraction of products to predict review scores for.',
+              '"prefSimAlt1", or "randSimAlt1"'), metavar='FUNCNAME')
+    parser.add_option('--productSampleRate', dest='productSampleRate',
+        type='float', default=0.01,
+        help='Fraction of products to predict review scores for.',
         metavar='FLOAT')
-    parser.add_option('--reviewSampleRate', dest='reviewSampleRate', type='float',
-        default=0.1, help='Fraction of review scores to predict.', metavar='FLOAT')
+    parser.add_option('--reviewSampleRate', dest='reviewSampleRate',
+        type='float', default=0.1, help='Fraction of review scores to predict.',
+        metavar='FLOAT')
     parser.add_option('-K', dest='K', type='int', default=None,
         help='Parameter K for prefSimAlt1 or randSimAlt1.', metavar='NUM')
     parser.add_option('--sigma', dest='sigma', type='float', default=None,
         help='Parameter sigma for prefSimAlt1 or randSimAlt1.', metavar='FLOAT')
     return parser
 
-def doExperiment(db_conn, csvfile, cosineFunc, reviewSampleRate, targetProductId):
+def doExperiment(db_conn, csvfile, cosineFunc, reviewSampleRate,
+                 targetProductId):
     count = 0
     skips = 0
     totalError = 0
@@ -99,8 +104,6 @@ def doExperiment(db_conn, csvfile, cosineFunc, reviewSampleRate, targetProductId
         targetReviewsPrime = [review for review in targetReviews\
                                      if review[1] != targetUserId]
         assert(targetReviewsPrime)
-        # compute bias associated with target product
-        targetBias = numpy.mean([review[2] for review in targetReviewsPrime])
         #compute the target score
         targetScore = targetAdjustedScore - targetBias
         # retrieve neighbors
@@ -120,14 +123,11 @@ def doExperiment(db_conn, csvfile, cosineFunc, reviewSampleRate, targetProductId
             if not proxyList:
                 continue
             assert(len(proxyList) == 1)
-            # compute bias
-            bias = numpy.mean([review[2] for review in reviews])
             # compute proxy score
             proxyScore = proxyList[0][2] - bias
             # compute cosine similarity at present time slice
             # using the provided function.
-            cosineSim, numUserCommon =\
-                cosineFunc(targetReviewsPrime, reviews, targetBias, bias)
+            cosineSim, numUserCommon = cosineFunc(targetReviewsPrime, reviews)
             if cosineSim > 0.0:
                 weights.append(cosineSim)
                 scores.append(proxyScore)

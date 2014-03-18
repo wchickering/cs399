@@ -5,10 +5,13 @@ Aggregates results of experiment 2 into a single data file.
 """
 
 from optparse import OptionParser
+import sqlite3
 import csv
 import os
 import sys
 from fnmatch import fnmatch
+
+import similarity
 
 # params
 outputFileTemplate = '%s.csv'
@@ -18,8 +21,22 @@ numUsers2Idx = 2
 numUsersComIdx = 3
 simIdx = 4
 
+# db params
+dbTimeout = 5
+selectReviewsStmt =\
+    ('SELECT Time, UserId, AdjustedScore '
+     'FROM Reviews '
+     'WHERE ProductId = :ProductId '
+     'ORDER BY UserId')
+
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
+    parser.add_option('-d', '--database', dest='db_fname',
+        default='data/amazon.db', help='sqlite3 database file.', metavar='FILE')
+    parser.add_option('-c', '--cosineFunc', dest='cosineFunc',
+        default='randSim',
+        help=('Similarity function to use for estimate of truth: '
+             '"prefSim" or "randSim" (default)'), metavar='FUNCNAME')
     parser.add_option('-p', '--pattern', dest='pattern', default='*.csv',
         help='Input file pattern.', metavar='PATTERN')
     return parser
@@ -63,6 +80,16 @@ def main():
     if not os.path.isdir(inputDir):
         print >> sys.stderr, 'Cannot find: %s' % inputDir
         return
+    try:
+        cosineFunc = getattr(similarity, options.cosineFunc)
+    except KeyError:
+        print >> sys.stderr,\
+            'Invalid Similarity function: %s' % options.cosineFunc
+        return
+
+    # connect to db
+    db_conn = sqlite3.connect(options.db_fname, dbTimeout)
+    db_curs = db_conn.cursor()
 
     # Compute variances and errors
     data = []
@@ -79,9 +106,16 @@ def main():
         filenames.append(filename)
         # record all data
         data.append(getData(fullpath))
-        # Determine estimate of truth
-        lastRow = getLastRow(fullpath)
-        truth = float(lastRow[simIdx])
+        # parse productIds from filename
+        productId1 = filename.split('_')[1]
+        productId2 = filename.split('_')[2].split('.')[0]
+        # fetch product reviews
+        db_curs.execute(selectReviewsStmt, (productId1,))
+        reviews1 = [row for row in db_curs.fetchall()]
+        db_curs.execute(selectReviewsStmt, (productId2,))
+        reviews2 = [row for row in db_curs.fetchall()]
+        #Deterine best estimate of truth ("gold standard")
+        truth, numUserCommon = cosineFunc(reviews1, reviews2)
         # Compute and save variances for this file
         variances.append(getVariances(fullpath, truth))
         # Compute and save errors for this file
