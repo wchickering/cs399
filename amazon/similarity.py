@@ -9,7 +9,7 @@ from collections import defaultdict
 import predictions as pred
 
 # params
-constSimScore = 0.33
+constSimScore = 0.27
 K = 20
 sigma = 1.0
 writer = csv.writer(sys.stdout)
@@ -23,6 +23,17 @@ userIdIdx = 0
 averageIdx = 2
 varianceIdx = 3
 absAverageIdx = 4
+
+def regSim(reviewsA, reviewsB):
+    """Uses params from linear regressions on training data to translate
+       raw similarity to an improved esimate.
+    """
+    rawSim, numUsersCommon = regSim_rawFunc(reviewsA, reviewsB)
+    if numUsersCommon <= regSim_maxCommonUsers:
+        intercept, slope = regSimParams[numUsersCommon]
+        return (intercept + slope*rawSim, numUsersCommon)
+    else:
+        return (rawSim, numUsersCommon)
 
 def constSim(reviewsA, reviewsB):
     """Provides a baseline similarity function by always returning the
@@ -238,6 +249,35 @@ def initWeightedSim(errorFileName, epsilon):
     averageW = totalW/len(w)
     weights = defaultdict(lambda x: averageW, w)
 
+#########################
+#
+#  Linear Regression
+#
+##############################
+
+regSimParams = {}
+regSim_rawFunc = None
+regSim_maxCommonUsers = 0
+
+numUsersCommonIdx = 0
+interceptIdx = 1
+slopeIdx = 2
+
+def initRegSim(paramFileName, cosineFunc, maxCommonUsers):
+    global regSimParams
+    global regSim_rawFunc
+    global regSim_maxCommonUsers
+    regSim_rawFunc = cosineFunc
+    regSim_maxCommonUsers = maxCommonUsers
+    print 'Reading %s . . .' % paramFileName
+    with open(paramFileName, 'rb') as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            numUsersCommon = int(row[numUsersCommonIdx])
+            intercept = float(row[interceptIdx])
+            slope = float(row[slopeIdx])
+            regSimParams[numUsersCommon] = (intercept, slope)
+
 ############
 #
 #  Stand-alone similarity
@@ -263,6 +303,16 @@ def getParser(usage=None):
         default='prefSim',
         help=('Similarity function to use: "prefSim" (default), "randSim", '
               'or "predSim"'), metavar='FUNCNAME')
+    parser.add_option('--regSimRawFunc', dest='regSimRawFunc',
+        default='randSim',
+        help=('Similarity function to used for raw similarity by regSim: '
+              '"prefSim", or "randSim" (default)'), metavar='FUNCNAME')
+    parser.add_option('--regSimParamsFile', dest='regSimParamsFile',
+        default='output/regSim_params.csv', help='Parameter file for regSim.',
+        metavar='FILE')
+    parser.add_option('--max-common-reviewers', dest='maxUsersCommon',
+        type='int', default=100,
+        help='Maximum number of common reviewers for regSim.', metavar='NUM')
     parser.add_option('-K', dest='K', type='int', default=None,
         help='Parameter K for prefSimAlt1 or randSimAlt1.', metavar='NUM')
     parser.add_option('--sigma', dest='sigma', type='float', default=None,
@@ -303,6 +353,12 @@ def main():
         print >> sys.stderr,\
             'Invalid Similarity function: %s' % options.cosineFunc
         return
+    try:
+        regSimRawFunc = globals()[options.regSimRawFunc]
+    except KeyError:
+        print >> sys.stderr,\
+            'Invalid Raw Similarity function: %s' % options.regSimRawFunc
+        return
 
     # set global params
     K = options.K
@@ -311,10 +367,14 @@ def main():
     sigmaXX = options.sigmaXX
     sigmaXY = options.sigmaXY
 
+    if options.cosineFunc == 'regSim':
+        # retrieve linear regression params
+        initRegSim(options.regSimParamsFile, regSimRawFunc,
+                   options.maxUsersCommon)
+
     if options.cosineFunc == 'weightedPredSim':
         # initialize weights
-            initWeightedSim(options.errorFileName, options.epsilon)
-        
+        initWeightedSim(options.errorFileName, options.epsilon)
 
     # connect to db
     db_conn = sqlite3.connect(options.db_fname, dbTimeout)

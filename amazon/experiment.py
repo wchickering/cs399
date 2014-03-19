@@ -49,6 +49,16 @@ def getParser(usage=None):
         default='prefSim',
         help=('Similarity function to use: "prefSim" (default), "randSim", '
               '"prefSimAlt1", "randSimAlt1", or "predSim"'), metavar='FUNCNAME')
+    parser.add_option('--regSimRawFunc', dest='regSimRawFunc',
+        default='randSim',
+        help=('Similarity function to used for raw similarity by regSim: '
+              '"prefSim", or "randSim" (default)'), metavar='FUNCNAME')
+    parser.add_option('--regSimParamsFile', dest='regSimParamsFile',
+        default='output/regSim_params.csv', help='Parameter file for regSim.',
+        metavar='FILE')
+    parser.add_option('--max-common-reviewers', dest='maxUsersCommon',
+        type='int', default=100,
+        help='Maximum number of common reviewers for regSim.', metavar='NUM')
     parser.add_option('-s', '--stepSize', dest='stepSize', type='int',
         default=None, help='Step size prefSim or prefSimAlt1.', metavar='NUM')
     parser.add_option('-K', dest='K', type='int', default=None,
@@ -275,6 +285,12 @@ def main():
         print >> sys.stderr,\
             'Invalid Similarity function: %s' % options.cosineFunc
         return
+    try:
+        regSimRawFunc = getattr(similarity, options.regSimRawFunc)
+    except KeyError:
+        print >> sys.stderr,\
+            'Invalid Raw Similarity function: %s' % options.regSimRawFunc
+        return
     if options.outputDir:
         outputDir = options.outputDir
     else:
@@ -293,6 +309,11 @@ def main():
         similarity.K = options.K
     if options.sigma:
         similarity.sigma = options.sigma
+
+    # regSim
+    if options.cosineFunc == 'regSim':
+        similarity.initRegSim(options.regSimParamsFile, regSimRawFunc,
+                   options.maxUsersCommon)
 
     # weighted similarity
     if options.cosineFunc == 'weightedRandSim':

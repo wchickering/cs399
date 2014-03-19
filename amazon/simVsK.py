@@ -33,7 +33,7 @@ def getParser(usage=None):
         default='prefSim',
         help=('Similarity function to use: "prefSim" (default), "randSim", '
               '"prefSimAlt1", or "randSimAlt1"'), metavar='FUNCNAME')
-    parser.add_option('-s', '--step', dest='step', type='int', default=10,
+    parser.add_option('-s', '--step', dest='step', type='int', default=1,
         help='Step size for K.', metavar='NUM')
     return parser
 
