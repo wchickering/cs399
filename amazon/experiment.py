@@ -48,7 +48,8 @@ def getParser(usage=None):
     parser.add_option('-c', '--cosineFunc', dest='cosineFunc',
         default='prefSim',
         help=('Similarity function to use: "prefSim" (default), "randSim", '
-              '"prefSimAlt1", "randSimAlt1", or "predSim"'), metavar='FUNCNAME')
+              '"prefSimAlt1", "randSimAlt1", "regSim" or "predSim"'),
+        metavar='FUNCNAME')
     parser.add_option('--regSimRawFunc', dest='regSimRawFunc',
         default='randSim',
         help=('Similarity function to used for raw similarity by regSim: '
@@ -59,6 +60,15 @@ def getParser(usage=None):
     parser.add_option('--max-common-reviewers', dest='maxUsersCommon',
         type='int', default=100,
         help='Maximum number of common reviewers for regSim.', metavar='NUM')
+    parser.add_option('--simGridFile', dest='simGridFile',
+        default='output/simGrid_randSim.csv',
+        help='CSV containing simGrid data.', metavar='FILE')
+    parser.add_option('--minRating', type='float', dest='minRating',
+        default=-2.0, help='Minimum rating.', metavar='FLOAT')
+    parser.add_option('--maxRating', type='float', dest='maxRating',
+        default=2.0, help='Maximum rating.', metavar='FLOAT')
+    parser.add_option('--stepRating', type='float', dest='stepRating',
+        default=0.1, help='Step rating.', metavar='FLOAT')
     parser.add_option('-s', '--stepSize', dest='stepSize', type='int',
         default=None, help='Step size prefSim or prefSimAlt1.', metavar='NUM')
     parser.add_option('-K', dest='K', type='int', default=None,
@@ -97,9 +107,6 @@ def getReviewPairTimes(reviewsA, reviewsB):
     return reviewPairTimes
 
 def expt1(db_conn, writer, cosineFunc, productId1, productId2):
-    # create covariance matrix (only used by predSim)
-    sigma = np.array([[similarity.sigmaXX, similarity.sigmaXY],
-                      [similarity.sigmaXY, similarity.sigmaXX]])
     db_curs = db_conn.cursor()
     # fetch product reviews
     db_curs.execute(selectReviewsOrderByTimeStmt, (productId1,))
@@ -131,30 +138,20 @@ def expt1(db_conn, writer, cosineFunc, productId1, productId2):
             stepReviews2 = sorted(reviews2[stepBegin_j:j], key=lambda x: x[1])
             stepBegin_i = i
             stepBegin_j = j
-            # special handling for predSim
-            if cosineFunc == similarity.predSim:
-                predictions += pred.getPredictions(similarity.dimensions, sigma,
-                                                   stepReviews1, stepReviews2)
-                cosineSim = np.mean([p[3] for p in predictions])
-                numUserCommon = len(predictions)
-            else:
-                # append to past reviews and sort by userId
-                pastReviews1 = sorted(pastReviews1 + stepReviews1,
-                                      key=lambda x:x[1])
-                pastReviews2 = sorted(pastReviews2 + stepReviews2,
-                                      key=lambda x:x[1])
-                # compute cosine similarity at present time slice
-                # using the provided function.
-                cosineSim, numUserCommon =\
-                    cosineFunc(pastReviews1, pastReviews2)
+            # append to past reviews and sort by userId
+            pastReviews1 = sorted(pastReviews1 + stepReviews1,
+                                  key=lambda x:x[1])
+            pastReviews2 = sorted(pastReviews2 + stepReviews2,
+                                  key=lambda x:x[1])
+            # compute cosine similarity at present time slice
+            # using the provided function.
+            cosineSim, numUserCommon =\
+                cosineFunc(pastReviews1, pastReviews2)
             # write step info
             writer.writerow([count, i, j, numUserCommon, cosineSim])
 
 def expt2(db_conn, writer, cosineFunc, productId1, productId2):
     db_curs = db_conn.cursor()
-    # create covariance matrix (only used by predSim)
-    sigma = np.array([[similarity.sigmaXX, similarity.sigmaXY],
-                      [similarity.sigmaXY, similarity.sigmaXX]])
     # fetch product reviews
     db_curs.execute(selectReviewsOrderByUserStmt, (productId1,))
     reviews1 = [(row[0], row[1], row[2]) for row in db_curs.fetchall()]
@@ -191,32 +188,16 @@ def expt2(db_conn, writer, cosineFunc, productId1, productId2):
         stepReviews2 = sorted(reviews2[stepBegin_j:j], key=lambda x: x[1])
         stepBegin_i = i
         stepBegin_j = j
-        # special handling for predSim
-        if cosineFunc == similarity.predSim:
-            predReviews1 =\
-                sorted(predReviews1 + stepReviews1, key=lambda x: x[1])
-            predReviews2 =\
-                sorted(predReviews2 + stepReviews2, key=lambda x: x[1])
-            predictions += pred.getPredictions(similarity.dimensions, sigma,
-                                               predReviews1, predReviews2)
-            # remove predictors from predReviews to avoid double counting
-            predReviews1 = [r for r in predReviews1\
-                            if r[1] not in [p[0] for p in predictions]]
-            predReviews2 = [r for r in predReviews2\
-                            if r[1] not in [p[0] for p in predictions]]
-            cosineSim = np.mean([p[3] for p in predictions])
-            numUserCommon = len(predictions)
-        else:
-            # append to past reviews and sort by userId
-            pastReviews1 = sorted(pastReviews1 + stepReviews1,
-                                  key=lambda x: x[1])
-            assert(pastReviews1)
-            pastReviews2 = sorted(pastReviews2 + stepReviews2,
-                                  key=lambda x: x[1])
-            assert(pastReviews2)
-            # compute cosine similarity at present time slice
-            # using the provided function.
-            cosineSim, numUserCommon = cosineFunc(pastReviews1, pastReviews2)
+        # append to past reviews and sort by userId
+        pastReviews1 = sorted(pastReviews1 + stepReviews1,
+                              key=lambda x: x[1])
+        assert(pastReviews1)
+        pastReviews2 = sorted(pastReviews2 + stepReviews2,
+                              key=lambda x: x[1])
+        assert(pastReviews2)
+        # compute cosine similarity at present time slice
+        # using the provided function.
+        cosineSim, numUserCommon = cosineFunc(pastReviews1, pastReviews2)
         # write step info
         writer.writerow([i+j, i, j, numUserCommon, cosineSim])
 
@@ -314,6 +295,11 @@ def main():
     if options.cosineFunc == 'regSim':
         similarity.initRegSim(options.regSimParamsFile, regSimRawFunc,
                    options.maxUsersCommon)
+
+    # predSim
+    if options.cosineFunc == 'predSim':
+        similarity.initPredSim(options.minRating, options.maxRating,
+                               options.stepRating, options.simGridFile)
 
     # weighted similarity
     if options.cosineFunc == 'weightedRandSim':

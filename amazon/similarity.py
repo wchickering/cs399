@@ -5,8 +5,10 @@ import numpy as np
 import csv
 import sys
 from collections import defaultdict
+import sympy 
 
 import predictions as pred
+from SimilarityGrid import SimilarityGrid
 
 # params
 constSimScore = 0.27
@@ -17,6 +19,11 @@ step = sys.maxint
 dimensions = 100
 sigmaXX = 1.0
 sigmaXY = 0.3
+
+# modelSim params
+mu_s = constSimScore
+sigma_s = 0.2
+sigma_r = 0.1
 
 # errorFile
 userIdIdx = 0
@@ -92,12 +99,110 @@ def predSim(reviewsA, reviewsB):
     """Compute the average "implicitly" predicted similarity between
        items A and B.
     """
-    sigma = np.array([[sigmaXX, sigmaXY],
-                      [sigmaXY, sigmaXX]])
-    predictions = pred.getPredictions(dimensions, sigma, reviewsA, reviewsB)
-    avgPrediction = np.mean([p[3] for p in predictions])
-    return (avgPrediction, len(predictions))
+    #sigma = np.array([[sigmaXX, sigmaXY],
+    #                  [sigmaXY, sigmaXX]])
+    #predictions = pred.getPredictions(dimensions, sigma, reviewsA, reviewsB)
+    #avgPrediction = np.mean([p[3] for p in predictions])
+    #return (avgPrediction, len(predictions))
 
+    # compute product biases:
+    if reviewsA:
+        biasA = np.mean([review[2] for review in reviewsA])
+    else:
+        biasA = 0.0
+    if reviewsB:
+        biasB = np.mean([review[2] for review in reviewsB])
+    else:
+        biasB = 0.0
+    totalScore = 0
+    totalCount = 0
+    numUsersCommon = 0
+    i = 0
+    j = 0
+    while i < len(reviewsA) and j < len(reviewsB):
+        userIdA = reviewsA[i][1]
+        userIdB = reviewsB[j][1]
+        if userIdA < userIdB:
+            i += 1
+        elif userIdA > userIdB:
+            j += 1
+        else:
+            timeA = reviewsA[i][0]
+            timeB = reviewsB[j][0]
+            if timeA == timeB:
+                i += 1
+                j += 1
+                continue # ignore duplicate reviews
+            numUsersCommon += 1
+            scoreA = reviewsA[i][2] - biasA
+            scoreB = reviewsB[j][2] - biasB
+            entry = simGrid[(scoreA, scoreB)]
+            if entry:
+                totalScore += entry[0]
+                totalCount += entry[1]
+            i += 1
+            j += 1
+    if totalCount > 0:
+        return (totalScore/totalCount, numUsersCommon)
+    else:
+        return (constSimScore, numUsersCommon)
+
+def modelSim(reviewsA, reviewsB):
+    """Compute the MLE similarity based upon a simple model."""
+    if reviewsA:
+        biasA = np.mean([review[2] for review in reviewsA])
+    else:
+        biasA = 0.0
+    if reviewsB:
+        biasB = np.mean([review[2] for review in reviewsB])
+    else:
+        biasB = 0.0
+    numUsersCommon = 0
+    solutionTotal = 0
+    weightTotal = 0
+    i = 0
+    j = 0
+    while i < len(reviewsA) and j < len(reviewsB):
+        userIdA = reviewsA[i][1]
+        userIdB = reviewsB[j][1]
+        if userIdA < userIdB:
+            i += 1
+        elif userIdA > userIdB:
+            j += 1
+        else:
+            timeA = reviewsA[i][0]
+            timeB = reviewsB[j][0]
+            if timeA == timeB:
+                i += 1
+                j += 1
+                continue # ignore duplicate reviews
+            numUsersCommon += 1
+            scoreA = reviewsA[i][2] - biasA
+            scoreB = reviewsB[j][2] - biasB
+            p = round(scoreA*scoreB, 3)
+            q = round(scoreA**2 + scoreB**2, 3)
+            s = sympy.Symbol('s')
+            solutions =\
+                sympy.solve(-p*s**2 + q*s - p +\
+                            (sigma_r/sigma_s)**2*(1 - s**2)**2*(s - mu_s), s,
+                            minimal=True, quick=True)
+            weight = math.sqrt(q)
+            #entry = simGrid[(scoreA, scoreB)]
+            #if entry:
+            #    historic = entry[0]/entry[1]
+            #else:
+            #    historic = constSimScore
+            #print ('rating1=%0.3f, rating2=%0.3f, prediction: %0.3f, '
+            #       'weight: %0.3f (historic: %0.3f)') %\
+            #    (scoreA, scoreB, solutions[0], weight, historic)
+            solutionTotal += weight*solutions[0]
+            weightTotal += weight
+            i += 1
+            j += 1
+
+    #print solutions
+    return (solutionTotal/weightTotal, numUsersCommon)
+    
 def weightedPredSim(reviewsA, reviewsB):
     """Compute the average "implicitly" predicted similarity between
        items A and B.
@@ -269,7 +374,6 @@ def initRegSim(paramFileName, cosineFunc, maxCommonUsers):
     global regSim_maxCommonUsers
     regSim_rawFunc = cosineFunc
     regSim_maxCommonUsers = maxCommonUsers
-    print 'Reading %s . . .' % paramFileName
     with open(paramFileName, 'rb') as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
@@ -277,6 +381,20 @@ def initRegSim(paramFileName, cosineFunc, maxCommonUsers):
             intercept = float(row[interceptIdx])
             slope = float(row[slopeIdx])
             regSimParams[numUsersCommon] = (intercept, slope)
+
+#################
+#
+#  predSim
+#
+####################
+
+simGrid = None
+
+def initPredSim(minRating, maxRating, stepRating, simGridFileName):
+    global simGrid
+    simGrid = SimilarityGrid(minRating, maxRating, stepRating)
+    simGridFile = open(simGridFileName, 'rb')
+    simGrid.readFromFile(simGridFile)
 
 ############
 #
@@ -313,6 +431,15 @@ def getParser(usage=None):
     parser.add_option('--max-common-reviewers', dest='maxUsersCommon',
         type='int', default=100,
         help='Maximum number of common reviewers for regSim.', metavar='NUM')
+    parser.add_option('--simGridFile', dest='simGridFile',
+        default='output/simGrid_randSim.csv',
+        help='CSV containing simGrid data.', metavar='FILE')
+    parser.add_option('--minRating', type='float', dest='minRating',
+        default=-2.0, help='Minimum rating.', metavar='FLOAT')
+    parser.add_option('--maxRating', type='float', dest='maxRating',
+        default=2.0, help='Maximum rating.', metavar='FLOAT')
+    parser.add_option('--stepRating', type='float', dest='stepRating',
+        default=0.1, help='Step rating.', metavar='FLOAT')
     parser.add_option('-K', dest='K', type='int', default=None,
         help='Parameter K for prefSimAlt1 or randSimAlt1.', metavar='NUM')
     parser.add_option('--sigma', dest='sigma', type='float', default=None,
@@ -338,6 +465,7 @@ def main():
     global dimensions
     global sigmaXX
     global sigmaXY
+    global simGrid
 
     # Parse options
     usage = 'Usage: %prog [options] productId1 productId2'
@@ -371,6 +499,11 @@ def main():
         # retrieve linear regression params
         initRegSim(options.regSimParamsFile, regSimRawFunc,
                    options.maxUsersCommon)
+
+    if options.cosineFunc == 'predSim' or options.cosineFunc == 'modelSim':
+        # read simGrid
+        initPredSim(options.minRating, options.maxRating, options.stepRating,
+                    options.simGridFile)
 
     if options.cosineFunc == 'weightedPredSim':
         # initialize weights
