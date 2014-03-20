@@ -12,6 +12,7 @@ from sympy import Symbol, solve
 from sympy.solvers.solvers import check_assumptions
 
 import similarity
+import modelSim
 
 # params
 outputTemplateTemplate = '%s_%%s_%%s.csv'
@@ -36,27 +37,32 @@ def getParser(usage=None):
     parser.add_option('-o', '--output-dir', dest='outputDir',
         default='modelPredictions', help='Output directory.', metavar='DIR')
     parser.add_option('-c', '--cosineFunc', dest='cosineFunc',
-        default='prefSim',
+        default='randSim',
         help=('Similarity function to use as reference: '
-             '"prefSim" (default) or "randSim"'),
+             '"randSim" (default) or "prefSim"'),
         metavar='FUNCNAME')
-    parser.add_option('--sigma_r', type='float', dest='sigma_r',
-        default=0.2, help='Standard deviation of rating distribution.',
+    parser.add_option('--mu_s', type='float', dest='mu_s',
+        default=None,  help='Mean of score distribution.',
         metavar='FLOAT')
     parser.add_option('--sigma_s', type='float', dest='sigma_s',
-        default=0.2, help='Standard deviation of score distribution.',
+        default=None, help='Standard deviation of score distribution.',
+        metavar='FLOAT')
+    parser.add_option('--sigma_r', type='float', dest='sigma_r',
+        default=None, help='Standard deviation of rating distribution.',
         metavar='FLOAT')
     return parser
 
 def getPredictions(reviews1, reviews2, bias1, bias2,
-                   sigma_r=None, sigma_s=None):
-    mu_s = similarity.mu_s
-    if not sigma_s:
-        sigma_s = similarity.sigma_s
-    if not sigma_r:
-        sigma_r = similarity.sigma_r
+                   mu_s=None, sigma_r=None, sigma_s=None):
+    # override params
+    if mu_s:
+        modelSim.mu_s = mu_s
+    if sigma_s:
+        modelSim.sigma_s = sigma_s
+    if sigma_r:
+        modelSim.sigma_r = sigma_r
     predictions = []
-    # update histograms
+    # iterate over common reviewers
     i = 0
     j = 0
     while i < len(reviews1) and j < len(reviews2):
@@ -75,39 +81,13 @@ def getPredictions(reviews1, reviews2, bias1, bias2,
                 continue # ignore duplicate reviews
             rating1 = reviews1[i][2] - bias1
             rating2 = reviews2[j][2] - bias2
-            # get prediction
-            p = round(rating1*rating2, 3)
-            q = round(rating1**2 + rating2**2, 3)
-            sigRatio = round((sigma_r/sigma_s)**2, 3)
-            s = Symbol('s')
-            try:
-                solutions = solve(-p*s**2 + q*s - p +\
-                                  sigRatio*(1 - s**2)**2*(s - mu_s), s)
-            except:
-                print >> sys.stderr, 'WARNING: sympy.solve raised error.'
-                solutions = []
-            prediction = None
-            for candidate in solutions:
-                if (check_assumptions(candidate, real=True) and\
-                    candidate > -1 and candidate < 1) or\
-                     candidate == 0:
-                    prediction = candidate
-            if not prediction:
-                if solutions == [0.0]:
-                    prediction = 0.0
-                elif solutions and solutions[0] == 1.0:
-                    prediction = 1.0
-                elif solutions and solutions[0] == -1.0:
-                    prediction = -1.0
-                else:
-                    print >> sys.stderr, 'WARNING: No solution found:', solutions
-                    prediction = similarity.constSimScore
-            predictions.append((userId1, rating1, rating2, prediction))
+            predictions.append((userId1, rating1, rating2,
+                                modelSim.modelSim(rating1, rating2)))
             i += 1
             j += 1
     return predictions
 
-def processPair(db_conn, writer, cosineFunc, sigma_r, sigma_s,
+def processPair(db_conn, writer, cosineFunc, mu_s, sigma_r, sigma_s,
                 productId1, productId2):
     db_curs = db_conn.cursor()
     # fetch product reviews
@@ -122,14 +102,14 @@ def processPair(db_conn, writer, cosineFunc, sigma_r, sigma_s,
     bias2 = np.mean([review[2] for review in reviews2])
     # get predictions
     predictions = getPredictions(reviews1, reviews2, bias1, bias2,
-                                 sigma_r=sigma_r, sigma_s=sigma_s)
+                                 mu_s=mu_s, sigma_r=sigma_r, sigma_s=sigma_s)
     # write output
     for (userId, rating1, rating2, prediction) in predictions:
         error = prediction - cosineSim
         writer.writerow([userId, rating1, rating2, prediction, error])
 
 def worker(workerIdx, q, db_fname, outputDir, outputTemplate, cosineFunc,
-           sigma_r, sigma_s):
+           mu_s, sigma_s, sigma_r):
     num_writes = 0
     num_skips = 0
     # connect to db
@@ -146,7 +126,7 @@ def worker(workerIdx, q, db_fname, outputDir, outputTemplate, cosineFunc,
             print 'Writing %s . . .' % outputFileName
             with open(outputFileName, 'wb') as csvfile:
                 writer = csv.writer(csvfile)
-                processPair(db_conn, writer, cosineFunc, sigma_r, sigma_s,
+                processPair(db_conn, writer, cosineFunc, mu_s, sigma_r, sigma_s,
                             productId1, productId2)
                 num_writes += 1
 
@@ -197,6 +177,20 @@ def main():
             'Invalid Similarity function: %s' % options.cosineFunc
         return
 
+    # modelSim param overrides
+    if options.mu_s:
+        mu_s = options.mu_s
+    else:
+        mu_s = modelSim.mu_s
+    if options.sigma_s:
+        sigma_s = options.sigma_s
+    else:
+        sigma_s = modelSim.sigma_s
+    if options.sigma_r:
+        sigma_r = options.sigma_r
+    else:
+        sigma_r = modelSim.sigma_r
+
     outputTemplate = outputTemplateTemplate % options.cosineFunc
 
     # create queues
@@ -209,7 +203,7 @@ def main():
     for w in range(options.numWorkers):
         workers.append(mp.Process(target=worker,
             args=(w, queues[w], options.db_fname, outputDir, outputTemplate,
-                  cosineFunc, options.sigma_r, options.sigma_s)))
+                  cosineFunc, mu_s, sigma_s, sigma_r)))
 
     # start worker processes
     for w in range(options.numWorkers):
