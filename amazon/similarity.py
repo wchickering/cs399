@@ -147,11 +147,16 @@ def predSim(reviewsA, reviewsB):
     else:
         return (constSimScore, numUsersCommon)
 
+def modelSim(reviewsA, reviewsB):
+    """this is just a place holder."""
+    raise NotImplemented
+
+def weightedModelSim(reviewsA, reviewsB):
+    """this is just a place holder."""
+    raise NotImplemented
+
 #def modelSim(reviewsA, reviewsB):
-#    """Compute the average "implicitly" predicted similarity between
-#       items A and B according to a simple model.
-#    """
-#    # compute product biases:
+#    """Compute the MLE similarity based upon a simple model."""
 #    if reviewsA:
 #        biasA = np.mean([review[2] for review in reviewsA])
 #    else:
@@ -160,9 +165,9 @@ def predSim(reviewsA, reviewsB):
 #        biasB = np.mean([review[2] for review in reviewsB])
 #    else:
 #        biasB = 0.0
-#    totalScore = 0
-#    totalCount = 0
 #    numUsersCommon = 0
+#    solutionTotal = 0
+#    weightTotal = 0
 #    i = 0
 #    j = 0
 #    while i < len(reviewsA) and j < len(reviewsB):
@@ -182,69 +187,18 @@ def predSim(reviewsA, reviewsB):
 #            numUsersCommon += 1
 #            scoreA = reviewsA[i][2] - biasA
 #            scoreB = reviewsB[j][2] - biasB
-#            entry = modelGrid[(scoreA, scoreB)]
-#            if entry and entry[0] >= -1 and entry[0] <= 1:
-#                totalScore += entry[0]
-#                totalCount += math.sqrt(scoreA**2 + scoreB**2)
+#            p = round(scoreA*scoreB, 3)
+#            q = round(scoreA**2 + scoreB**2, 3)
+#            s = sympy.Symbol('s')
+#            solutions =\
+#                sympy.solve(-p*s**2 + q*s - p +\
+#                            (sigma_r/sigma_s)**2*(1 - s**2)**2*(s - mu_s), s,
+#                            minimal=True, quick=True)
+#            weight = math.sqrt(q)
+#            solutionTotal += weight*solutions[0]
+#            weightTotal += weight
 #            i += 1
 #            j += 1
-#    if totalCount > 0:
-#        return (totalScore/totalCount, numUsersCommon)
-#    else:
-#        return (constSimScore, numUsersCommon)
-
-def modelSim(reviewsA, reviewsB):
-    """Compute the MLE similarity based upon a simple model."""
-    if reviewsA:
-        biasA = np.mean([review[2] for review in reviewsA])
-    else:
-        biasA = 0.0
-    if reviewsB:
-        biasB = np.mean([review[2] for review in reviewsB])
-    else:
-        biasB = 0.0
-    numUsersCommon = 0
-    solutionTotal = 0
-    weightTotal = 0
-    i = 0
-    j = 0
-    while i < len(reviewsA) and j < len(reviewsB):
-        userIdA = reviewsA[i][1]
-        userIdB = reviewsB[j][1]
-        if userIdA < userIdB:
-            i += 1
-        elif userIdA > userIdB:
-            j += 1
-        else:
-            timeA = reviewsA[i][0]
-            timeB = reviewsB[j][0]
-            if timeA == timeB:
-                i += 1
-                j += 1
-                continue # ignore duplicate reviews
-            numUsersCommon += 1
-            scoreA = reviewsA[i][2] - biasA
-            scoreB = reviewsB[j][2] - biasB
-            p = round(scoreA*scoreB, 3)
-            q = round(scoreA**2 + scoreB**2, 3)
-            s = sympy.Symbol('s')
-            solutions =\
-                sympy.solve(-p*s**2 + q*s - p +\
-                            (sigma_r/sigma_s)**2*(1 - s**2)**2*(s - mu_s), s,
-                            minimal=True, quick=True)
-            weight = math.sqrt(q)
-            #entry = simGrid[(scoreA, scoreB)]
-            #if entry:
-            #    historic = entry[0]/entry[1]
-            #else:
-            #    historic = constSimScore
-            #print ('rating1=%0.3f, rating2=%0.3f, prediction: %0.3f, '
-            #       'weight: %0.3f (historic: %0.3f)') %\
-            #    (scoreA, scoreB, solutions[0], weight, historic)
-            solutionTotal += weight*solutions[0]
-            weightTotal += weight
-            i += 1
-            j += 1
 
     #print solutions
     return (solutionTotal/weightTotal, numUsersCommon)
@@ -378,6 +332,7 @@ def computeScore(innerProd, varA, varB):
 ################################
 
 weights = None
+avgWeight = None
 
 def computePredictivity(absAverage, variance, epsilon):
     #adjustedError = absAverage + math.sqrt(variance)
@@ -386,6 +341,7 @@ def computePredictivity(absAverage, variance, epsilon):
 
 def initWeightedSim(errorFileName, epsilon):
     global weights
+    global avgWeight
     w = {}
     totalW = 0
     with open(errorFileName, 'rb') as csvfile:
@@ -398,6 +354,7 @@ def initWeightedSim(errorFileName, epsilon):
             totalW += w[userId]
     # create entry for unknown users
     averageW = totalW/len(w)
+    avgWeight = averageW
     weights = defaultdict(lambda x: averageW, w)
 
 #########################
@@ -516,8 +473,8 @@ def getParser(usage=None):
        help=('Off-diagonal component of covariance matrix for multivariate '
              'Gaussian distribution prior for ratings.'), metavar='FLOAT')
     parser.add_option('--errorFileName', dest='errorFileName',
-        default='output/aggregatePredictions_train.csv',
-        help='User prediction errors file.', metavar='FILE')
+        default='output/aggregatePredictions_modelSim.csv',
+        help='User prediction errors file for weightedModelSim.', metavar='FILE')
     parser.add_option('--epsilon', dest='epsilon', type='float', default=0.3,
         help='Decay constant epsilon for weightedPredSim.', metavar='FLOAT')
     return parser
@@ -573,7 +530,7 @@ def main():
         initPredSim(options.minRating, options.maxRating, options.stepRating,
                     options.simGridFile)
 
-    if options.cosineFunc == 'weightedPredSim':
+    if options.cosineFunc == 'weightedModelSim':
         # initialize weights
         initWeightedSim(options.errorFileName, options.epsilon)
 

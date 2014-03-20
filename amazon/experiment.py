@@ -77,8 +77,8 @@ def getParser(usage=None):
     parser.add_option('--sigma', dest='sigma', type='float', default=None,
         help='Parameter sigma for prefSimAlt1 or randSimAlt1.', metavar='FLOAT')
     parser.add_option('--errorFileName', dest='errorFileName',
-        default='data/userErrors.csv', help='User prediction errors file.',
-        metavar='FILE')
+        default='output/aggregatePredictions_modelSim.csv',
+        help='User prediction errors file for modelSim.', metavar='FILE')
     parser.add_option('--epsilon', dest='epsilon', type='float', default=0.5,
         help='Parameter epsilon for weightedRandSim or wightedPrefSim.',
         metavar='FLOAT')
@@ -193,7 +193,8 @@ def expt2(db_conn, writer, cosineFunc, productId1, productId2):
         stepBegin_i = i
         stepBegin_j = j
         # special handling for modelSim
-        if cosineFunc == similarity.modelSim:
+        if cosineFunc == similarity.modelSim or\
+           cosineFunc == similarity.weightedModelSim:
             predReviews1 =\
                 sorted(predReviews1 + stepReviews1, key=lambda x: x[1])
             predReviews2 =\
@@ -209,8 +210,13 @@ def expt2(db_conn, writer, cosineFunc, productId1, productId2):
             totalScore = 0
             totalWeight = 0
             for p in predictions:
-                #weight = abs(p[1]*p[2])
-                weight = 1
+                if cosineFunc == similarity.weightedModelSim:
+                    try:
+                        weight = similarity.weights[p[0]]
+                    except:
+                        weight = similarity.avgWeight
+                else:
+                    weight = 1
                 totalScore += p[3]*weight
                 totalWeight += weight
             cosineSim = totalScore/totalWeight
@@ -330,7 +336,7 @@ def main():
                                options.stepRating, options.simGridFile)
 
     # weighted similarity
-    if options.cosineFunc == 'weightedRandSim':
+    if options.cosineFunc == 'weightedModelSim':
         similarity.initWeightedSim(options.errorFileName, options.epsilon)
 
     # create queues
