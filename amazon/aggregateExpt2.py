@@ -105,7 +105,10 @@ def main():
         print >> sys.stderr, 'Processing %s . . .' % filename
         filenames.append(filename)
         # record all data
-        data.append(getData(fullpath))
+        filedata = getData(fullpath)
+        if not filedata:
+            continue
+        data.append(filedata)
         # parse productIds from filename
         productId1 = filename.split('_')[1]
         productId2 = filename.split('_')[2].split('.')[0]

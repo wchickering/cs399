@@ -37,35 +37,25 @@ def getParser(usage=None):
         default='modelPredictions', help='Output directory.', metavar='DIR')
     parser.add_option('-c', '--cosineFunc', dest='cosineFunc',
         default='prefSim',
-        help='Similarity function to use: "prefSim" (default) or "randSim"',
-              metavar='FUNCNAME')
-    parser.add_option('--modelGridFile', dest='modelGridFile',
-        default='output/simGrid_modelSim.csv',
-        help='CSV containing simGrid data for modelSim.', metavar='FILE')
+        help=('Similarity function to use as reference: '
+             '"prefSim" (default) or "randSim"'),
+        metavar='FUNCNAME')
     parser.add_option('--sigma_r', type='float', dest='sigma_r',
         default=0.2, help='Standard deviation of rating distribution.',
         metavar='FLOAT')
     parser.add_option('--sigma_s', type='float', dest='sigma_s',
         default=0.2, help='Standard deviation of score distribution.',
         metavar='FLOAT')
-    parser.add_option('--minRating', type='float', dest='minRating',
-        default=-2.0, help='Minimum rating.', metavar='FLOAT')
-    parser.add_option('--maxRating', type='float', dest='maxRating',
-        default=2.0, help='Maximum rating.', metavar='FLOAT')
-    parser.add_option('--stepRating', type='float', dest='stepRating',
-        default=0.1, help='Step rating.', metavar='FLOAT')
     return parser
 
-def getPredictions(reviews1, reviews2, sigma_r=None, sigma_s=None):
+def getPredictions(reviews1, reviews2, bias1, bias2,
+                   sigma_r=None, sigma_s=None):
     mu_s = similarity.mu_s
     if not sigma_s:
         sigma_s = similarity.sigma_s
     if not sigma_r:
         sigma_r = similarity.sigma_r
     predictions = []
-    # compute product biases
-    bias1 = np.mean([review[2] for review in reviews1])
-    bias2 = np.mean([review[2] for review in reviews2])
     # update histograms
     i = 0
     j = 0
@@ -90,8 +80,12 @@ def getPredictions(reviews1, reviews2, sigma_r=None, sigma_s=None):
             q = round(rating1**2 + rating2**2, 3)
             sigRatio = round((sigma_r/sigma_s)**2, 3)
             s = Symbol('s')
-            solutions =\
-                solve(-p*s**2 + q*s - p + sigRatio*(1 - s**2)**2*(s - mu_s), s)
+            try:
+                solutions = solve(-p*s**2 + q*s - p +\
+                                  sigRatio*(1 - s**2)**2*(s - mu_s), s)
+            except:
+                print >> sys.stderr, 'WARNING: sympy.solve raised error.'
+                solutions = []
             prediction = None
             for candidate in solutions:
                 if (check_assumptions(candidate, real=True) and\
@@ -100,24 +94,21 @@ def getPredictions(reviews1, reviews2, sigma_r=None, sigma_s=None):
                     prediction = candidate
             if not prediction:
                 if solutions == [0.0]:
-                    prediction = 0
+                    prediction = 0.0
+                elif solutions and solutions[0] == 1.0:
+                    prediction = 1.0
+                elif solutions and solutions[0] == -1.0:
+                    prediction = -1.0
                 else:
                     print >> sys.stderr, 'WARNING: No solution found:', solutions
                     prediction = similarity.constSimScore
-
-            #ratingA = min(rating1, rating2)
-            #ratingB = max(rating2, rating2)
-            #if similarity.modelGrid[(ratingA, ratingB)]:
-            #    prediction = similarity.modelGrid[(ratingA, ratingB)][0]
-            #else:
-            #    print >> sys.stderr, 'WARNING: No entry in modelGrid'
-            #    prediction = similarity.constSimScore
             predictions.append((userId1, rating1, rating2, prediction))
             i += 1
             j += 1
     return predictions
 
-def processPair(db_conn, writer, cosineFunc, sigma_r, sigma_s, productId1, productId2):
+def processPair(db_conn, writer, cosineFunc, sigma_r, sigma_s,
+                productId1, productId2):
     db_curs = db_conn.cursor()
     # fetch product reviews
     db_curs.execute(selectReviewsStmt, (productId1,))
@@ -126,8 +117,11 @@ def processPair(db_conn, writer, cosineFunc, sigma_r, sigma_s, productId1, produ
     reviews2 = [row for row in db_curs.fetchall()]
     # compute cosine similarity using the provided function.
     cosineSim, numUserCommon = cosineFunc(reviews1, reviews2)
+    # compute product biases
+    bias1 = np.mean([review[2] for review in reviews1])
+    bias2 = np.mean([review[2] for review in reviews2])
     # get predictions
-    predictions = getPredictions(reviews1, reviews2,
+    predictions = getPredictions(reviews1, reviews2, bias1, bias2,
                                  sigma_r=sigma_r, sigma_s=sigma_s)
     # write output
     for (userId, rating1, rating2, prediction) in predictions:
@@ -204,9 +198,6 @@ def main():
         return
 
     outputTemplate = outputTemplateTemplate % options.cosineFunc
-
-    similarity.initModelSim(options.minRating, options.maxRating,
-                            options.stepRating, options.modelGridFile)
 
     # create queues
     queues = []

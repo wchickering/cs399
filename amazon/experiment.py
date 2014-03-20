@@ -8,9 +8,10 @@ import numpy as np
 import csv
 import os
 import sys
+import math
 
 import similarity
-import predictions as pred
+import modelPredictions as modpred
 
 # params
 stepSize = 10
@@ -157,6 +158,9 @@ def expt2(db_conn, writer, cosineFunc, productId1, productId2):
     reviews1 = [(row[0], row[1], row[2]) for row in db_curs.fetchall()]
     db_curs.execute(selectReviewsOrderByUserStmt, (productId2,))
     reviews2 = [(row[0], row[1], row[2]) for row in db_curs.fetchall()]
+    # compute product biases
+    bias1 = np.mean([review[2] for review in reviews1])
+    bias2 = np.mean([review[2] for review in reviews2])
     # determine review pair times
     reviewPairTimes = getReviewPairTimes(reviews1, reviews2)
     # sort everything by time
@@ -188,16 +192,40 @@ def expt2(db_conn, writer, cosineFunc, productId1, productId2):
         stepReviews2 = sorted(reviews2[stepBegin_j:j], key=lambda x: x[1])
         stepBegin_i = i
         stepBegin_j = j
-        # append to past reviews and sort by userId
-        pastReviews1 = sorted(pastReviews1 + stepReviews1,
-                              key=lambda x: x[1])
-        assert(pastReviews1)
-        pastReviews2 = sorted(pastReviews2 + stepReviews2,
-                              key=lambda x: x[1])
-        assert(pastReviews2)
-        # compute cosine similarity at present time slice
-        # using the provided function.
-        cosineSim, numUserCommon = cosineFunc(pastReviews1, pastReviews2)
+        # special handling for modelSim
+        if cosineFunc == similarity.modelSim:
+            predReviews1 =\
+                sorted(predReviews1 + stepReviews1, key=lambda x: x[1])
+            predReviews2 =\
+                sorted(predReviews2 + stepReviews2, key=lambda x: x[1])
+            predictions += modpred.getPredictions(predReviews1, predReviews2,
+                                                  bias1, bias2)
+            # remove predictors from predReviews to avoid double counting
+            predReviews1 = [r for r in predReviews1\
+                            if r[1] not in [p[0] for p in predictions]]
+            predReviews2 = [r for r in predReviews2\
+                            if r[1] not in [p[0] for p in predictions]]
+            # compute weighted mean
+            totalScore = 0
+            totalWeight = 0
+            for p in predictions:
+                #weight = abs(p[1]*p[2])
+                weight = 1
+                totalScore += p[3]*weight
+                totalWeight += weight
+            cosineSim = totalScore/totalWeight
+            numUserCommon = len(predictions)
+        else:
+            # append to past reviews and sort by userId
+            pastReviews1 = sorted(pastReviews1 + stepReviews1,
+                                  key=lambda x: x[1])
+            assert(pastReviews1)
+            pastReviews2 = sorted(pastReviews2 + stepReviews2,
+                                  key=lambda x: x[1])
+            assert(pastReviews2)
+            # compute cosine similarity at present time slice
+            # using the provided function.
+            cosineSim, numUserCommon = cosineFunc(pastReviews1, pastReviews2)
         # write step info
         writer.writerow([i+j, i, j, numUserCommon, cosineSim])
 

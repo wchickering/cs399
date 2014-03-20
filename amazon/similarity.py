@@ -23,7 +23,7 @@ sigmaXY = 0.3
 # modelSim params
 mu_s = constSimScore
 sigma_s = 0.2
-sigma_r = 0.1
+sigma_r = 0.3
 
 # errorFile
 userIdIdx = 0
