@@ -77,7 +77,7 @@ def getParser(usage=None):
     parser.add_option('--sigma', dest='sigma', type='float', default=None,
         help='Parameter sigma for prefSimAlt1 or randSimAlt1.', metavar='FLOAT')
     parser.add_option('--errorFileName', dest='errorFileName',
-        default='output/aggregatePredictions_modelSim.csv',
+        default='output/aggregatePredictions_modelSim_2.2_0.5_0.3.csv',
         help='User prediction errors file for modelSim.', metavar='FILE')
     parser.add_option('--epsilon', dest='epsilon', type='float', default=0.5,
         help='Parameter epsilon for weightedRandSim or wightedPrefSim.',
