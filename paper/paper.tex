@@ -47,7 +47,8 @@ CS 399 \> Paper \> Bill Chickering (bchick)\\
 \emph{Will write this when the paper is done}
 
 \section*{Introduction}
-Determining the similarity of two items is super important because... With large
+The similarity of two items is a valuable measurement for a number of
+data-mining applications, such as recommender systems. With large
 amounts of rating data, collaborative filtering is a good method for
 calculating similarity. However, with sparse rating data, this
 technique gives noisy and unreliable approximations for similarity. Even worse, 
@@ -65,13 +66,19 @@ of the two rating vectors.
 There are a few ways to compute the similarity of two vectors. One approach is
 to use Cosine-similarity, defined as the cosine of the angle between the two vectors:
 \begin{align}
-PearsSim(A, B) = ...
+CosSim(A, B) = \frac{\sum\limits_{u\in U_{AB}}
+r_{u,A}r_{u,B}}{\sqrt{\sum\limits_{u\in U_{A}} r_{u,A}^2}
+\sqrt{\sum\limits_{u\in U_{B}} r_{u,B}^2}}
 \end{align}
-where this = that ... Another popular approach is to use Pearson correlation:
+where $U_{I}$ is the set of all users who rated item $I$, $U_{AB}$ is the set of all 
+users who rated both item $A$ and item $B$ and $r_{u,I}$ is the rating user $u$ gave 
+to item $I$. Another popular approach is to use Pearson correlation:
 \begin{align}
-CosSim(A, B) = ...
+PearsSim(A, B) = \frac{\sum\limits_{u\in U_{AB}}
+r_{u,A}r_{u,B}}{\sqrt{\sum\limits_{u\in U_{AB}} r_{u,A}^2}
+\sqrt{\sum\limits_{u\in U_{AB}} r_{u,B}^2}}
 \end{align}
-where this = that.  Other similarity functions exist, such as one-sided similarities, but Pearson
+Other similarity functions exist, such as one-sided similarities, but Pearson
 correlation and Cosine-similarity are the most popular and will be the two
 measurements used in this paper. \footnotemark
 
@@ -118,7 +125,7 @@ ModSim(Sim(A, B), n) \approx lim_{n\to\infty}Sim(A, B)
 \section*{Model}
 We model the problem probabilistically. Let $Y$ be a random variable
 representing the $TrueSim$ of a randomly chosen pair of items. Let $X_n$ be a
-random variable representing the $Sim$ of a pair of items with $n$ common users.
+random variable representing the calculated $Sim$ of a pair of items with $n$ common users.
 
 We model $Y$ as a Normal distribution 
 \begin{align}
@@ -133,9 +140,14 @@ the true similarity $Y$, we model $X_n | Y$ as a Normal distribution around $Y$:
 Note that $\sigma_{2, n}^2$ represents how noisy the estimation of $Sim$ is
 when there are $n$ common users. This should decrease as $n$ increases.
 
-\begin{itemize}
-    \item illustration
-\end{itemize}
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.5\textwidth]{twonormals.png}
+    \caption{The blue curve represents $Y$, the distribution of true similarities
+    between a random pair of items. The red curve represents $X|Y$, the
+    estimated similarity when a small number of common users exist.}
+    \label{fig:two_normals}
+\end{figure}
 
 In probabilistic terms, for a calculated value $X_n$, we want to find the value 
 of $Y$ that most likely produced $X_n$. Thus we desire the Maximum Likelihood
@@ -170,13 +182,36 @@ which can be rewritten as:
 \left(y - \mu\right) &= \frac{\sigma_{1}^2}{\sigma_{1}^2+\sigma_{2,n}^2}\left(x-\mu\right)
 \end{align}
 
-\begin{itemize}
-    \item MLE with bias
-    \item Features - linear, mu is fixed point
-    \item Slope - between 0 and 1. As sigma2 changes. 
-    \item Model sigma2 as a function of users in common
-    \item Show final parameterized model - discuss params, speculation in model (?)
-\end{itemize}
+The model suggests that there is a linear correlation between $X_n$, the
+similarity calculated with $n$ common users, and $Y$, the true similarity. Since 
+$\sigma_{2,n}^2\ge0$, the slope is always $\le1$, meaning that the calculated
+distance from $\mu$ (the average similarity) overestimates the true distance. This makes
+sense, since there is a prior distribution of true similarity weighted around $\mu$.
+
+The parameters $\mu$, $\sigma_{1}^2$, and $\sigma_{2,n}^2$ all can be approximated 
+using the method of moments over training data where there are enough common
+users that $TrueSim$ can be approximated. This method requires approximating
+$\sigma_{2,n}^2$ for every value of $n$ separately. Alternatively, we can model
+$\sigma_{2,n}^2$ as a function of $n$. Recall that $\sigma_{2,n}^2$ is the
+noisiness of the measurement $Sim$ about $TrueSim$ and $TrueSim = lim_{n \to
+\infty}Sim$. Thus $Sim$ can be thought of as a sampling $n$ users from the
+infinite set used to calculate $TrueSim$. Although $Sim$ may not be linear, we
+the Central Limit Theorem motivates the intuition that the variance of $Sim$
+would decrease as the $sqrt(n)$. Thus we model $\sigma_{2,n}^2$ as:
+
+\begin{align}
+\sigma_{2,n}^2 = \frac{\alpha}{\sqrt{n}}
+\end{align}
+Yielding the single parameter model:
+\begin{align}
+\left(Y - \mu\right) = \frac{\sigma_{1}^2}{\sigma_{1}^2+\frac{\alpha}{\sqrt{n}}}
+\left(X_n-\mu\right)
+\end{align}
+In terms of a modified similarity function, as desired earlier, we now have:
+\begin{align}
+ModSim(Sim, n) = \frac{\sigma_{1}^2}{\sigma_{1}^2+\frac{\alpha}{\sqrt{n}}}
+\left(Sim-\mu\right) + \mu
+\end{align}
 
 \section*{Technique}
 
