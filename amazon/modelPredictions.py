@@ -41,26 +41,31 @@ def getParser(usage=None):
         help=('Similarity function to use as reference: '
              '"randSim" (default) or "prefSim"'),
         metavar='FUNCNAME')
-    parser.add_option('--mu_s', type='float', dest='mu_s',
-        default=None,  help='Mean of score distribution.',
-        metavar='FLOAT')
-    parser.add_option('--sigma_s', type='float', dest='sigma_s',
-        default=None, help='Standard deviation of score distribution.',
-        metavar='FLOAT')
-    parser.add_option('--sigma_r', type='float', dest='sigma_r',
-        default=None, help='Standard deviation of rating distribution.',
-        metavar='FLOAT')
+    parser.add_option('--mu_s', type='float', dest='mu_s', default=None,
+        help='Mean of score distribution.', metavar='FLOAT')
+    parser.add_option('--sigma_s', type='float', dest='sigma_s', default=None,
+        help='Standard deviation of score distribution.', metavar='FLOAT')
+    parser.add_option('--mu_r', type='float', dest='mu_r', default=None,
+        help='Mean of rating distribution.', metavar='FLOAT')
+    parser.add_option('--sigma_r', type='float', dest='sigma_r', default=None,
+        help='Standard deviation of rating distribution.', metavar='FLOAT')
+    parser.add_option('--alpha', type='int', dest='alpha', default=None,
+        help='Similarity root.', metavar='INT')
     return parser
 
-def getPredictions(reviews1, reviews2, bias1, bias2,
-                   mu_s=None, sigma_r=None, sigma_s=None):
+def getPredictions(reviews1, reviews2, bias1, bias2, mu_s=None, sigma_s=None,
+                   mu_r=None, sigma_r=None, alpha=None):
     # override params
     if mu_s:
         modelSim.mu_s = mu_s
     if sigma_s:
         modelSim.sigma_s = sigma_s
+    if mu_r:
+        modelSim.mu_r = mu_r
     if sigma_r:
         modelSim.sigma_r = sigma_r
+    if alpha:
+        modelSim.alpha = alpha
     predictions = []
     # iterate over common reviewers
     i = 0
@@ -87,8 +92,8 @@ def getPredictions(reviews1, reviews2, bias1, bias2,
             j += 1
     return predictions
 
-def processPair(db_conn, writer, cosineFunc, mu_s, sigma_r, sigma_s,
-                productId1, productId2):
+def processPair(db_conn, writer, cosineFunc, mu_s, sigma_s, mu_r, sigma_r,
+                alpha, productId1, productId2):
     db_curs = db_conn.cursor()
     # fetch product reviews
     db_curs.execute(selectReviewsStmt, (productId1,))
@@ -102,14 +107,15 @@ def processPair(db_conn, writer, cosineFunc, mu_s, sigma_r, sigma_s,
     bias2 = np.mean([review[2] for review in reviews2])
     # get predictions
     predictions = getPredictions(reviews1, reviews2, bias1, bias2,
-                                 mu_s=mu_s, sigma_r=sigma_r, sigma_s=sigma_s)
+                                 mu_s=mu_s, sigma_s=sigma_s,
+                                 mu_r=mu_r, sigma_r=sigma_r, alpha=alpha)
     # write output
     for (userId, rating1, rating2, prediction) in predictions:
         error = prediction - cosineSim
         writer.writerow([userId, rating1, rating2, prediction, error])
 
 def worker(workerIdx, q, db_fname, outputDir, outputTemplate, cosineFunc,
-           mu_s, sigma_s, sigma_r):
+           mu_s, sigma_s, mu_r, sigma_r, alpha):
     num_writes = 0
     num_skips = 0
     # connect to db
@@ -126,8 +132,8 @@ def worker(workerIdx, q, db_fname, outputDir, outputTemplate, cosineFunc,
             print 'Writing %s . . .' % outputFileName
             with open(outputFileName, 'wb') as csvfile:
                 writer = csv.writer(csvfile)
-                processPair(db_conn, writer, cosineFunc, mu_s, sigma_r, sigma_s,
-                            productId1, productId2)
+                processPair(db_conn, writer, cosineFunc, mu_s, sigma_s,
+                            mu_r, sigma_r, alpha, productId1, productId2)
                 num_writes += 1
 
 def master(inputfile, queues, workers):
@@ -186,10 +192,18 @@ def main():
         sigma_s = options.sigma_s
     else:
         sigma_s = modelSim.sigma_s
+    if options.mu_r:
+        mu_r = options.mu_r
+    else:
+        mu_r = modelSim.mu_r
     if options.sigma_r:
         sigma_r = options.sigma_r
     else:
         sigma_r = modelSim.sigma_r
+    if options.alpha:
+        alpha = options.alpha
+    else:
+        alpha = modelSim.alpha
 
     outputTemplate = outputTemplateTemplate % options.cosineFunc
 
@@ -203,7 +217,7 @@ def main():
     for w in range(options.numWorkers):
         workers.append(mp.Process(target=worker,
             args=(w, queues[w], options.db_fname, outputDir, outputTemplate,
-                  cosineFunc, mu_s, sigma_s, sigma_r)))
+                  cosineFunc, mu_s, sigma_s, mu_r, sigma_r, alpha)))
 
     # start worker processes
     for w in range(options.numWorkers):

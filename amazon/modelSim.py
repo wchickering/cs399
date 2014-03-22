@@ -16,38 +16,39 @@ a single reviewer.
 # "official" modelSim params
 mu_s = 0.27
 sigma_s = 0.3
-sigma_r = 0.5
-rho = 2.2
+mu_r = 0.2
+sigma_r = 0.2
+alpha = 2
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('--mu_s', type='float', dest='mu_s',
-        default=None, help='Mean of score distribution.',
-        metavar='FLOAT')
-    parser.add_option('--sigma_s', type='float', dest='sigma_s',
-        default=None, help='Standard deviation of score distribution.',
-        metavar='FLOAT')
-    parser.add_option('--sigma_r', type='float', dest='sigma_r',
-        default=None, help='Standard deviation of rating distribution.',
-        metavar='FLOAT')
-    parser.add_option('--rho', type='float', dest='rho',
-        default=None, help='Similarity multiplicative constant.',
-        metavar='FLOAT')
+    parser.add_option('--mu_s', type='float', dest='mu_s', default=None,
+        help='Mean of score distribution.', metavar='FLOAT')
+    parser.add_option('--sigma_s', type='float', dest='sigma_s', default=None,
+        help='Standard deviation of score distribution.', metavar='FLOAT')
+    parser.add_option('--mu_r', type='float', dest='mu_r', default=None,
+        help='Mean of rating distribution.', metavar='FLOAT')
+    parser.add_option('--sigma_r', type='float', dest='sigma_r', default=None,
+        help='Standard deviation of rating distribution.', metavar='FLOAT')
+    parser.add_option('--alpha', type='int', dest='alpha', default=None,
+        help='Similarity root.', metavar='INT')
     return parser
 
 def modelSim(rating1, rating2):
     # rounding seems to help sympy
-    mu = round(mu_s, 3)
-    sigRatio = round((sigma_r/sigma_s)**2, 3)
-    r = round(rho, 3)
-    r_sq = round(rho**2, 3)
-    p = round(rating1*rating2, 3)
-    q = round(rating1**2 + rating2**2, 3)
+    p = round((rating1 - mu_r)*(rating2 - mu_r), 3)
+    q = round((rating1 - mu_r)**2 + (rating2 - mu_r)**2, 3)
+    mu_s_ = round(mu_s, 3)
+    sigRatio = round(alpha*(sigma_r/sigma_s)**2, 3)
+    exp1 = round((1 + alpha)/float(alpha), 3)
+    exp2 = round((1 - alpha)/float(alpha), 3)
+    exp3 = round((3 - alpha)/float(alpha), 3)
+    exp4 = round(2/alpha, 3)
     s = Symbol('s')
     solutions = None
     try:
-        solutions = solve(-p*r_sq*s**2 + q*r*s - p +\
-                          sigRatio*(1 - r_sq*s**2)**2*(s - mu), s)
+        solutions = solve(q*s - p*s**exp1 - p*s**exp2 + p*s**exp3 +\
+                          sigRatio*(1 - s**exp4)**2*(s - mu_s_), s)
     except:
         print >> sys.stderr, 'WARNING: sympy.solve raised error.'
     prediction = None
@@ -68,6 +69,10 @@ def modelSim(rating1, rating2):
                 prediction = -1.0
             else:
                 print >> sys.stderr, 'WARNING: No solution found:', solutions
+                print >> sys.stderr,\
+                    ('p=%0.3f, q=%0.3f, mu_s_=%0.3f, sigRatio=%0.3f, '
+                     'exp1=%0.3f, exp2=%0.3f, exp3=%0.3f, exp4=%0.3f ') %\
+                    (p, q, mu_s_, sigRatio, exp1, exp2, exp3, exp4)
                 prediction = mu_s
     return prediction
 
@@ -86,11 +91,15 @@ def main():
     global sigma_s
     if options.sigma_s:
         sigma_s = options.sigma_s
+    global mu_r
+    if options.mu_r:
+        mu_r = options.mu_r
     global sigma_r
     if options.sigma_r:
         sigma_r = options.sigma_r
-    if options.rho:
-        rho = options.rho
+    global alpha
+    if options.alpha:
+        alpha = options.alpha
     
     print modelSim(rating1, rating2)
                           
