@@ -1,5 +1,10 @@
 #!/usr/local/bin/python
 
+"""
+Processes a list of product pairs and for each produces a list of users, their
+implied similarity estimates based on a model, and their error.
+"""
+
 import multiprocessing as mp
 import Queue
 from optparse import OptionParser
@@ -8,16 +13,14 @@ import csv
 import os
 import sys
 import numpy as np
-from sympy import Symbol, solve
-from sympy.solvers.solvers import check_assumptions
 
 import similarity
 import modelSim
 
 # params
 outputTemplateTemplate = '%s_%%s_%%s.csv'
-workerTimeout = 60
-workerQueueSize = 100
+workerTimeout = 20
+workerQueueSize = 20
 END_OF_QUEUE = -1
 
 # db params
@@ -39,8 +42,7 @@ def getParser(usage=None):
     parser.add_option('-c', '--cosineFunc', dest='cosineFunc',
         default='randSim',
         help=('Similarity function to use as reference: '
-             '"randSim" (default) or "prefSim"'),
-        metavar='FUNCNAME')
+             '"randSim" (default) or "prefSim"'), metavar='FUNCNAME')
     parser.add_option('--mu_s', type='float', dest='mu_s', default=None,
         help='Mean of score distribution.', metavar='FLOAT')
     parser.add_option('--sigma_s', type='float', dest='sigma_s', default=None,
@@ -49,12 +51,10 @@ def getParser(usage=None):
         help='Mean of rating distribution.', metavar='FLOAT')
     parser.add_option('--sigma_r', type='float', dest='sigma_r', default=None,
         help='Standard deviation of rating distribution.', metavar='FLOAT')
-    parser.add_option('--alpha', type='int', dest='alpha', default=None,
-        help='Similarity root.', metavar='INT')
     return parser
 
 def getPredictions(reviews1, reviews2, bias1, bias2, mu_s=None, sigma_s=None,
-                   mu_r=None, sigma_r=None, alpha=None):
+                   mu_r=None, sigma_r=None):
     # override params
     if mu_s:
         modelSim.mu_s = mu_s
@@ -64,8 +64,6 @@ def getPredictions(reviews1, reviews2, bias1, bias2, mu_s=None, sigma_s=None,
         modelSim.mu_r = mu_r
     if sigma_r:
         modelSim.sigma_r = sigma_r
-    if alpha:
-        modelSim.alpha = alpha
     predictions = []
     # iterate over common reviewers
     i = 0
@@ -86,14 +84,14 @@ def getPredictions(reviews1, reviews2, bias1, bias2, mu_s=None, sigma_s=None,
                 continue # ignore duplicate reviews
             rating1 = reviews1[i][2] - bias1
             rating2 = reviews2[j][2] - bias2
-            predictions.append((userId1, rating1, rating2,
-                                modelSim.modelSim(rating1, rating2)))
+            simScore = modelSim.modelSim(rating1, rating2)
+            predictions.append((userId1, rating1, rating2, simScore))
             i += 1
             j += 1
     return predictions
 
 def processPair(db_conn, writer, cosineFunc, mu_s, sigma_s, mu_r, sigma_r,
-                alpha, productId1, productId2):
+                productId1, productId2):
     db_curs = db_conn.cursor()
     # fetch product reviews
     db_curs.execute(selectReviewsStmt, (productId1,))
@@ -108,14 +106,14 @@ def processPair(db_conn, writer, cosineFunc, mu_s, sigma_s, mu_r, sigma_r,
     # get predictions
     predictions = getPredictions(reviews1, reviews2, bias1, bias2,
                                  mu_s=mu_s, sigma_s=sigma_s,
-                                 mu_r=mu_r, sigma_r=sigma_r, alpha=alpha)
+                                 mu_r=mu_r, sigma_r=sigma_r)
     # write output
     for (userId, rating1, rating2, prediction) in predictions:
         error = prediction - cosineSim
         writer.writerow([userId, rating1, rating2, prediction, error])
 
 def worker(workerIdx, q, db_fname, outputDir, outputTemplate, cosineFunc,
-           mu_s, sigma_s, mu_r, sigma_r, alpha):
+           mu_s, sigma_s, mu_r, sigma_r):
     num_writes = 0
     num_skips = 0
     # connect to db
@@ -125,7 +123,8 @@ def worker(workerIdx, q, db_fname, outputDir, outputTemplate, cosineFunc,
         if productId1 == END_OF_QUEUE: break
         outputFileName = os.path.join(outputDir, outputTemplate %
                                       (productId1, productId2))
-        if os.path.isfile(outputFileName):
+        if os.path.isfile(outputFileName) and\
+           os.stat(outputFileName).st_size > 0:
             num_skips += 1
             print 'Skipping %s . . .' % outputFileName
         else:
@@ -133,7 +132,7 @@ def worker(workerIdx, q, db_fname, outputDir, outputTemplate, cosineFunc,
             with open(outputFileName, 'wb') as csvfile:
                 writer = csv.writer(csvfile)
                 processPair(db_conn, writer, cosineFunc, mu_s, sigma_s,
-                            mu_r, sigma_r, alpha, productId1, productId2)
+                            mu_r, sigma_r, productId1, productId2)
                 num_writes += 1
 
 def master(inputfile, queues, workers):
@@ -200,10 +199,6 @@ def main():
         sigma_r = options.sigma_r
     else:
         sigma_r = modelSim.sigma_r
-    if options.alpha:
-        alpha = options.alpha
-    else:
-        alpha = modelSim.alpha
 
     outputTemplate = outputTemplateTemplate % options.cosineFunc
 
@@ -217,7 +212,7 @@ def main():
     for w in range(options.numWorkers):
         workers.append(mp.Process(target=worker,
             args=(w, queues[w], options.db_fname, outputDir, outputTemplate,
-                  cosineFunc, mu_s, sigma_s, mu_r, sigma_r, alpha)))
+                  cosineFunc, mu_s, sigma_s, mu_r, sigma_r)))
 
     # start worker processes
     for w in range(options.numWorkers):

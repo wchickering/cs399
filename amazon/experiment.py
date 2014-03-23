@@ -45,7 +45,7 @@ def getParser(usage=None):
         help='Output file prefix.', metavar='STR')
     parser.add_option('-e', '--exptFunc', dest='exptFunc', default='expt1',
         help='Experiment function to use: "expt1" (default) or "expt2"',
-        metavar='FUNCNAME')
+        metavar='EXPTNAME')
     parser.add_option('-c', '--cosineFunc', dest='cosineFunc',
         default='prefSim',
         help=('Similarity function to use: "prefSim" (default), "randSim", '
@@ -77,9 +77,9 @@ def getParser(usage=None):
     parser.add_option('--sigma', dest='sigma', type='float', default=None,
         help='Parameter sigma for prefSimAlt1 or randSimAlt1.', metavar='FLOAT')
     parser.add_option('--errorFileName', dest='errorFileName',
-        default='output/aggregatePredictions_modelSim_2.2_0.5_0.3.csv',
+        default='output/aggregatePredictions_modelSim.csv',
         help='User prediction errors file for modelSim.', metavar='FILE')
-    parser.add_option('--epsilon', dest='epsilon', type='float', default=0.5,
+    parser.add_option('--epsilon', dest='epsilon', type='float', default=0.01,
         help='Parameter epsilon for weightedRandSim or wightedPrefSim.',
         metavar='FLOAT')
     return parser
