@@ -12,7 +12,6 @@ import sys
 from collections import defaultdict
 import sympy 
 
-import predictions as pred
 from SimilarityGrid import SimilarityGrid
 
 # params
