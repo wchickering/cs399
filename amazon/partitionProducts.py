@@ -12,28 +12,32 @@ import random
 # db params
 dropStoresTableStmt = 'DROP TABLE IF EXISTS Stores'
 dropStoreProductsTableStmt = 'DROP TABLE IF EXISTS StoreProducts'
-createStoresTableStmt = 'CREATE TABLE Stores(StoreId INT PRIMARY KEY, Name TEXT)'
+createStoresTableStmt =\
+    'CREATE TABLE Stores(StoreId INT PRIMARY KEY, Name TEXT)'
 createStoreProductsTableStmt =\
     ('CREATE TABLE StoreProducts(StoreId INT, ProductId INT, PRIMARY '
-     'KEY(StoreId, ProductId), FOREIGN KEY(StoreId) REFERENCES Stores(StoreId), '
+     'KEY(StoreId, ProductId), '
+     'FOREIGN KEY(StoreId) REFERENCES Stores(StoreId), '
      'FOREIGN KEY(ProductId) REFERENCES Products(ProductId))')
 insertStoreStmt = 'INSERT INTO Stores (StoreId) VALUES (:StoreId)'
 selectProductsStmt = 'SELECT ProductId FROM Products'
 insertStoreProductStmt =\
-    'INSERT INTO StoreProducts (StoreId, ProductId) VALUES (:StoreId, :ProductId)'
+    ('INSERT INTO StoreProducts (StoreId, ProductId) '
+     'VALUES (:StoreId, :ProductId)')
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-d', '--database', dest='db_fname', default='data/amazon.db',
-        help='sqlite3 database file.', metavar='FILE')
-    parser.add_option('-n', '--numStores', dest='numStores', type='int', default=2,
-        help='Number of StoreId values.', metavar='NUM')
+    parser.add_option('-d', '--database', dest='db_fname',
+        default='data/amazon.db', help='sqlite3 database file.', metavar='FILE')
+    parser.add_option('-n', '--numStores', dest='numStores', type='int',
+        default=2, help='Number of StoreId values.', metavar='NUM')
     parser.add_option('-r', '--ratios', dest='ratios', default='1:1',
         help=('Ratios of products per store. For example, "2:1" indicates that '
-              'store 1 has a product catalog that is twice the size of store 2\'s.'),
-        metavar='RATIOS')
-    parser.add_option('-o', '--overlap', dest='overlap', type='float', default=0.0,
-        help='Fraction of products in multiple stores.', metavar='OVERLAP')
+              'store 1 has a product catalog that is twice the size of store '
+              '2\'s.'), metavar='RATIOS')
+    parser.add_option('-o', '--overlap', dest='overlap', type='float',
+        default=0.0, help='Fraction of products in multiple stores.',
+        metavar='OVERLAP')
     return parser
 
 def getRanges(ratios):
@@ -104,7 +108,8 @@ def main():
                         if storeId not in stores:
                             stores.append(storeId)
                             break
-                    db_curs2.execute(insertStoreProductStmt, (storeId, productId))
+                    db_curs2.execute(insertStoreProductStmt,
+                                     (storeId, productId))
 
 if __name__ == '__main__':
     main()
