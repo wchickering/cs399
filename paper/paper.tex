@@ -126,7 +126,7 @@ ModSim(Sim(A, B), n) \approx lim_{n\to\infty}Sim(A, B)
 
 We model the problem probabilistically. Let $Y$ be a random variable
 representing the $TrueSim$ of a randomly chosen pair of items. Let $X_n$ be a
-random variable representing the calculated $Sim$ of a pair of items with $n$
+random variable representing the observed $Sim$ of a pair of items with $n$
 common users.
 
 We model $Y$ as a Normal distribution 
@@ -146,14 +146,14 @@ there are $n$ common users. This should decrease as $n$ increases.
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=0.5\textwidth]{twonormals.png}
+    \includegraphics[width=0.7\textwidth]{twonormals.png}
 	\caption{The blue curve represents $Y$, the distribution of true
     similarities between a random pair of items. The red curve represents $X|Y$,
     the observed similarity when a small number of common users exist.}
     \label{fig:two_normals}
 \end{figure}
 
-In probabilistic terms, for a calculated value $X_n$, we want to find the value
+In probabilistic terms, for an observed value $X_n$, we want to find the value
 of $Y$ that most likely produced $X_n$. Thus we desire the Maximum Likelihood
 Estimate of $Y | X_n$
 \begin{align}
@@ -190,19 +190,19 @@ which can be rewritten as:
 \end{align}
 
 The model suggests that there is a linear correlation between $X_n$, the
-similarity calculated with $n$ common users, and $Y$, the true similarity.
+observed similarity with $n$ common users, and $Y$, the true similarity.
 Moreover, the best predicted $y$ is a linear combination of the mean and the
-observed similiatiry. Since $\sigma_{2,n}^2\ge0$, the slope is always $\le1$, 
-meaning that the calculated distance from $\mu$ (the average similarity) 
-overestimates the true distance. This makes sense, since there is a prior 
-distribution of true similarity weighted around $\mu$.
+observed similiarity. Since $\sigma_{2,n}^2\ge0$, the slope is always $\le1$, 
+meaning that the observed distance from $\mu$ (the average similarity) 
+overestimates the true distance. This is reasonable, since there is a prior 
+that expects the true similarity to be around $\mu$.
 
-The parameters $\mu$, $\sigma_{1}^2$, and $\sigma_{2,n}^2$ all can be approximated 
+The parameters $\mu$, $\sigma_{1}^2$, and $\sigma_{2,n}^2$ can be approximated 
 using the method of moments over training data where there are enough common
 users that $TrueSim$ can be approximated. This method requires approximating
-$\sigma_{2,n}^2$ for every value of $n$ separately. Alternatively, we can model
-$\sigma_{2,n}^2$ as a function of $n$. Recall that $\sigma_{2,n}^2$ is the
-noisiness of the measurement $Sim$ about $TrueSim$ and $TrueSim = lim_{n \to
+$\sigma_{2,n}^2$ for every value of $n$ separately. To gain a more general 
+model, we can model $\sigma_{2,n}^2$ as a function of $n$. Recall that 
+$\sigma_{2,n}^2$ is the noisiness of the measurement $Sim$ about $TrueSim$ and $TrueSim = lim_{n \to
 \infty}Sim$. Thus $Sim$ can be thought of as a sampling $n$ users from the
 infinite set used to calculate $TrueSim$. Although $Sim$ may not be linear, we
 the Central Limit Theorem motivates the intuition that the variance of $Sim$
