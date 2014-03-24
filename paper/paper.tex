@@ -135,8 +135,8 @@ Y \sim N(\mu, \sigma_{1}^2)
 \end{align}
 where $\mu$ and $\sigma_{1}^2$ are the average similarity score and the variance
 of similarity scores of all pairs of items, respectively. Since $X_n$ represents
-a noisy reading of the true similarity $Y$, we model $X_n | Y$ as a Normal
-distribution around $Y$:
+a noisy reading of the true similarity $Y$, we model $X_n | Y$ as a Gaussian
+error around $Y$:
 \begin{align}
 (X_n | Y=y) \sim N(y, \sigma_{2, n}^2)
 \end{align}
@@ -149,7 +149,7 @@ there are $n$ common users. This should decrease as $n$ increases.
     \includegraphics[width=0.5\textwidth]{twonormals.png}
 	\caption{The blue curve represents $Y$, the distribution of true
     similarities between a random pair of items. The red curve represents $X|Y$,
-    the estimated similarity when a small number of common users exist.}
+    the observed similarity when a small number of common users exist.}
     \label{fig:two_normals}
 \end{figure}
 
