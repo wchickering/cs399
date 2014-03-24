@@ -10,6 +10,7 @@ import csv
 import os
 import sys
 import numpy as np
+import random
 
 # db params
 dbTimeout = 5
@@ -80,8 +81,15 @@ def fillHistogram(db_conn, inputfile, histogram,
                 numUsersCommon += 1
                 rating1 = reviews1[i][2] - bias1
                 rating2 = reviews2[j][2] - bias2
+                # randomly shuffle ratings
+                if random.random() < 0.5:
+                    ratingA = rating1
+                    ratingB = rating2
+                else:
+                    ratingA = rating2
+                    ratingB = rating1
                 incrementHistogram(histogram, minRating, stepRating, numBins,
-                                   rating1, rating2)
+                                   ratingA, ratingB)
                 i += 1
                 j += 1
 
