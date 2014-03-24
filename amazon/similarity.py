@@ -42,6 +42,35 @@ def regSim(reviewsA, reviewsB):
     else:
         return (rawSim, numUsersCommon)
 
+def momSim(reviewsA, reviewsB):
+    """Uses params from method of moments on training data to translate
+       raw similarity to an improved esimate.
+    """
+    rawSim, numUsersCommon = momSim_rawFunc(reviewsA, reviewsB)
+    if numUsersCommon <= momSim_maxCommonUsers:
+        mu = momSimParams['mu']
+        sigma1 = momSimParams['sigma1']
+        sigma2_n = momSimParams['sigma2_n'][numUsersCommon]
+        predictSim = (sigma1 / (sigma1 + sigma2_n)) * (rawSim - mu) + mu
+        return (predictSim, numUsersCommon)
+    else:
+        return (rawSim, numUsersCommon)
+
+def alphaSim(reviewsA, reviewsB):
+    """Uses params from method of moments and alpha fit for sigma2s to translate
+       raw similarity to an improved esimate.
+    """
+    rawSim, numUsersCommon = alphaSim_rawFunc(reviewsA, reviewsB)
+    if numUsersCommon <= alphaSim_maxCommonUsers:
+        mu = float(alphaSimParams['mu'])
+        sigma1 = float(alphaSimParams['sigma1'])
+        alpha = float(alphaSimParams['alpha'])
+        sigma2 = alpha / math.sqrt(int(numUsersCommon))
+        predictSim = (sigma1 / (sigma1 + sigma2)) * (rawSim - mu) + mu
+        return (predictSim, numUsersCommon)
+    else:
+        return (rawSim, numUsersCommon)
+
 def constSim(reviewsA, reviewsB):
     """Provides a baseline similarity function by always returning the
        average item-item similarity.
@@ -385,6 +414,68 @@ def initRegSim(paramFileName, cosineFunc, maxCommonUsers):
             slope = float(row[slopeIdx])
             regSimParams[numUsersCommon] = (intercept, slope)
 
+#########################
+#
+#  Method of Moments
+#
+##############################
+
+momSimParams = {}
+momSim_rawFunc = None
+momSim_maxCommonUsers = 0
+
+variableIdx = 0
+valueIdx = 1
+
+def initMomSim(paramFileName, cosineFunc, maxCommonUsers):
+    global momSimParams
+    global momSim_rawFunc
+    global momSim_maxCommonUsers
+    momSim_rawFunc = cosineFunc
+    momSim_maxCommonUsers = maxCommonUsers
+    sigma2_n = {}
+    with open(paramFileName, 'rb') as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            variable = row[variableIdx]
+            value = float(row[valueIdx])
+            if variable == 'mu':
+                momSimParams['mu'] = value
+            elif variable == 'sigma1':
+                momSimParams['sigma1'] = value
+            else:
+                n = int(variable)
+                sigma2_n[n] = value
+        momSimParams['sigma2_n'] = sigma2_n
+
+#########################
+#
+#  Method of Moments
+#
+##############################
+
+alphaSimParams = {}
+alphaSim_rawFunc = None
+alphaSim_maxCommonUsers = 0
+
+muIdx = 0
+sigma1Idx = 1
+alphaIdx = 2
+
+def initMomSim(paramFileName, cosineFunc, maxCommonUsers):
+    global alphaSimParams
+    global alphaSim_rawFunc
+    global alphaSim_maxCommonUsers
+    alphaSim_rawFunc = cosineFunc
+    alphaSim_maxCommonUsers = maxCommonUsers
+    with open(paramFileName, 'rb') as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            # One row of (mu, sigma2, alpha)
+            alphaSimParams['mu'] = row[muIdx]
+            alphaSimParams['sigma1'] = row[sigma1Idx]
+            alphaSimParams['alpha'] = row[alphaIdx]
+
 #################
 #
 #  modelSim
@@ -445,9 +536,23 @@ def getParser(usage=None):
     parser.add_option('--regSimParamsFile', dest='regSimParamsFile',
         default='output/regSim_params.csv', help='Parameter file for regSim.',
         metavar='FILE')
+    parser.add_option('--momSimRawFunc', dest='momSimRawFunc',
+        default='randSim',
+        help=('Similarity function to used for raw similarity by momSim: '
+              '"prefSim", or "randSim" (default)'), metavar='FUNCNAME')
+    parser.add_option('--alphaSimRawFunc', dest='alphaSimRawFunc',
+        default='randSim',
+        help=('Similarity function to used for raw similarity by momSim: '
+              '"prefSim", or "randSim" (default)'), metavar='FUNCNAME')
+    parser.add_option('--momSimParamsFile', dest='momSimParamsFile',
+        default='output/momSim_params.csv', help='Parameter file for momSim.',
+        metavar='FILE')
+    parser.add_option('--alphaSimParamsFile', dest='alphaSimParamsFile',
+        default='output/alphaSim_params.csv', help='Parameter file for alphaSim.',
+        metavar='FILE')
     parser.add_option('--max-common-reviewers', dest='maxUsersCommon',
         type='int', default=100,
-        help='Maximum number of common reviewers for regSim.', metavar='NUM')
+        help='Maximum number of common reviewers for regSim, momSim or alphaSim.', metavar='NUM')
     parser.add_option('--modelGridFile', dest='modelGridFile',
         default='output/simGrid_modelSim.csv',
         help='CSV containing simGrid data for modelSim.', metavar='FILE')
@@ -507,6 +612,18 @@ def main():
         print >> sys.stderr,\
             'Invalid Raw Similarity function: %s' % options.regSimRawFunc
         return
+    try:
+        momSimRawFunc = globals()[options.momSimRawFunc]
+    except KeyError:
+        print >> sys.stderr,\
+            'Invalid Raw Similarity function: %s' % options.momSimRawFunc
+        return
+    try:
+        alphaSimRawFunc = globals()[options.alphaSimRawFunc]
+    except KeyError:
+        print >> sys.stderr,\
+            'Invalid Raw Similarity function: %s' % options.alphaSimRawFunc
+        return
 
     # set global params
     K = options.K
@@ -518,6 +635,16 @@ def main():
     if options.cosineFunc == 'regSim':
         # retrieve linear regression params
         initRegSim(options.regSimParamsFile, regSimRawFunc,
+                   options.maxUsersCommon)
+
+    if options.cosineFunc == 'momSim':
+        # retrieve method of moments  params
+        initMomSim(options.momSimParamsFile, momSimRawFunc,
+                   options.maxUsersCommon)
+
+    if options.cosineFunc == 'alphaSim':
+        # retrieve alpha params
+        initMomSim(options.alphaSimParamsFile, alphaSimRawFunc,
                    options.maxUsersCommon)
 
     if options.cosineFunc == 'modelSim':

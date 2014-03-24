@@ -183,10 +183,12 @@ which can be rewritten as:
 \end{align}
 
 The model suggests that there is a linear correlation between $X_n$, the
-similarity calculated with $n$ common users, and $Y$, the true similarity. Since 
-$\sigma_{2,n}^2\ge0$, the slope is always $\le1$, meaning that the calculated
-distance from $\mu$ (the average similarity) overestimates the true distance. This makes
-sense, since there is a prior distribution of true similarity weighted around $\mu$.
+similarity calculated with $n$ common users, and $Y$, the true similarity.
+Moreover, the best predicted $y$ is a linear combination of the mean and the
+observed similiatiry. Since $\sigma_{2,n}^2\ge0$, the slope is always $\le1$, 
+meaning that the calculated distance from $\mu$ (the average similarity) 
+overestimates the true distance. This makes sense, since there is a prior 
+distribution of true similarity weighted around $\mu$.
 
 The parameters $\mu$, $\sigma_{1}^2$, and $\sigma_{2,n}^2$ all can be approximated 
 using the method of moments over training data where there are enough common
@@ -214,16 +216,32 @@ ModSim(Sim, n) = \frac{\sigma_{1}^2}{\sigma_{1}^2+\frac{\alpha}{\sqrt{n}}}
 \end{align}
 
 \section*{Technique}
+Based on this maodel, we try three different techniques to predict the true similarity from a
+measured similarity. The techniques vary in their fidelity to the model. For
+each, we limit our data to all pairs of items that have enough common users that
+we can approximate $TrueSim \approx Sim$. Then we pick subsets of the common
+users of various sizes $n$ and calculate $Sim_{n}$. With examples of $Sim$, $n$
+and the resulting $TrueSim$, we can implement supervised learning.
 
-\begin{itemize}
-    \item Discussion of abandonment of parameterization in exchange for linear regression
-    \item Pick data that's big enough to have gold standard
-    \item Slice data and group by n
-    \item Run linear regression on each group of n
-    \item For predicting true similarity, take a given point and project on appropriate
-    \item regression.
-\end{itemize}
+The first technique is the least faithful to the model. It simply runs a number
+of linear regressions between $Sim$ and $TrueSim$ for each $n$. This ignores the 
+data-specific parameters $\mu$, $\sigma_{1}$ and $\sigma_{2,n}$ to find the best 
+linear fit. It also treats each $n$ completely independently. This technique 
+necessarilty has the lowest training error of all linear techniques, potentially 
+at the risk of overfitting.
 
+The second technique is more general. It approximates $\mu$ and $\sigma_{1}$
+using the method of moments on the training data of all $TrueSim$ scores. Then,
+$\sigma_{2,n}$ is also approximated using a method of moments on the training
+data of all $Sim_n$ for each $n$ separately. Here $\sigma_{2,n}$'s are also
+considered independently of each other.
+
+The third and most general technique models $\sigma_{2,n}$ as a function of
+$n$ using equation 19. As in the previous technique, $\mu$, $\sigma_{1}$ and each
+$\sigma_{2,n}$ are approximated using the method of moments over the training
+data. Then $\alpha$ is calculated that minimizes the sum of squared errors
+between $\sigma_{2,n}^2$ and $\frac{\alpha}{\sqrt{n}}$. This $\alpha$ is used to
+construct the three-parameter prediction function of equation 19.
 
 \section*{Experiment}
 

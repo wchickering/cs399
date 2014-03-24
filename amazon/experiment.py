@@ -49,18 +49,32 @@ def getParser(usage=None):
     parser.add_option('-c', '--cosineFunc', dest='cosineFunc',
         default='prefSim',
         help=('Similarity function to use: "prefSim" (default), "randSim", '
-              '"prefSimAlt1", "randSimAlt1", "regSim" or "predSim"'),
+              '"prefSimAlt1", "randSimAlt1", "regSim", "momSim", "alphaSim" or "predSim"'),
         metavar='FUNCNAME')
     parser.add_option('--regSimRawFunc', dest='regSimRawFunc',
         default='randSim',
         help=('Similarity function to used for raw similarity by regSim: '
               '"prefSim", or "randSim" (default)'), metavar='FUNCNAME')
+    parser.add_option('--momSimRawFunc', dest='momSimRawFunc',
+        default='randSim',
+        help=('Similarity function to used for raw similarity by momSim: '
+              '"prefSim", or "randSim" (default)'), metavar='FUNCNAME')
+    parser.add_option('--alphaSimRawFunc', dest='alphaSimRawFunc',
+        default='randSim',
+        help=('Similarity function to used for raw similarity by alphaSim: '
+              '"prefSim", or "randSim" (default)'), metavar='FUNCNAME')
     parser.add_option('--regSimParamsFile', dest='regSimParamsFile',
         default='output/regSim_params.csv', help='Parameter file for regSim.',
         metavar='FILE')
+    parser.add_option('--momSimParamsFile', dest='momSimParamsFile',
+        default='output/momSim_params.csv', help='Parameter file for momSim.',
+        metavar='FILE')
+    parser.add_option('--alphaSimParamsFile', dest='alphaSimParamsFile',
+        default='output/alphaSim_params.csv', help='Parameter file for alphaSim.',
+        metavar='FILE')
     parser.add_option('--max-common-reviewers', dest='maxUsersCommon',
         type='int', default=100,
-        help='Maximum number of common reviewers for regSim.', metavar='NUM')
+        help='Maximum number of common reviewers for regSim, momSim, or alphaSim.', metavar='NUM')
     parser.add_option('--simGridFile', dest='simGridFile',
         default='output/simGrid_randSim.csv',
         help='CSV containing simGrid data.', metavar='FILE')
@@ -306,6 +320,18 @@ def main():
         print >> sys.stderr,\
             'Invalid Raw Similarity function: %s' % options.regSimRawFunc
         return
+    try:
+        momSimRawFunc = getattr(similarity, options.momSimRawFunc)
+    except KeyError:
+        print >> sys.stderr,\
+            'Invalid Raw Similarity function: %s' % options.momSimRawFunc
+        return
+    try:
+        alphaSimRawFunc = getattr(similarity, options.alphaSimRawFunc)
+    except KeyError:
+        print >> sys.stderr,\
+            'Invalid Raw Similarity function: %s' % options.alphaSimRawFunc
+        return
     if options.outputDir:
         outputDir = options.outputDir
     else:
@@ -328,6 +354,16 @@ def main():
     # regSim
     if options.cosineFunc == 'regSim':
         similarity.initRegSim(options.regSimParamsFile, regSimRawFunc,
+                   options.maxUsersCommon)
+
+    # momSim
+    if options.cosineFunc == 'momSim':
+        similarity.initMomSim(options.momSimParamsFile, momSimRawFunc,
+                   options.maxUsersCommon)
+
+    # alphaSim
+    if options.cosineFunc == 'alphaSim':
+        similarity.initMomSim(options.alphaSimParamsFile, alphaSimRawFunc,
                    options.maxUsersCommon)
 
     # predSim
