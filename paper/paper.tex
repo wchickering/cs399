@@ -79,11 +79,14 @@ where $U$ is the set of all users and $r_{u,I}$ is the rating given by user $u$
 to item $I$.
 
 In the second model, we imagine an unlimited supply of users each of whom
-chooses to rate a subset of items. At any point in time, we may estimate the
-similarity in this model of {\em preferential} rating, by computing the cosine
-similarity of the two item vectors. Only in the limit of inifinite time does
-this estimate converge with the true similarity, which we denote $TrueSimP$.
-That is,
+chooses to rate a subset of items. The lack of a rating is now meaningful since
+it indicates a lack of interest of a particular user for a particular item. This
+is captured by the model through a default rating of zero \footnote{We address
+the issue of rating bias and the precise meaning of a zero valued rating later
+in this report.}. At any point in time, we may estimate the true similarity in
+this model of {\em preferential} rating, by computing the cosine similarity of
+the two item vectors. Only in the limit of inifinite time does this estimate
+converge to the true similarity, which we denote $TrueSimP$.  That is,
 \begin{align}
 TrueSimP(A, B) = lim_{t\to\infty}\frac{\sum\limits_{u\in U_{AB}}
 r_{u,A}r_{u,B}}{\sqrt{\sum\limits_{u\in U_A} r_{u,A}^2}
