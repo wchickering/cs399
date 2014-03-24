@@ -15,16 +15,13 @@ import sympy
 from SimilarityGrid import SimilarityGrid
 
 # params
-constSimScore = 0.27
+#constSimScore = 0.16   # topEdges_40_randSim
+#constSimScore = 0.27    # topEdges_80_randSim
+constSimScore = 0.050    # topEdges_80_prefSim
 K = 20
 sigma = 1.0
 writer = csv.writer(sys.stdout)
 step = sys.maxint
-
-# modelSim params
-mu_s = constSimScore
-sigma_s = 0.2
-sigma_r = 0.3
 
 # errorFile
 userIdIdx = 0

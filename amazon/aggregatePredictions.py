@@ -20,12 +20,8 @@ errorIdx = 4
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-p', '--pattern', dest='pattern', default=None,
+    parser.add_option('-p', '--pattern', dest='pattern', default='*.csv',
         help='Input file pattern.', metavar='PATTERN')
-    parser.add_option('-c', '--cosineFunc', dest='cosineFunc',
-        default='prefSim',
-        help=('Similarity function to use: "prefSim" (default), "randSim", '
-              '"prefSimAlt1", or "randSimAlt1".'), metavar='FUNCNAME')
     return parser
 
 def main():
@@ -39,10 +35,6 @@ def main():
     if not os.path.isdir(inputDir):
         print >> sys.stderr, 'Cannot find: %s' % inputDir
         return
-    if options.pattern:
-        pattern = options.pattern
-    else:
-        pattern = '%s_*_*.csv' % options.cosineFunc
 
     # compile user predictions
     userErrors = {}
@@ -50,7 +42,7 @@ def main():
         fullpath = os.path.join(inputDir, filename)
         if not os.path.isfile(fullpath):
             continue
-        if not fnmatch(filename, pattern):
+        if not fnmatch(filename, options.pattern):
             continue
         print >> sys.stderr, 'Processing %s . . .' % filename
         with open(fullpath, 'rb') as csvfile:

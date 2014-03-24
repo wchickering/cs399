@@ -51,6 +51,9 @@ def getParser(usage=None):
         help=('Similarity function to use: "prefSim" (default), "randSim", '
               '"prefSimAlt1", "randSimAlt1", "regSim" or "predSim"'),
         metavar='FUNCNAME')
+    parser.add_option('--constSimScore', type='float', dest='constSimScore',
+        default=None, help='Constant similarity estimate used by constSim.',
+        metavar='FLOAT')
     parser.add_option('--regSimRawFunc', dest='regSimRawFunc',
         default='randSim',
         help=('Similarity function to used for raw similarity by regSim: '
@@ -324,6 +327,8 @@ def main():
         similarity.K = options.K
     if options.sigma:
         similarity.sigma = options.sigma
+    if options.constSimScore:
+        similarity.constSimScore = options.constSimScore
 
     # regSim
     if options.cosineFunc == 'regSim':
