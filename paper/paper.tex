@@ -12,7 +12,7 @@
 \usepackage{bbm}                        % for \mathbbm{1} (indicator function)
 \usepackage{booktabs}
 \usepackage{graphicx}
-\usepackage{caption}
+\usepackage[font={small}]{caption}
 \usepackage{subcaption}
 
 %\setlength{\parskip}{\baselineskip}     % skip line following paragraphs
@@ -252,6 +252,53 @@ construct the three-parameter prediction function of equation 19.
 \section*{Experiment}
 
 \section*{Results}
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{RatingDist_40.png}
+    \includegraphics[width=0.7\textwidth]{RatingDist_80.png}
+	\caption{Distribution of rating pairs by common reviewers for item pairs.
+Top figure shows distribution for item pairs having at least 40 common
+reviewers. Bottom figure shows distribution for item pairs having at least 80
+common reviewers.}
+    \label{fig:RatingDist}
+\end{figure}
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=1.0\textwidth]{Histograms.png}
+	\caption{Histograms of {\em TrueSimR} (top) and {\em TrueSimP} (bottom) for
+training datasets containing at least 40 common reviewers (left) and 80 common
+reviewers (right).}
+    \label{fig:Histograms}
+\end{figure}
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{MSE_SimR_40.png}
+    \includegraphics[width=0.9\textwidth]{MSE_SimR_80.png}
+	\caption{Mean square error {\em vs} number of common reviewers, $n$, for
+estimates of {\em TrueSimR} for item pairs ultimately having at least 40 common
+reviewers (top) and 80 common reviewers (bottom). The dashed curve represents
+{\em SimR} computed using only the ratings from the first $n$ reviewers. The
+flat red line indicate the MSE that results from always guessing the average
+{\em TrueSimR} from the training set. The green curve is {\em RegSimR} and the
+blue curve is {\em ModelSimR}. }
+    \label{fig:MSE_SimR}
+\end{figure}
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{MSE_SimP_80.png}
+	\caption{Mean square error {\em vs} number of common reviewers, $n$, for
+estimates of {\em TrueSimP} for item pairs ultimately having at least 80 common
+reviewers. The dashed curve represents
+{\em SimP} computed using only the ratings from the first $n$ reviewers. The
+flat red line indicate the MSE that results from always guessing the average
+{\em TrueSimP} from the training set. The green curve is {\em RegSimP} and the
+blue curve is {\em ModelSimP}. }
+    \label{fig:MSE_SimP}
+\end{figure}
 
 \section*{Conclusion}
 
