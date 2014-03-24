@@ -1,5 +1,5 @@
 # Fdb version 3
-["pdflatex"] 1395279246 "paper.tex" "paper.pdf" "paper" 1395279247
+["pdflatex"] 1395635941 "paper.tex" "paper.pdf" "paper" 1395635942
   "/usr/local/texlive/2012/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2012/texmf-dist/fonts/map/fontname/texfonts.map" 1272929888 3287 e6b82fe08f5336d4d5ebc73fb1152e87 ""
   "/usr/local/texlive/2012/texmf-dist/fonts/tfm/jknappen/ec/ecbx1000.tfm" 1136768653 3584 2d666ecf6d466d8b007246bc2f94d9da ""
@@ -28,6 +28,7 @@
   "/usr/local/texlive/2012/texmf-dist/fonts/tfm/public/cm/cmsy8.tfm" 1136768653 1120 8b7d695260f3cff42e636090a8002094 ""
   "/usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb" 1248133631 30251 6afa5cb1d0204815a708a080681d4674 ""
   "/usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb" 1248133631 36299 5f9df58c2139e7edcf37c8fca4bd384d ""
+  "/usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb" 1248133631 37912 77d683123f92148345f3fc36a38d9ab1 ""
   "/usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb" 1248133631 36281 c355509802a035cadc5f15869451dcee ""
   "/usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb" 1248133631 35752 024fb6c41858982481f6968b5fc26508 ""
   "/usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb" 1248133631 32762 224316ccc9ad3ca0423a14971cfa7fc1 ""
@@ -63,7 +64,6 @@
   "/usr/local/texlive/2012/texmf-dist/tex/latex/base/article.cls" 1254151887 20571 b8bd218bf2e18b4f5817ee643cd9c515 ""
   "/usr/local/texlive/2012/texmf-dist/tex/latex/base/fontenc.sty" 1254151887 4435 b97063eb2f20be499e7725926af85c55 ""
   "/usr/local/texlive/2012/texmf-dist/tex/latex/base/graphpap.sty" 1254151887 3254 d69e7cd09aa7dbfff369d8d6fb50bf28 ""
-  "/usr/local/texlive/2012/texmf-dist/tex/latex/base/omscmr.fd" 1254151887 2109 c400bd6c901edc4a09e4d53fcffd3b3c ""
   "/usr/local/texlive/2012/texmf-dist/tex/latex/base/size10.clo" 1254151887 9042 248dfba326a1b8733d6bb8e0a3ac1e49 ""
   "/usr/local/texlive/2012/texmf-dist/tex/latex/base/t1enc.def" 1254151887 9172 67c33288b50eb57eab968f345e8befb0 ""
   "/usr/local/texlive/2012/texmf-dist/tex/latex/bbm-macros/bbm.sty" 1191314257 1644 1e0d54b051369c3f457872824cac219f ""
@@ -86,8 +86,9 @@
   "/usr/local/texlive/2012/texmf-var/web2c/pdftex/pdflatex.fmt" 1341108725 3691572 80746d7cec090b0770bc87079bef471d ""
   "/usr/local/texlive/2012/texmf.cnf" 1341108668 572 7ea7194897937febeb63145e1c3a1f03 ""
   "/usr/local/texlive/2012/texmf/web2c/texmf.cnf" 1336865692 31299 729e216d9b945005c0d4b079c0500bc9 ""
-  "paper.aux" 1395279246 8 a94a2480d3289e625eea47cd1b285758 ""
-  "paper.tex" 1395279245 8376 52e581c4707e69a5983bd5b3d5ec27cd ""
+  "paper.aux" 1395635942 391 bd47b325f384ec783ed6ed6983043897 ""
+  "paper.tex" 1395635941 11912 87ce0b08e16625be007c6e464ba7ee78 ""
+  "twonormals.png" 1395530936 183917 b907aae1fc5d53867027810662090cf1 ""
   (generated)
   "paper.pdf"
   "paper.log"
