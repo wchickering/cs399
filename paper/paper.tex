@@ -1,4 +1,4 @@
-\documentclass[10pt]{article}
+\documentclass[11pt]{article}
 
 % =========================================================================
 % document style changes
@@ -16,13 +16,11 @@
 \usepackage{subcaption}
 
 %\setlength{\parskip}{\baselineskip}     % skip line following paragraphs
-\setlength{\parskip}{0.0in}
-\setlength{\parindent}{0.3in}           % Control margins and amount of text
-\setlength{\topmargin}{-0.8in}
-\setlength{\oddsidemargin}{-.15in}      % changed from {-.15in}
-\setlength{\textheight}{9.5in}
-\setlength{\textwidth}{6.8in}
-\pagestyle{empty}                       % No page numbers
+%\pagestyle{empty}                       % No page numbers
+\setlength{\topmargin}{-.5in}
+\setlength{\textheight}{9in}
+\setlength{\oddsidemargin}{.125in}
+\setlength{\textwidth}{6.25in}
 
 \newcommand{\spc}{\vspace{0.25in}}      % Shortcut commands
 \newcommand{\ds}{\displaystyle}         %\newcommand{\ds}[1]{\displaystyle{#1}}
@@ -32,78 +30,78 @@
 
 \begin{document}                        % This is where the document begins
 
-{\LARGE\bf
-\begin{tabbing}
-\hspace{2.8in} \= \hspace{1.3in} \= \hspace{1.2in} \= \\
-
-%=========    Heading   ==================================================
-CS 399 \> Paper \> Bill Chickering (bchick)\\
-\normalsize Mar 21, 2014 \> \> Jamie Irvine (jirvine)
-% =========================================================================
-\end{tabbing}
-} \vspace{.4in}
+\title{Improving Item-Item Similarity Estimation during Collaborative Filtering}
+\author{Bill Chickering and Jamie Irvine\\
+CS 399 with Anand Rajaraman\\
+Stanford University}
+\renewcommand{\today}{March 25, 2014}
+\maketitle
 
 \section*{Abstract}
 \emph{Will write this when the paper is done}
 
 \section*{Introduction}
 The similarity of two items is a valuable measurement for a number of
-data-mining applications, such as recommender systems. With large
-amounts of rating data, collaborative filtering is a good method for
-calculating similarity. However, with sparse rating data, this
-technique gives noisy and unreliable approximations for similarity. Even worse, 
-low confidence measurements of similarity are indistinguishable from high
-confidence ones. In this paper, we develop a novel method which incorporates
-confidence into the similarity score to produce more accurate estimates of
-similarity.
+data-mining applications, such as recommender systems. With large amounts of
+rating data, collaborative filtering is a good method for calculating
+similarity. However, with sparse rating data, this technique gives noisy and
+unreliable approximations for similarity. Even worse, low confidence
+measurements of similarity are indistinguishable from high confidence ones. In
+this paper, we develop and compare a number of methods to produce more accurate
+estimates of similarity by incorporating confidence into the similarity score.
  
-Item-based collaborative filtering is a common technique for measuring the similarity 
-of two items. There are different forms of collaborative filtering. For
-this paper, we use a traditional approach. Each item is represented as a vector
-of ratings. The similarity score of two items is computed by measuring the similarity
-of the two rating vectors.
+Item-based collaborative filtering is a common technique for measuring the
+similarity of two items. There are different forms of collaborative filtering.
+For this paper, we use a traditional approach. Each item is represented as a
+vector of ratings. The similarity score of two items is computed by measuring
+the similarity of the two rating vectors.
 
 There are a few ways to compute the similarity of two vectors. One approach is
-to use Cosine-similarity, defined as the cosine of the angle between the two vectors:
+to use Cosine-similarity, defined as the cosine of the angle between the two
+vectors:
 \begin{align}
 CosSim(A, B) = \frac{\sum\limits_{u\in U_{AB}}
 r_{u,A}r_{u,B}}{\sqrt{\sum\limits_{u\in U_{A}} r_{u,A}^2}
 \sqrt{\sum\limits_{u\in U_{B}} r_{u,B}^2}}
 \end{align}
-where $U_{I}$ is the set of all users who rated item $I$, $U_{AB}$ is the set of all 
-users who rated both item $A$ and item $B$ and $r_{u,I}$ is the rating user $u$ gave 
-to item $I$. Another popular approach is to use Pearson correlation:
+where $U_{I}$ is the set of all users who rated item $I$, $U_{AB}$ is the set of
+all users who rated both item $A$ and item $B$ and $r_{u,I}$ is the rating user
+$u$ gave to item $I$. Another popular approach is to use Pearson correlation:
 \begin{align}
 PearsSim(A, B) = \frac{\sum\limits_{u\in U_{AB}}
 r_{u,A}r_{u,B}}{\sqrt{\sum\limits_{u\in U_{AB}} r_{u,A}^2}
 \sqrt{\sum\limits_{u\in U_{AB}} r_{u,B}^2}}
 \end{align}
+
 Other similarity functions exist, such as one-sided similarities, but Pearson
 correlation and Cosine-similarity are the most popular and will be the two
 measurements used in this paper. \footnotemark
 
-\footnotetext{ Note that the difference between the two similarities is how they handle
-unpaired ratings; that is ratings from a user who has not rated the other
+\footnotetext{ Note that the difference between the two similarities is how they
+handle unpaired ratings; that is ratings from a user who has not rated the other
 item. Cosine-similarity considers the unknown rating from an unpaired rating to
-be $0$ and then calculates the cosine of the two vectors. Pearson correlation simply
-throws away all unpaired ratings and calculates the cosine of the two modified vectors.}
+be $0$ and then calculates the cosine of the two vectors. Pearson correlation
+simply throws away all unpaired ratings and calculates the cosine of the two
+modified vectors.}
 
 Both similarity measurements primarily leverage information from common users,
-that is users who have rated both items. Because of this, they perform
-well with a large number common users, but give unreliable results when the
-items have few common users. In an extreme case, if only one user has rated item
-$A$ and item $B$, $PearsSim(A, B) = 1$ or $-1$. Not only is this unlikely to be an accurate
+that is users who have rated both items. Because of this, they perform well with
+a large number common users, but give unreliable results when the items have few
+common users. In an extreme case, if only one user has rated item $A$ and item
+$B$, $PearsSim(A, B) = 1$ or $-1$. Not only is this unlikely to be an accurate
 assessment of the true similarity of $A$ and $B$, it also gives the most extreme
 results possible, without giving any indication that this is a low-confidence
 calculation.
 
-In this paper, we construct a more accurate similarity score by incorporating the
-number of common users, $n$, into the similarity function. 
+In this paper, we construct a more accurate similarity score by incorporating
+the number of common users, $n$, into the similarity function. 
 
 \section*{Problem}
-The goal is to calculate a modified similiary function that leverages the number of
-commonn users to better estimate the true similarity. Formally, we design
+
+The goal is to calculate a modified similiary function that leverages the number
+of commonn users to better estimate the true similarity. Formally, we design
 $ModSim$ such that for two items $A$ and $B$ with $n$ users in common
+
 \begin{align}
 ModSim(A, B, n) \approx TrueSim(A, B)
 \end{align}
@@ -117,39 +115,45 @@ TrueSim(A, B) = lim_{n\to\infty}Sim(A, B)
 where $Sim$ is the most appropriate generic similarity function for the dataset.
 
 Since $TrueSim$ dependends on the choice of $Sim$, we abstract away the details
-of $Sim$ and use its output directly. In all, the goal is to construct $ModSim$ such that
+of $Sim$ and use its output directly. In all, the goal is to construct $ModSim$
+such that
+
 \begin{align}
 ModSim(Sim(A, B), n) \approx lim_{n\to\infty}Sim(A, B)
 \end{align}
 
 \section*{Model}
+
 We model the problem probabilistically. Let $Y$ be a random variable
 representing the $TrueSim$ of a randomly chosen pair of items. Let $X_n$ be a
-random variable representing the calculated $Sim$ of a pair of items with $n$ common users.
+random variable representing the calculated $Sim$ of a pair of items with $n$
+common users.
 
 We model $Y$ as a Normal distribution 
 \begin{align}
 Y \sim N(\mu, \sigma_{1}^2)
 \end{align}
-where $\mu$ and $\sigma_{1}^2$ are the average similarity score and the variance of similarity scores
-of all pairs of items, respectively. Since $X_n$ represents a noisy reading of
-the true similarity $Y$, we model $X_n | Y$ as a Normal distribution around $Y$:
+where $\mu$ and $\sigma_{1}^2$ are the average similarity score and the variance
+of similarity scores of all pairs of items, respectively. Since $X_n$ represents
+a noisy reading of the true similarity $Y$, we model $X_n | Y$ as a Normal
+distribution around $Y$:
 \begin{align}
 (X_n | Y=y) \sim N(y, \sigma_{2, n}^2)
 \end{align}
-Note that $\sigma_{2, n}^2$ represents how noisy the estimation of $Sim$ is
-when there are $n$ common users. This should decrease as $n$ increases.
+
+Note that $\sigma_{2, n}^2$ represents how noisy the estimation of $Sim$ is when
+there are $n$ common users. This should decrease as $n$ increases.
 
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.5\textwidth]{twonormals.png}
-    \caption{The blue curve represents $Y$, the distribution of true similarities
-    between a random pair of items. The red curve represents $X|Y$, the
-    estimated similarity when a small number of common users exist.}
+	\caption{The blue curve represents $Y$, the distribution of true
+    similarities between a random pair of items. The red curve represents $X|Y$,
+    the estimated similarity when a small number of common users exist.}
     \label{fig:two_normals}
 \end{figure}
 
-In probabilistic terms, for a calculated value $X_n$, we want to find the value 
+In probabilistic terms, for a calculated value $X_n$, we want to find the value
 of $Y$ that most likely produced $X_n$. Thus we desire the Maximum Likelihood
 Estimate of $Y | X_n$
 \begin{align}
@@ -157,8 +161,10 @@ Estimate of $Y | X_n$
 Y=y)P(Y=y)}{P(X_n=x)}\right]
 \\&= \argmax_y\left[P(X_n=x|Y=y)P(Y=y)\right]
 \\&= 
-\argmax_y\left[\frac{1}{\sigma_{2,n}\sqrt{2\pi}}\exp{\left(\frac{-(x-y)^2}{2\sigma_{2,n}^2}\right)}
-\frac{1}{\sigma_{1}\sqrt{2\pi}}\exp{\left(\frac{-(y-\mu)^2}{2\sigma_{1}^2}\right)}\right]
+\argmax_y\left[\frac{1}{\sigma_{2,n}\sqrt{2\pi}}\exp{\left(\frac{-(x-y)^2}
+{2\sigma_{2,n}^2}\right)}
+\frac{1}{\sigma_{1}\sqrt{2\pi}}\exp{\left(\frac{-(y-\mu)^2}
+{2\sigma_{1}^2}\right)}\right]
 \\&= \argmin_y\left[\frac{(x-y)^2}{2\sigma_{2,n}^2} +
 \frac{(y-\mu)^2}{2\sigma_{1}^2}\right]
 \\&= \argmin_y\left[\left(\sigma_{1}^2+\sigma_{2,n}^2\right)y^2 - 
@@ -179,7 +185,8 @@ y &= \frac{\sigma_{1}^2x+\sigma_{2,n}^2\mu}{\sigma_{1}^2+\sigma_{2,n}^2}
 \end{align}
 which can be rewritten as:
 \begin{align}
-\left(y - \mu\right) &= \frac{\sigma_{1}^2}{\sigma_{1}^2+\sigma_{2,n}^2}\left(x-\mu\right)
+\left(y - \mu\right) &= \frac{\sigma_{1}^2}{\sigma_{1}^2+\sigma_{2,n}^2}
+\left(x-\mu\right)
 \end{align}
 
 The model suggests that there is a linear correlation between $X_n$, the
@@ -200,11 +207,10 @@ noisiness of the measurement $Sim$ about $TrueSim$ and $TrueSim = lim_{n \to
 infinite set used to calculate $TrueSim$. Although $Sim$ may not be linear, we
 the Central Limit Theorem motivates the intuition that the variance of $Sim$
 would decrease as the $sqrt(n)$. Thus we model $\sigma_{2,n}^2$ as:
-
 \begin{align}
-\sigma_{2,n}^2 = \frac{\alpha}{\sqrt{n}}
+\sigma_{2,n}^2 = \frac{\alpha}{\sqrt{n}},
 \end{align}
-Yielding the single parameter model:
+yielding the single parameter model:
 \begin{align}
 \left(Y - \mu\right) = \frac{\sigma_{1}^2}{\sigma_{1}^2+\frac{\alpha}{\sqrt{n}}}
 \left(X_n-\mu\right)
