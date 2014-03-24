@@ -41,14 +41,25 @@ Stanford University}
 \emph{Will write this when the paper is done}
 
 \section*{Introduction}
-The similarity of two items is a valuable measurement for a number of
-data-mining applications, such as recommender systems. With large amounts of
-rating data, collaborative filtering is a good method for calculating
-similarity. However, with sparse rating data, this technique gives noisy and
-unreliable approximations for similarity. Even worse, low confidence
-measurements of similarity are indistinguishable from high confidence ones. In
-this paper, we develop and compare a number of methods to produce more accurate
-estimates of similarity by incorporating confidence into the similarity score.
+Accurate estimations of the similarity of two users or items is valuable for a
+number of data-mining applications including recommender systems, product
+assortment and differentiation, as well as branding. Collaborative filtering is
+often used to exploit user-item rating data to make such estimates typically by
+computing the Pearson correlation or cosine similarity of vector representations
+of the users or items \cite{Breese98}. Given sufficient user-item rating data,
+this approach can be very effective. On the otherhand, when very little rating
+data for one or both users/items is available, unmodified, these metrics can
+yield dramatic discrepancies compared to values computed later once sufficient
+data has been acquired. In this report, we describe two novel techniques for
+estimating the true similarity of two users or items given limited common rating
+data.
+
+.....
+
+Even worse, low confidence measurements of similarity are indistinguishable from
+high confidence ones. In this paper, we develop and compare a number of methods
+to produce more accurate estimates of similarity by incorporating confidence
+into the similarity score.
  
 Item-based collaborative filtering is a common technique for measuring the
 similarity of two items. There are different forms of collaborative filtering.
