@@ -193,9 +193,9 @@ users are observed.
 
 We model $Y$ as a Normal distribution 
 \begin{align}
-Y \sim N(\mu, \sigma_{s}^2),
+Y \sim N(\mu_s, \sigma_{s}^2),
 \end{align}
-where $\mu$ and $\sigma_{s}^2$ are the average similarity score and the variance
+where $\mu_s$ and $\sigma_{s}^2$ are the average similarity score and the variance
 of similarity scores of all pairs of items, respectively. Since $X_n$ represents
 a noisy reading of the true similarity $Y$, we model $X_n | Y=y$ as a Gaussian
 error around $y$:
@@ -225,31 +225,31 @@ Maximum Likelihood Estimate of $Y | X_n$:
 \\&= 
 \argmax_y\left[\frac{1}{\sigma_{err,n}\sqrt{2\pi}}\exp{\left(\frac{-(x-y)^2}
 {2\sigma_{err,n}^2}\right)}
-\frac{1}{\sigma_{s}\sqrt{2\pi}}\exp{\left(\frac{-(y-\mu)^2}
+\frac{1}{\sigma_{s}\sqrt{2\pi}}\exp{\left(\frac{-(y-\mu_s)^2}
 {2\sigma_{s}^2}\right)}\right]
 \\&= \argmin_y\left[\frac{(x-y)^2}{2\sigma_{err,n}^2} +
-\frac{(y-\mu)^2}{2\sigma_{s}^2}\right]
+\frac{(y-\mu_s)^2}{2\sigma_{s}^2}\right]
 \\&= \argmin_y\left[\left(\sigma_{s}^2+\sigma_{err,n}^2\right)y^2 - 
-2\left(\sigma_{s}^2x+\sigma_{err,n}^2\mu\right)y\right]
+2\left(\sigma_{s}^2x+\sigma_{err,n}^2\mu_s\right)y\right]
 \end{align}
 We find the exact minimum by taking the derivative with respect to $y$ and
 setting it to zero:
 \begin{align}
 \frac{d}{dy}\left[\left(\sigma_{s}^2+\sigma_{err,n}^2\right)y^2 - 
-2\left(\sigma_{s}^2x+\sigma_{err,n}^2\mu\right)y\right]
+2\left(\sigma_{s}^2x+\sigma_{err,n}^2\mu_s\right)y\right]
 &= 2\left(\sigma_{s}^2+\sigma_{err,n}^2\right)y - 
-2\left(\sigma_{s}^2x+\sigma_{err,n}^2\mu\right) 
+2\left(\sigma_{s}^2x+\sigma_{err,n}^2\mu_s\right) 
 \\&= 0
 \end{align}
 This produces the following linear equation for $\hat{y}$ in terms of $x$
 \begin{align}
 \hat{y} &=
-\frac{\sigma_{s}^2x+\sigma_{err,n}^2\mu}{\sigma_{s}^2+\sigma_{err,n}^2},
+\frac{\sigma_{s}^2x+\sigma_{err,n}^2\mu_s}{\sigma_{s}^2+\sigma_{err,n}^2},
 \end{align}
 which can be rewritten as
 \begin{align}
-\left(\hat{y} - \mu\right) &= \frac{\sigma_{s}^2}{\sigma_{s}^2+\sigma_{err,n}^2}
-\left(x-\mu\right).
+\left(\hat{y} - \mu_s\right) &= \frac{\sigma_{s}^2}{\sigma_{s}^2+\sigma_{err,n}^2}
+\left(x-\mu_s\right).
 \end{align}
 
 The model suggests that there is a linear correlation between $X_n$ ($Sim_n$)
@@ -260,9 +260,9 @@ scores, whereas the Slope One model seeks a linear relationship between the
 ratings a user gives to different items.} Moreover, the best predicted $TrueSim$
 is a linear combination of the average true similarity and the observed
 similiarity. Since $\sigma_{err,n}^2$ is nonnegative, the slope is always less
-than or equal to one, meaning that, on average, the observed distance from $\mu$
-overestimates the true distance from $\mu$. This is reasonable, since the prior
-distribution suggests that the true similarity is likely to be near $\mu$.
+than or equal to one. This means that, on average, the observed distance from $\mu_s$
+overestimates the true distance from $\mu_s$. This is reasonable, since the prior
+distribution suggests that the true similarity is likely to be near $\mu_s$.
 
 This model requires a different parameter $\sigma_{err,n}^2$ for each $n$.  To
 gain more generality, we model $\sigma_{err,n}^2$ as a function of $n$ instead
@@ -276,8 +276,8 @@ the square root of $n$. Thus we model $\sigma_{err,n}^2$ as
 \end{align}
 yielding the single parameter model
 \begin{align}
-\left(Y - \mu\right) = \frac{\sigma_{s}^2}{\sigma_{s}^2+\frac{\alpha}{\sqrt{n}}}
-\left(X_n-\mu\right).
+\left(Y - \mu_s\right) = \frac{\sigma_{s}^2}{\sigma_{s}^2+\frac{\alpha}{\sqrt{n}}}
+\left(X_n-\mu_s\right).
 \end{align}
 
 
@@ -307,7 +307,7 @@ learning techniques. First, we find pairs of items that have at least $N$ common
 users and calculate their $GoldSim$. Next we withold some of the users to 
 produce estimated $Sim_n$ for $n=1,...,N$. By doing this over many pairs of 
 items, we produce pairs of ($Sim_n$, $TrueSim$) across different values of $n$ 
-that can be used for training and testing. Now the parameters $\mu$, 
+that can be used for training and testing. Now the parameters $\mu_s$, 
 $\sigma_{s}^2$, and $\sigma_{err,n}^2$ can be approximated using the method of 
 moments over the training data. The values of $\sigma_{err,n}^2$ are fit to the 
 function $\frac{\alpha}{\sqrt{n}}$ and the $\alpha$ that minimizes the sum of 
@@ -315,7 +315,7 @@ squared error is computed.
 
 The graph of Fig. 3 compares the results of three linear fits, with varying
 degrees of fidelity to the probabilistic model. The most faithful fit uses
-$\mu$, $\sigma_{s}^2$ and $\alpha$ as calculated above to predict the $GoldSim$
+$\mu_s$, $\sigma_{s}^2$ and $\alpha$ as calculated above to predict the $GoldSim$
 using Eqn (18). The next fit uses the calculated values of $\sigma_{err,n}^2$ directly,
 following Eqn (16) for predictions. The third fit simply uses a series of linear
 regressions, one for each $n$. This model only assumes that for each $n$,
@@ -330,7 +330,7 @@ As the results show, the trade-off is worth it.
     in common, $n$, the graphs represent the average squared error of predicted
     $GoldSim$ calculated from the observed $Sim_n$. As a baseline, the technique
     of guessing the average $GoldSim$ is included. For these experiments, we use
-    $Sim$ = $PearSim$ and $N=100$ for determining $GoldSim$.}
+    $Sim$ = $PearSim$ and $N=70$ for determining $GoldSim$.}
     \label{fig:Linear}
 \end{figure}
 
