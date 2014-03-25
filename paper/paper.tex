@@ -86,7 +86,7 @@ rating given by user $u$ to item $I$.
 In the second model, we imagine an unlimited supply of users, each of whom
 chooses to rate a subset of items. The lack of a rating is now meaningful since
 it indicates a lack of interest of a particular user for a particular item. This
-is captured by the model through a default rating of zero \footnote{We address
+is captured by the model through a default rating of zero\footnote{We address
 the issue of rating bias and the precise meaning of a zero valued ratings later
 in this report.}. At any point in time, we may estimate the true similarity in
 this model of {\em preferential} rating, by computing the cosine similarity of
@@ -111,7 +111,7 @@ serves as a simple and obvious estimate. In using this estimate, we are treating
 all missing ratings as intentionally omitted. When estimating $TrueSimRand$, the
 choice of how to handle missing ratings is perhaps less obvious. Following the
 convention of Breese et al. \cite{Breese1998}, we choose to use the Pearson
-correlation \footnote{The Pearson correlation is traditionally characterized by
+correlation\footnote{The Pearson correlation is traditionally characterized by
 subtracting an expectation value from each dimension. This is only approximately
 true in our case. We discuss the how we subtract rating biases later in this
 report.} for this estimate, ignoring all ratings by users who have not rated
@@ -391,7 +391,35 @@ This final expression implicitly yields the MLE of $y$ as a function of the
 ratings $r_A$ and $r_B$. That is, constraining the parameters $\mu_r$,
 $\sigma_r$, $\mu_s$, and $\sigma_s$ to realistic values (e.g. $\sigma_r,
 \sigma_s > 0$), this expression defines a surface that can be used to
-efficiently estimate $y$ given a pair of ratings.
+efficiently estimate $y$ given a pair of ratings\footnote{Note that this
+equation neglects the constraint that $-1 \leq y \leq 1$. As a consequence, some
+combinations of ratings and parameters can yield MLEs for $y$ that exceed $1$ in
+magnitude. This is easily fixed, however, by applying this additional
+constraint.}.
+
+\subsection*{User Predictivity}
+
+As already mentioned, the estimator $PearSim$ is unable to say much about the
+similarity of two items when only provided ratings from a single common user. In
+this case, $PearSim$ yields $\pm1$ (or the indeterminate value $0/0$ in the case
+that both ratings are zero) depending on whether the ratings have the same sign
+or not. The MLE provided by the above model rectifies this by generating
+similarity estimates in the range $[-1, +1]$ given a single pair of ratings. We
+therefore consider each user who rates a pair of items as implicitly predicting
+the similarity of the items. A key discovery of the present work is that the
+accuracy of users' predictions in a training set is correlated with the accuracy
+in a test set. We exploit this finding by ascribing a quantity we call {\em user
+predictivity} to each user defined as
+\begin{align}
+p_u = e^{-\epsilon_u/\lambda},
+\end{align}
+where $\lambda$ is a parameter to be learned and
+\begin{align}
+\epsilon_u = \frac{1}{\left|I_u\right|}
+\sum_{A,B \in I_u}{\left|ModelSimRand(A, B) - GoldSimRand(A, B)\right|}
+\end{align}
+with $I_u$ the set of item pairs rated by user $u$ such that $\epsilon_u$ is
+the average absolute error of user $u$'s similarity predictions.
 
 
 \section*{Experiment}
