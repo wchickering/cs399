@@ -55,30 +55,30 @@ for estimating the true similarity of two users or items given limited common
 rating data.
 
 To keep the present work focused, we confine ourselves to memory-based
-collaborative filtering (CF) in which we work with a logical user-item matrix
-with elements corresponding to ratings given by a particular user to a
+collaborative filtering (CF) in which we work with a logical user-item matrix.
+Each element of the matrix corresponds to a rating given by a particular user to a
 particular item. Further, we choose to limit our analysis to item-item
 similarity but note that these techniques should be equally effective at
-improving user-user similarity estimation. An item is now represented as vector
-of the ratings they have received from all users. We now formalize the notion of
-item-item similarity. Two alternative models for the generation of user-item
-ratings are useful here in arriving at two different definitions of the {\em
-true} item-item similarity.
+improving user-user similarity estimation. In this representaion, an item is
+a vector of the ratings it has received from all users. We now formalize the 
+notion of {\em true} item-item similarity. Two alternative models for the 
+generation of user-item ratings are useful in arriving at two different 
+definitions of the {\em true} item-item similarity.
 
 \section*{True Item-Item Similarity}
 
-In the first model, we imagine users are randomly presented with items to rate.
-Given a sufficient period of time, all users will eventually rate all items such
-that all elements of an item's vector correspond to a provided rating. The true
-similarity in this model of {\em random} rating, which we denote $TrueSimRand$,
-is then the vector product of two item vectors. That is,
+In the first model, we imagine users are randomly presented items to rate. Given 
+a sufficient period of time, all users will eventually rate all items, creating
+item vectors that contain provided ratings from all users. The true similarity 
+in this model of {\em random} rating, denoted $TrueSimRand$, is then the vector 
+product of two complete item vectors. That is, 
 \begin{align}
 TrueSimRand(A, B) = \frac{\sum\limits_{u\in U}
 r_{u,A}r_{u,B}}{\sqrt{\sum\limits_{u\in U} r_{u,A}^2}
 \sqrt{\sum\limits_{u\in U} r_{u,B}^2}},
 \end{align}
-where $U$ is the set of all users and $r_{u,I}$ is the rating given by user $u$
-to item $I$.
+where $A$ and $B$ are items, $U$ is the set of all users and $r_{u,I}$ is the 
+rating given by user $u$ to item $I$.
 
 In the second model, we imagine an unlimited supply of users each of whom
 chooses to rate a subset of items. The lack of a rating is now meaningful since
