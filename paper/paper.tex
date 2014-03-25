@@ -143,9 +143,9 @@ indication that this is a low-confidence calculation.
 In the following sections, we present two approaches to better approximate the
 true similarity given a limited number of common reviewers. Both approaches are
 motivated by probabilistic models with distributions grounded in the data. The
-first approach leverages the observed similarity score and the number of common
-users to calculate the true similarity. The second approach leverages the
-rating-vectors themselves.
+first method leverages the observed naive similarity estimate and the number of
+common users to better estimate the true similarity. The second method leverages
+the observed ratings themselves for the same ends.
 
 \subsection*{The Experiment}
 We construct an experiment to test the efficacy of a predictive model. 
@@ -186,19 +186,18 @@ users are observed.
 
 We model $Y$ as a Normal distribution 
 \begin{align}
-Y \sim N(\mu, \sigma_{s}^2)
+Y \sim N(\mu, \sigma_{s}^2),
 \end{align}
-where $\mu$ and $\sigma_{s}^2$ are the average similarity score and the variance 
+where $\mu$ and $\sigma_{s}^2$ are the average similarity score and the variance
 of similarity scores of all pairs of items, respectively. Since $X_n$ represents
 a noisy reading of the true similarity $Y$, we model $X_n | Y=y$ as a Gaussian
 error around $y$:
 \begin{align}
 (X_n | Y=y) \sim N(y, \sigma_{err, n}^2)
 \end{align}
-
-Note that $\sigma_{err, n}^2$ represents how noisy $Sim_n$ is as an estimation of
+Note that $\sigma_{err, n}^2$ represents how noisy $Sim_n$ is as an estimate of
 $TrueSim$ and therefore should decrease as $n$ increases. The probability
-distribution of $X_n$ can be visualized in Figure 1.
+distribution of $X_n$ is illustrated in Fig. 1.
 
 \begin{figure}[!htbp]
     \centering
@@ -209,9 +208,9 @@ distribution of $X_n$ can be visualized in Figure 1.
     \label{fig:two_normals}
 \end{figure}
 
-The problem of approximating the $TrueSim$ from $Sim_n$ can now be seen as
-finding the value of $Y$ that most likely produced $X_n$. In other words we 
-desire the Maximum Likelihood Estimate of $Y | X_n$:
+The problem of approximating $TrueSim$ given $Sim_n$ can now be seen as finding
+the value of $Y$ that most likely produced $X_n$. In other words we desire the
+Maximum Likelihood Estimate of $Y | X_n$:
 \begin{align}
 \hat{y} &= \argmax_yP(Y=y|X_n=x) 
 \\&= \argmax_y\left[\frac{P(X_n=x | Y=y)P(Y=y)}{P(X_n=x)}\right]
@@ -235,56 +234,57 @@ setting it to zero:
 2\left(\sigma_{s}^2x+\sigma_{err,n}^2\mu\right) 
 \\&= 0
 \end{align}
-This produces the following linear equation for $\hat{y}$ in terms of $x$:
+This produces the following linear equation for $\hat{y}$ in terms of $x$
 \begin{align}
-\hat{y} &= \frac{\sigma_{s}^2x+\sigma_{err,n}^2\mu}{\sigma_{s}^2+\sigma_{err,n}^2}
+\hat{y} &=
+\frac{\sigma_{s}^2x+\sigma_{err,n}^2\mu}{\sigma_{s}^2+\sigma_{err,n}^2},
 \end{align}
-which can be rewritten as:
+which can be rewritten as
 \begin{align}
 \left(\hat{y} - \mu\right) &= \frac{\sigma_{s}^2}{\sigma_{s}^2+\sigma_{err,n}^2}
-\left(x-\mu\right)
+\left(x-\mu\right).
 \end{align}
 
 The model suggests that there is a linear correlation between $X_n$ ($Sim_n$)
-and $Y$ ($TrueSim$).\footnote{It is worth noting that despite
-the resemblance to Slope One Predictors \cite{Lemire1998}, this is a fundamentally 
-different technique. Here, we have a linear relationship between observed 
-scores and true scores, whereas the Slope One model seeks a linear relationship 
-between the ratings a user gives to one items versus another.} 
-Moreover, the best predicted $TrueSim$ is a linear 
-combination of the average true similarity and the observed similiarity. Since $\sigma_{err,n}^2$ is 
-nonnegative, the slope is always less than or equal to one, meaning that the 
-observed distance from $\mu$ (the average true similarity) overestimates the 
-true distance. This is reasonable, since the prior suggests that the true 
-similarity is likely to be near $\mu$.
+and $Y$ ($TrueSim$).\footnote{It is worth noting that despite the resemblance to
+Slope One Predictors \cite{Lemire1998}, this is a fundamentally different
+technique. Here, we have a linear relationship between observed scores and true
+scores, whereas the Slope One model seeks a linear relationship between the
+ratings a user gives to different items.} Moreover, the best predicted $TrueSim$
+is a linear combination of the average true similarity and the observed
+similiarity. Since $\sigma_{err,n}^2$ is nonnegative, the slope is always less
+than or equal to one, meaning that, on average, the observed distance from $\mu$
+overestimates the true distance from $\mu$. This is reasonable, since the prior
+distribution suggests that the true similarity is likely to be near $\mu$.
 
-This model requires a different parameter $\sigma_{err,n}^2$ for each $n$.
-To gain more generality, we model $\sigma_{err,n}^2$ as a function of $n$
-instead of considering them independent of each other. Recall that 
-$\sigma_{err,n}^2$ is the noisiness of the observed $Sim_n$ about $TrueSim$. 
-Since $TrueSim$ is $Sim$ when all users that will rate the items 
-have rated them, $Sim_n$ can be thought of as sampling $n$ users from the 
-set used to calculate $TrueSim$. Although $Sim$ is usually more complicated 
-than an average, the Central Limit Theorem motivates the intuition that the 
-variance of $Sim$ would decrease as the sqaure root of $n$. Thus we model 
-$\sigma_{err,n}^2$ as:
+This model requires a different parameter $\sigma_{err,n}^2$ for each $n$.  To
+gain more generality, we model $\sigma_{err,n}^2$ as a function of $n$ instead
+of considering them independent of each other. Recall that $\sigma_{err,n}^2$ is
+the noisiness of the observed $Sim_n$ about $TrueSim$.  $Sim$ converges to
+$TrueSim$ as the number of users $n$ increases.  The Central Limit Theorem
+therefore motivates the intuition that the variance of $Sim$ would decrease as
+the square root of $n$. Thus we model $\sigma_{err,n}^2$ as
 \begin{align}
 \sigma_{err,n}^2 = \frac{\alpha}{\sqrt{n}},
 \end{align}
-yielding the single parameter model:
+yielding the single parameter model
 \begin{align}
 \left(Y - \mu\right) = \frac{\sigma_{s}^2}{\sigma_{s}^2+\frac{\alpha}{\sqrt{n}}}
-\left(X_n-\mu\right)
+\left(X_n-\mu\right).
 \end{align}
 
 
 \subsection*{Technique}
-While it may be impossible to get $TrueSim$ for any pair, we
-can get close by calculating $Sim_n$ when a large number of users have rated
-both items. Formally, we define $GoldSim$ = $Sim_N$ where $N$ is a number 
-large enough that $GoldSim \approx TrueSim$. Using this approach to approximate
-$TrueSim$, we can look at the distribution of $GoldSim$ scores (Fig. 2) and see 
-that the Normal distribution of $TrueSim$ is a reasonable model.
+To evaluate this method of improving similarity estimates, we would like to know
+{\em a priori} the true similarity for a set of item pairs. This way, we could
+compute the error in estimates made based on only partial rating data. Of
+course, the metric $TrueSim$ is a theoretical construct and not something we
+have access to in the real world. Fortunately, we can achieve good
+approximations of $TrueSim$ given sufficient data. We therefore define $GoldSim$
+= $Sim_N$ where $N$ is a number large enough that $GoldSim \approx TrueSim$.
+Using this approach to approximate $TrueSim$, we can look at the distribution of
+$GoldSim$ scores (Fig. 2) and see that the Normal distribution of $TrueSim$ is a
+reasonable model.
 
 \begin{figure}[!htbp]
     \centering
