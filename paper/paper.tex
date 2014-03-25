@@ -139,20 +139,25 @@ this unlikely to be an accurate assessment of the true similarity of $A$ and
 $B$, it also gives the most extreme results possible, without giving any
 indication that this is a low-confidence calculation.
 
-\begin{align}
-ModSim(Sim(A, B), n) \approx lim_{n\to\infty}Sim(A, B)
-\end{align}
+In the following sections, we present two approaches to better approximate the
+true similarity given a limited number of common reviewers. Both approaches are
+motivated by probabilistic models with distributions grounded in the data. The
+first approach leverages the observed similarity score and the number of common
+users to calculate the true similarity. The second approach leverages the
+rating-vectors themselves.
 
 \section*{Score-based Approach}
 \subsection*{Probabilistic Model}
 
-In our first approach, we model true and observed similarity probabilistically. The
-goal is to use the observed similarity score directly to approximate the true similarity.
-In this way, we can consider an abstact $TrueSim$ which ignores the details of 
-$TrueSimRand$ or $TrueSimPref$. Similarly, we consider $Sim_{n}$ and $GoldSim$ to be
-the generic observed similarity scores. Let $Y$ be a random variable representing 
-the $TrueSim$ of a randomly chosen pair of items. Let $X_{n}$ be a random variable 
-representing the $Sim_{n}$ of a pair of items when $n$ common users are observed.
+In our first approach, we model the probability distributions of true and 
+observed similarity. The goal is to use the observed similarity score directly 
+to approximate the true similarity. In this way, we can consider an abstact 
+$TrueSim$ which ignores the details of $TrueSimRand$ or $TrueSimPref$. 
+Similarly, we consider $Sim_n$ to be a generic observed similarity score when
+the two itmes have $n$ common reviewers. Now, let $Y$ be a random variable 
+representing the $TrueSim$ of a randomly chosen pair of items. Let $X_{n}$ be a
+random variable representing the $Sim_{n}$ of a pair of items when $n$ common 
+users are observed.
 
 We model $Y$ as a Normal distribution 
 \begin{align}
@@ -217,21 +222,26 @@ which can be rewritten as:
 
 The model suggests that there is a linear correlation between $X_n$ ($Sim_n$)
 and $Y$ ($TrueSim$). Moreover, the best predicted $TrueSim$ is a linear 
-combination of the mean and the observed similiarity. Since $\sigma_{err,n}^2$ is 
-nonnegative, the slope is always less than or equal to one, meaningthat the 
+combination of the average true similarity and the observed similiarity. Since $\sigma_{err,n}^2$ is 
+nonnegative, the slope is always less than or equal to one, meaning that the 
 observed distance from $\mu$ (the average true similarity) overestimates the 
-true distance. This is reasonable, since there is a prior that expects the true 
-similarity to be around $\mu$.
+true distance. This is reasonable, since prior suggests that the true 
+similarity is likely to be near $\mu$.\footnote{It is worth noting that despite
+the resemblance to Slope One Predictors \cite{Lemire1998}, this is a fundamentally 
+different technique. Here, we have a linear relationship between observed 
+scores and true scores, whereas the Slope One model seeks a linear relationship 
+between the ratings a user gives to one items versus another.}
 
-This model requires calculating $\sigma_{err,n}^2$ for every value of $n$ 
-separately. To gain a more general model, which relates the $\sigma_{err, n}$'s, 
-we model $\sigma_{err,n}^2$ as a function of $n$. Recall that $\sigma_{err,n}^2$ 
-is the noisiness of the observed $Sim_n$ about $TrueSim$. Since the $TrueSim$ is
-the $Sim$ when all users that will rate the items have rated them, $Sim_n$ can be
-thought of as sampling $n$ users from the set used to calculate $TrueSim$. 
-Although $Sim$ is likely more complicated than an average, the Central Limit 
-Theorem motivates the intuition that the variance of $Sim$ would decrease as the 
-$\sqrt{n}$. Thus we model $\sigma_{err,n}^2$ as:
+This model requires a different parameter $\sigma_{err,n}^2$ for each $n$.
+To gain a more generality, we model $\sigma_{err,n}^2$ as a function of $n$
+instead of considering them independent of each other. Recall that 
+$\sigma_{err,n}^2$ is the noisiness of the observed $Sim_n$ about $TrueSim$. 
+Since the $TrueSim$ is the $Sim$ when all users that will rate the items 
+have rated them, $Sim_n$ can be thought of as sampling $n$ users from the 
+set used to calculate $TrueSim$. Although $Sim$ is likely more complicated 
+than an average, the Central Limit Theorem motivates the intuition that the 
+variance of $Sim$ would decrease as the sqaure root of $n$. Thus we model 
+$\sigma_{err,n}^2$ as:
 \begin{align}
 \sigma_{err,n}^2 = \frac{\alpha}{\sqrt{n}},
 \end{align}
@@ -241,38 +251,44 @@ yielding the single parameter model:
 \left(X_n-\mu\right)
 \end{align}
 
+
 \subsection*{Technique}
-The parameters $\mu$, $\sigma_{s}^2$, and $\sigma_{err,n}^2$ can be approximated 
-using the method of moments over training data. $\mu$ and $\sigma_{s}$ are
-calculated
+While it may be impossible to get $TrueSim$ for any pair, we
+can get close by calculating $Sim_n$ when a large number of users have rated
+both items. Formally, we define $GoldSim$ = $Sim_N$ where $N$ is a number 
+large enough that $GoldSim \approx TrueSim$. 
 
+With a measurable $GoldSim$ as our goal, we can apply supervised learning 
+techniques. First, we find pairs of items that have at least $N$ common users 
+and calculate their $GoldSim$. Next we withold some of the users to produce 
+estimated $Sim_n$ for $n=1,...,N$. By doing this over many pairs of items, we 
+produce pairs of ($Sim_n$, $TrueSim$) that can be used for training and testing.
 
-Based on this maodel, we try three different techniques to predict the true similarity from a
-measured similarity. The techniques vary in their fidelity to the model. For
-each, we limit our data to all pairs of items that have enough common users that
-we can approximate $TrueSim \approx Sim$. Then we pick subsets of the common
-users of various sizes $n$ and calculate $Sim_{n}$. With examples of $Sim$, $n$
-and the resulting $TrueSim$, we can implement supervised learning.
+Now, the parameters $\mu$, $\sigma_{s}^2$, and $\sigma_{err,n}^2$ can be 
+approximated using the method of moments over the training data. The values of 
+$\sigma_{err,n}^2$ are fit to the function $\frac{\alpha}{\sqrt{n}}$ and the $\alpha$ 
+that minimizes the sum of squared error is computed.
 
-The first technique is the least faithful to the model. It simply runs a number
-of linear regressions between $Sim$ and $TrueSim$ for each $n$. This ignores the 
-data-specific parameters $\mu$, $\sigma_{s}$ and $\sigma_{err,n}$ to find the best 
-linear fit. It also treats each $n$ completely independently. This technique 
-necessarilty has the lowest training error of all linear techniques, potentially 
-at the risk of overfitting.
+The following graph compares the results of three linear fits, with varying
+degrees of fidelity to the probabilistic model. The most faithful fit uses
+$\mu$, $\sigma_{s}^2$ and $\alpha$ as calculated above to predict the $GoldSim$
+using Eqn (18). The next fit uses the calculated values of $\sigma_{err,n}^2$ directly,
+following Eqn (16) for predictions. The third fit simply uses a series of linear
+regressions, one for each $n$. This model only assumes that for each $n$,
+$Sim_n$ and $GoldSim$ are linearly correlated.
 
-The second technique is more general. It approximates $\mu$ and $\sigma_{s}$
-using the method of moments on the training data of all $TrueSim$ scores. Then,
-$\sigma_{err,n}$ is also approximated using a method of moments on the training
-data of all $Sim_n$ for each $n$ separately. Here $\sigma_{err,n}$'s are also
-considered independently of each other.
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{LinearTechniques.png}
+	\caption{Comparison of different linear models. For each number of reviewers
+    in common $n$, the graphs represent the average squared error of predicted
+    $GoldSim$ calculated from the observed $Sim_n$. As a baseline, the technique
+    of guessing the average $GoldSim$ is included.}
+    \label{fig:Linear}
+\end{figure}
 
-The third and most general technique models $\sigma_{err,n}$ as a function of
-$n$ using equation 19. As in the previous technique, $\mu$, $\sigma_{s}$ and each
-$\sigma_{err,n}$ are approximated using the method of moments over the training
-data. Then $\alpha$ is calculated that minimizes the sum of squared errors
-between $\sigma_{err,n}^2$ and $\frac{\alpha}{\sqrt{n}}$. This $\alpha$ is used to
-construct the three-parameter prediction function of equation 19.
+The linear regression technique trades the generality of the model for a better
+fit on the training data. As the results show, the trade-off is worth it.
 
 \section*{Ratings-based Approach}
 \subsection*{Probabilistic Model}
