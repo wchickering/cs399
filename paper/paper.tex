@@ -477,7 +477,7 @@ $\epsilon_u$ is the average absolute error of user $u$'s similarity predictions.
 
 The parameter values $\mu_s$ and $\sigma_s$ are obtained by fitting the
 distribution of $GoldSimRand$ values in the training set (see Fig.
-\ref{fig:Histograms}). For example, the $N \geq 80$ dataset we have $\mu_s =
+\ref{fig:Histograms}). For example, in the $N \geq 80$ dataset we have $\mu_s =
 0.27$ and $\sigma_s = 0.25$. The choice of $\mu_r$ and $\sigma_r$ is less clear.
 Some insight can be gained, however, by examining the prior distribution of
 ratings for our datasets, which are shown in Fig. \ref{fig:RatingDist}.
@@ -489,15 +489,12 @@ ratings for our datasets, which are shown in Fig. \ref{fig:RatingDist}.
 	\caption{Distribution of rating pairs by common reviewers for item pairs.
 Top figure shows distribution for item pairs having at least 40 common
 reviewers. Bottom figure shows distribution for item pairs having at least 80
-common reviewers.}
+common reviewers. Rating1 and Rating2 are chosen in arbitrary order.}
     \label{fig:RatingDist}
 \end{figure}
 
-The upper panel of Fig. \ref{fig:RatingDist} shows data for the $N \geq 40$
-training set while the lower panel shows the same for the $N \geq 80$ training
-set. In these density plots, for each rating pair, we randomly choose which is
-Rating1 and which is Rating2. The two density plots present similar
-distributions. These data, together with the similarity score histograms of Fig.
+Fig. \ref{fig:RetingDist} shows density plots of rating pairs, for $N \geq 40$
+and $N \geq 80$. These data, together with the similarity score histograms of Fig.
 \ref{fig:Histograms}, suggest that the data for our two data sets are similar
 and that large biases are not introduced by varying the number of common users,
 $N$. At the same time, both rating distributions reveal significant correlations
@@ -553,7 +550,7 @@ blue curve is {\em ModelSimP}. }
     \emph{Advances in Artificial Intelligence.} vol. 2009,
     Article ID 421425, 19 pages, 2009. doi:10.1155/2009/421425
 \bibitem{Breese1998}
-    Breese, John S., David Heckerman, and Carl Kadie, 
+    John S. Breese, David Heckerman, and Carl Kadie, 
     ``Empirical analysis of predictive algorithms for collaborative filtering.'' 
     \emph{Proceedings of the Fourteenth conference on Uncertainty in artificial intelligence.}
     Morgan Kaufmann Publishers Inc., 1998.
@@ -562,7 +559,7 @@ blue curve is {\em ModelSimP}. }
     ``Slope One Predictors for Online Rating-Based Collaborative Filtering.''
     \emph{SDM.} Vol. 5, 2005.
 \bibitem{Koren2009}
-    Koren, Yehuda, Robert Bell, and Chris Volinsky. 
+    Yehuda Koren, Robert Bell, and Chris Volinsky. 
     ``Matrix factorization techniques for recommender systems.''
     \emph{Computer} 42.8, 2009. 30-37.
 
