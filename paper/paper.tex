@@ -130,9 +130,10 @@ r_{u,A}r_{u,B}}{\sqrt{\sum\limits_{u\in U_A} r_{u,A}^2}
 \stackrel{?}{\approx} TrueSimPref(A, B).
 \end{align}
 
+\section*{Problem}
 Both similarity estimates primarily leverage information from common users, that
 is users who have rated both items. Because of this, they perform well with a
-large number common users, but give unreliable, and dramatically varying,
+large number of common users, but give unreliable, and dramatically varying,
 results when the items have few common users. In an extreme case, if only one
 user has rated item $A$ and item $B$, $PearsSim(A, B) = 1$ or $-1$. Not only is
 this unlikely to be an accurate assessment of the true similarity of $A$ and
@@ -145,6 +146,30 @@ motivated by probabilistic models with distributions grounded in the data. The
 first approach leverages the observed similarity score and the number of common
 users to calculate the true similarity. The second approach leverages the
 rating-vectors themselves.
+
+\subsection*{The Experiment}
+We construct an experiment to test the efficacy of a predictive model. 
+For either similarity metric, there is not enough data to actually calculate
+$TrueSim$ for any pair. Instead, we can get close by calculating the
+corresponding $Sim_n$ metric when a large number of users have rated both 
+items. Formally, we define $GoldSim$ = $Sim_N$ where $N$ is a number large 
+enough that $GoldSim \approx TrueSim$.
+
+With a measurable $GoldSim$ as our predictive goal, we can implement a simple
+predictivity experiment. First, we find pairs of items that have at least 
+$N$ common users and calculate their $GoldSim$. Next, for each of these pairs
+of items, we withhold user ratings, leaving $n$ common reviewers. This 
+simulates a pair of items at times when there is a sparse amount of rating data. 
+We repeat theis for $n=1,...,N$ to get varying degrees of sparsity. With the
+sparse ratings alone, the model in question generates a prediction of the 
+$GoldSim$, which is compared to the actual $GoldSim$. This is repeated over 
+a large number of test pairs and the average squared error of the prediction 
+is calculated for each $n$.
+
+For this experimetn, we use Amazon's book data. Books are rated by users on a 1
+to 5 star-scale. As in 
+Some stuff about the experiment details: the data we use, how we subtract the
+biases, the biasedness of the experimental dataset, training vs testing.
 
 \section*{Score-based Approach}
 \subsection*{Probabilistic Model}
@@ -257,7 +282,18 @@ yielding the single parameter model:
 While it may be impossible to get $TrueSim$ for any pair, we
 can get close by calculating $Sim_n$ when a large number of users have rated
 both items. Formally, we define $GoldSim$ = $Sim_N$ where $N$ is a number 
-large enough that $GoldSim \approx TrueSim$. 
+large enough that $GoldSim \approx TrueSim$. Using this approach to approximate
+$TrueSim$, we can look at the distribution of $GoldSim$ scores (Fig. 2) and see 
+that the Normal distribution of $TrueSim$ is a reasonable model.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Histograms.png}
+	\caption{Histograms of {\em TrueSimR} (top) and {\em TrueSimP} (bottom) for
+training datasets containing at least 40 common reviewers (left) and 80 common
+reviewers (right).}
+    \label{fig:Histograms}
+\end{figure}
 
 With a measurable $GoldSim$ as our predictive goal, we can apply supervised 
 learning techniques. First, we find pairs of items that have at least $N$ common
@@ -270,13 +306,15 @@ moments over the training data. The values of $\sigma_{err,n}^2$ are fit to the
 function $\frac{\alpha}{\sqrt{n}}$ and the $\alpha$ that minimizes the sum of 
 squared error is computed.
 
-The following graph compares the results of three linear fits, with varying
+The graph of Fig. 3 compares the results of three linear fits, with varying
 degrees of fidelity to the probabilistic model. The most faithful fit uses
 $\mu$, $\sigma_{s}^2$ and $\alpha$ as calculated above to predict the $GoldSim$
 using Eqn (18). The next fit uses the calculated values of $\sigma_{err,n}^2$ directly,
 following Eqn (16) for predictions. The third fit simply uses a series of linear
 regressions, one for each $n$. This model only assumes that for each $n$,
-$Sim_n$ and $GoldSim$ are linearly correlated.
+$Sim_n$ and $GoldSim$ are linearly correlated. The linear regression technique 
+trades the generality of the model for a better fit on the training data. 
+As the results show, the trade-off is worth it.
 
 \begin{figure}[!htbp]
     \centering
@@ -284,14 +322,11 @@ $Sim_n$ and $GoldSim$ are linearly correlated.
 	\caption{Comparison of different linear techniques. For each number of reviewers
     in common, $n$, the graphs represent the average squared error of predicted
     $GoldSim$ calculated from the observed $Sim_n$. As a baseline, the technique
-    of guessing the average $GoldSim$ is included. For these experiments,
-    $N=100$ for determining $GoldSim$ and $70\%$ of the data was used for
-    training.}
+    of guessing the average $GoldSim$ is included. For these experiments, we use
+    $Sim$ = $PearSim$ and $N=100$ for determining $GoldSim$.}
     \label{fig:Linear}
 \end{figure}
 
-The linear regression technique trades the generality of the model for a better
-fit on the training data. As the results show, the trade-off is worth it.
 
 \section*{Ratings-based Approach}
 \subsection*{Probabilistic Model}
@@ -431,15 +466,6 @@ common reviewers.}
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=1.0\textwidth]{Histograms.png}
-	\caption{Histograms of {\em TrueSimR} (top) and {\em TrueSimP} (bottom) for
-training datasets containing at least 40 common reviewers (left) and 80 common
-reviewers (right).}
-    \label{fig:Histograms}
-\end{figure}
-
-\begin{figure}[!htbp]
-    \centering
     \includegraphics[width=0.9\textwidth]{MSE_SimR_40.png}
     \includegraphics[width=0.9\textwidth]{MSE_SimR_80.png}
 	\caption{Mean square error {\em vs} number of common reviewers, $n$, for
@@ -484,6 +510,10 @@ blue curve is {\em ModelSimP}. }
     Daniel Lemire and Anna Maclachlan.
     ``Slope One Predictors for Online Rating-Based Collaborative Filtering.''
     \emph{SDM.} Vol. 5, 2005.
+\bibitem{Koren2009}
+    Koren, Yehuda, Robert Bell, and Chris Volinsky. 
+    ``Matrix factorization techniques for recommender systems.''
+    \emph{Computer} 42.8, 2009. 30-37.
 
 \end{thebibliography}
 
