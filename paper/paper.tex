@@ -376,7 +376,21 @@ and that
 \left|\mathbf{\Sigma}\right| = \sigma_r^2(1 - y^2)
 \end{align}
 along with the substitution $\vec{r^\prime} = (r_A^\prime~~r_B^\prime) = \vec{r}
-- \vec{\mu_r}$.
+- \vec{\mu_r}$. Next, we find the minimum by taking the derivative with respect
+to $y$ and setting it to zero:
+\begin{align}
+\frac{d}{dy}\left[ \frac{1}{\sigma_r^2}\frac{1}{1 -
+y^2}\left[r_A^\prime(r_A^\prime - yr_B^\prime) + r_B^\prime(r_B^\prime -
+yr_A^\prime)\right] + \frac{(y - \mu_s)^2}{\sigma_{s}^2} +
+\ln{\left[\sigma_r^2(1 - y^2)\right]} \right] &= 0 \\
+-r_A^\prime r_B^\prime y^2 + ({r_A^\prime}^2 + {r_B^\prime}^2)y - r_A^\prime
+r_B^\prime + \frac{\sigma_r^2}{\sigma_s^2}(1 - y^2)^2(y - \mu_s) - \sigma_r^2(1
+- y^2)y &= 0.
+\end{align}
+This final expression implicitly yields the MLE of $y$ as a function of the
+ratings $r_A$ and $r_B$. That is, constraining the parameters $\mu_r$,
+$\sigma_r$, $\mu_s$, and $\sigma_s$ to realistic values, this expression defines
+a surface that can be to efficiently estimate $y$ given a pair of ratings.
 
 
 \section*{Experiment}
