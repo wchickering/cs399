@@ -331,7 +331,30 @@ y$ and $R_B | y$.  It therefore follows that if the ratings are indeed normally
 distributed that the covariance matrix is related to the similarity $y$ by
 \begin{align}
 \mathbf{\Sigma_y} = \sigma_r^2 \cdot
-\left[ \begin{array}{cc}  1 & y \\ y & 1 \end{array} \right]
+\left[ \begin{array}{cc}  1 & y \\ y & 1 \end{array} \right].
+\end{align}
+
+Using this model, we may view the problem of estimating the similarity $Y$ of
+items $A$ and $B$ that most likely produced ratings $R_A$ and $_B$ as
+that of finding the Maximum Likelihood Estimate of $Y | \vec{R}$:
+\begin{align}
+P(Y | \vec{R}) = \frac{P(\vec{R} | Y)P(Y)}{P(\vec{R})}.
+\end{align}
+
+\begin{align}
+\hat{y} &= \argmax_yP(Y=y|\vec{R}=(R_A~~R_B)) 
+\\&= \argmax_y\left[\frac{P(\vec{R}=(R_A~~R_B) |
+Y=y)P(Y=y)}{P(\vec{R}=(R_A~~R_B))}\right]
+\\&= \argmax_y\left[P(\vec{R}=(R_A~~R_B)|Y=y)P(Y=y)\right]
+%\\&= 
+%\argmax_y\left[\frac{1}{2\pi\sqrt{\left|\mathbf{\Sigma_y}\right|}}\exp{\left(\frac{-(x-y)^2}
+%{2\sigma_{2,n}^2}\right)}
+%\frac{1}{\sigma_{1}\sqrt{2\pi}}\exp{\left(\frac{-(y-\mu)^2}
+%{2\sigma_{1}^2}\right)}\right]
+%\\&= \argmin_y\left[\frac{(x-y)^2}{2\sigma_{2,n}^2} +
+%\frac{(y-\mu)^2}{2\sigma_{1}^2}\right]
+%\\&= \argmin_y\left[\left(\sigma_{1}^2+\sigma_{2,n}^2\right)y^2 - 
+%2\left(\sigma_{1}^2x+\sigma_{2,n}^2\mu\right)y\right]
 \end{align}
 
 \section*{Experiment}
