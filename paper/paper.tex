@@ -162,6 +162,17 @@ discussed below, we must confine ourselves to item pairs that have many common
 reviewers in order to determine a good approximation of the their true
 similarity.
 
+Before any analysis of the data, we remove the biases from each rating, as in
+\cite{Koren2009}:
+\begin{align}
+\hat{r_{ui}} = r_{ui} - \mu_r - b_u - b_i
+\end{align}
+where $r_{ui}$ is the raw rating user $u$ gave item $i$, $\mu_r$ is the average
+rating over the entire dataset, $b_u$ is the user bias, calculated as the
+average rating from user $u$ after $\mu_r$ has been subtracted from each, and
+$b_i$ is the item bias, calculated as the average rating of item $i$ after
+$\mu_r$ and $b_u$ have been subtracted from each. 
+
 \subsection*{Experiment}
 Ideally, we would know {\em a priori} the true similarity for a set of item
 pairs. We could then generate similarity estimates and readily determine the
@@ -177,32 +188,18 @@ with at least either $N=40$ and $80$ common users. These choices are a
 compromise between having enough data for statistically significant results and
 having a sufficiently large $N$ that $GoldSim \approx TrueSim$. Note that even
 with $N=80$ the average absolute error in $PearSim$ (i.e. $\left<\left| PearSim
-- GoldSim \right|\right>$) is $\approx 0.1$\footnote{See Fig.
-  \ref{fig:MSE_SimR}}.
+- GoldSim \right|\right>$) is $\approx 0.1$ (see Fig.  \ref{fig:MSE_SimR}). So
+  while $PearSim$ and $CosSim$ are relatively stable after this many common
+users, there does remain a significant level of variance.
 
-...
-
-First, we find pairs of items that have at least 
-$N$ common users and calculate their $GoldSim$. Next, for each of these pairs
-of items, we withhold user ratings, leaving $n$ common reviewers. This 
-simulates a pair of items at a time when there is sparser rating data. 
-We repeat this for $n=1,...,N$ to get varying degrees of sparsity. With the
-sparse ratings alone, the model in question generates a prediction of the 
-$GoldSim$, which is compared to the actual $GoldSim$. This is repeated over 
-a large number of test pairs and the average squared error of the prediction 
-is calculated for each $n$.
-
-For this experiment, we use Amazon's book data. Books are rated by users on a 1
-to 5 star-scale. Before any analysis of the data, we remove the biases from each
-rating, as in \cite{Koren2009}:
-\begin{align}
-\hat{r_{ui}} = r_{ui} - \mu_r - b_i - b_u
-\end{align}
-where $r_{ui}$ is the raw rating user $u$ gave item $i$, $\mu_r$ is the average
-rating over the entire dataset, $b_i$ is the item bias, calculated as the
-average rating for item $i$ after $\mu_r$ has been subtracted from each, and 
-$b_u$ is the user bias, calculated as the average rating from user $u$ after
-$\mu_r$ and $b_i$ have been subtracted from each. 
+Our off-line experiment simulates the passing of time, applying ratings to items
+in the order they actually occured. The similarity of item pairs is then
+estimated each time a user has rated both items such that $N$ is incremented by
+one. In this way, we can compare various estimators by comparing their outputs
+to each other and to the known $GoldSim$ value for each pair. We proceed like
+this for each pair in a test set for $n=1,...,N$ to get varying degrees of
+sparsity. We then compute the average squared error of the estimate for each
+$n$.
 
 \section*{Score-based Method}
 \subsection*{Probabilistic Model}
