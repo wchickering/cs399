@@ -149,18 +149,18 @@ the observed ratings themselves for the same ends.
 
 \subsection*{The Experiment}
 We construct an experiment to test the efficacy of a predictive model. 
-For either similarity metric, there is not enough data to actually calculate
-$TrueSim$ for any pair. Instead, we can get close by calculating the
-corresponding $Sim_n$ metric when a large number of users have rated both 
-items. Formally, we define $GoldSim$ = $Sim_N$ where $N$ is a number large 
-enough that $GoldSim \approx TrueSim$.
+We would like to know {\em a priori} the true similarity for a pair of items.
+For either true similarity metric, $TrueSim$ is a theoretical construct and not 
+something we have access to in the real world. Fortunately, we can achieve good
+approximations of $TrueSim$ given sufficient data. We therefore define $GoldSim$
+= $Sim_N$ where $N$ is a number large enough that $GoldSim \approx TrueSim$.
 
-With a measurable $GoldSim$ as our predictive goal, we can implement a simple
+With a measurable $GoldSim$ as our goal, we can implement a simple
 predictivity experiment. First, we find pairs of items that have at least 
 $N$ common users and calculate their $GoldSim$. Next, for each of these pairs
 of items, we withhold user ratings, leaving $n$ common reviewers. This 
-simulates a pair of items at times when there is a sparse amount of rating data. 
-We repeat theis for $n=1,...,N$ to get varying degrees of sparsity. With the
+simulates a pair of items at a time when there is sparser rating data. 
+We repeat this for $n=1,...,N$ to get varying degrees of sparsity. With the
 sparse ratings alone, the model in question generates a prediction of the 
 $GoldSim$, which is compared to the actual $GoldSim$. This is repeated over 
 a large number of test pairs and the average squared error of the prediction 
@@ -196,7 +196,20 @@ We model $Y$ as a Normal distribution
 Y \sim N(\mu_s, \sigma_{s}^2),
 \end{align}
 where $\mu_s$ and $\sigma_{s}^2$ are the average similarity score and the variance
-of similarity scores of all pairs of items, respectively. Since $X_n$ represents
+of similarity scores of all pairs of items, respectively. Figure 1 shows the
+distributions of $GoldSim$, which motivates a Gaussina model for $TrueSim$.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Histograms.png}
+	\caption{Histograms of {\em GoldPearSim} (top) and {\em GoldCosSim}
+(bottom) for training datasets containing at least 40 common reviewers (left)
+and 80 common reviewers (right).}
+    \label{fig:Histograms}
+\end{figure}
+
+
+Since $X_n$ represents
 a noisy reading of the true similarity $Y$, we model $X_n | Y=y$ as a Gaussian
 error around $y$:
 \begin{align}
@@ -204,7 +217,7 @@ error around $y$:
 \end{align}
 Note that $\sigma_{err, n}^2$ represents how noisy $Sim_n$ is as an estimate of
 $TrueSim$ and therefore should decrease as $n$ increases. The probability
-distribution of $X_n$ is illustrated in Fig. 1.
+distribution of $X_n$ is illustrated in Figure 2.
 
 \begin{figure}[!htbp]
     \centering
@@ -281,37 +294,17 @@ yielding the single parameter model
 \end{align}
 
 
-\subsection*{Technique}
-To evaluate this method of improving similarity estimates, we would like to know
-{\em a priori} the true similarity for a set of item pairs. This way, we could
-compute the error in estimates made based on only partial rating data. Of
-course, the metric $TrueSim$ is a theoretical construct and not something we
-have access to in the real world. Fortunately, we can achieve good
-approximations of $TrueSim$ given sufficient data. We therefore define $GoldSim$
-= $Sim_N$ where $N$ is a number large enough that $GoldSim \approx TrueSim$.
-Using this approach to approximate $TrueSim$, we can look at the distribution of
-$GoldSim$ scores (Fig. 2) and see that the Normal distribution of $TrueSim$ is a
-reasonable model.
-
-\begin{figure}[!htbp]
-    \centering
-    \includegraphics[width=0.8\textwidth]{Histograms.png}
-	\caption{Histograms of {\em TrueSimRand} (top) and {\em TrueSimPref}
-(bottom) for training datasets containing at least 40 common reviewers (left)
-and 80 common reviewers (right).}
-    \label{fig:Histograms}
-\end{figure}
-
+\subsection*{Technique and Results}
 With a measurable $GoldSim$ as our predictive goal, we can apply supervised 
 learning techniques. First, we find pairs of items that have at least $N$ common
 users and calculate their $GoldSim$. Next we withold some of the users to 
 produce estimated $Sim_n$ for $n=1,...,N$. By doing this over many pairs of 
 items, we produce pairs of ($Sim_n$, $TrueSim$) across different values of $n$ 
-that can be used for training and testing. Now the parameters $\mu_s$, 
-$\sigma_{s}^2$, and $\sigma_{err,n}^2$ can be approximated using the method of 
-moments over the training data. The values of $\sigma_{err,n}^2$ are fit to the 
-function $\frac{\alpha}{\sqrt{n}}$ and the $\alpha$ that minimizes the sum of 
-squared error is computed.
+that can be used for training. Now the parameters $\mu_s$, $\sigma_{s}^2$, and 
+$\sigma_{err,n}^2$ can be approximated using the method of moments over the 
+training data. The values of $\sigma_{err,n}^2$ are fit to the function 
+$\frac{\alpha}{\sqrt{n}}$ and the $\alpha$ that minimizes the sum of squared 
+error is computed.
 
 The graph of Fig. 3 compares the results of three linear fits, with varying
 degrees of fidelity to the probabilistic model. The most faithful fit uses
