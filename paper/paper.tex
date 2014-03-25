@@ -467,16 +467,16 @@ p_u = e^{-\epsilon_u/\lambda},
 where $\lambda$ is a parameter to be learned and
 \begin{align}
 \epsilon_u = \frac{1}{\left|I_u\right|}
-\sum_{A,B \in I_u}{\left|ModelSimRand(A, B) - GoldSimRand(A, B)\right|}
+\sum_{A,B \in I_u}{\left|\hat{y}(r_{u,A},r_{u,B}) - GoldSim(A, B)\right|}
 \end{align}
 with $I_u$ the set of item pairs rated by user $u$. We are once again using
-$GoldSim$ as a proxy for $TrueSim$ (See the {\bf Experiment} section) such that
+$GoldSim$ as a proxy for $TrueSim$ (See {\bf Experiment} section) such that
 $\epsilon_u$ is the average absolute error of user $u$'s similarity predictions.
 
 \subsection*{Technique and Results}
 
 The parameter values $\mu_s$ and $\sigma_s$ are obtained by fitting the
-distribution of $GoldSimRand$ values in the training set (see Fig.
+distribution of $GoldSim$ values in the training set (see Fig.
 \ref{fig:Histograms}). For example, the $N \geq 80$ dataset we have $\mu_s =
 0.27$ and $\sigma_s = 0.25$. The choice of $\mu_r$ and $\sigma_r$ is less clear.
 Some insight can be gained, however, by examining the prior distribution of
@@ -513,7 +513,28 @@ the item's average rating thereby avoiding any simple popularity effects.
 
 We observe that while the data of Fig. \ref{fig:RatingDist} clearly do not
 conform precisely to a multivariate Gaussian distribution, this approximation is
-not an unreasonable one.
+not an unreasonable one. In passing, we remark on the faint clusters that flank
+the central cluster in the figures. We understand these to be artifacts of the
+bias subtraction. Moreover, a more sophisticated Rating-based model could
+account for these by considering a $P(\vec{R} | Y)$ that is a mixture of
+Gaussians. Motivated partly by these density plots and partly by estimator
+performance against the training set, we choose $\mu_r = 0.25$ and $\sigma_r =
+0.3$ when estimating $TrueSimRand$.
+
+Having chosen values for $\mu_s$, $\sigma_s$, $\mu_r$, and $\sigma_r$ we are now
+able to estimate the similarity of item pairs. We do this for each common user
+$u$ in the training set in order to determine their average absolute error
+$\epsilon_u$. Next, we apply supervised learning techniques to optimize the
+value of the parameter $\lambda$ that appears in the definition of the {\em user
+predictivity} $p_u$. We do this by minimizing the error in the similarity
+estimates made against the training set where each estimate is the weighted
+average of the common user's implied prediction. That is, our new estimate for
+the similarity of items $A$ and $B$ is
+\begin{align}
+UserPredSim(A,B) = \frac{\sum_{u \in U_{AB}}{p_u\cdot\hat{y}(r_{u,A}, r_{u,B})}}
+{\sum_{u \in U_{AB}}{p_u}},
+\end{align}
+where, as before, $U_{AB}$ is the set of common users for items $A$ and $B$.
 
 \begin{figure}[!htbp]
     \centering
@@ -524,8 +545,8 @@ estimates of {\em TrueSimR} for item pairs ultimately having at least 40 common
 reviewers (top) and 80 common reviewers (bottom). The dashed curve represents
 {\em SimR} computed using only the ratings from the first $n$ reviewers. The
 flat red line indicate the MSE that results from always guessing the average
-{\em TrueSimR} from the training set. The green curve is {\em RegSimR} and the
-blue curve is {\em ModelSimR}. }
+{\em TrueSimR} from the training set. The green curve is {\em LinRegSim} and the
+blue curve is {\em UserPredSim}. }
     \label{fig:MSE_SimR}
 \end{figure}
 
@@ -534,11 +555,11 @@ blue curve is {\em ModelSimR}. }
     \includegraphics[width=0.9\textwidth]{MSE_SimP_80.png}
 	\caption{Mean square error {\em vs} number of common reviewers, $n$, for
 estimates of {\em TrueSimP} for item pairs ultimately having at least 80 common
-reviewers. The dashed curve represents
-{\em SimP} computed using only the ratings from the first $n$ reviewers. The
-flat red line indicate the MSE that results from always guessing the average
-{\em TrueSimP} from the training set. The green curve is {\em RegSimP} and the
-blue curve is {\em ModelSimP}. }
+reviewers. The dashed curve represents {\em CosSim} computed using only the
+ratings from the first $n$ reviewers. The flat red line indicate the MSE that
+results from always guessing the average {\em TrueSimPref} from the training
+set. The green curve is {\em LinRegSim} and the blue curve is {\em UserPredSim}.
+}
     \label{fig:MSE_SimP}
 \end{figure}
 
