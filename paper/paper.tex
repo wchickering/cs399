@@ -433,7 +433,7 @@ to $y$ and setting it to zero:
 \frac{d}{dy}\left[ \frac{1}{\sigma_r^2}\frac{1}{1 -
 y^2}\left[r_A^\prime(r_A^\prime - yr_B^\prime) + r_B^\prime(r_B^\prime -
 yr_A^\prime)\right] + \frac{(y - \mu_s)^2}{\sigma_{s}^2} +
-\ln{\left[\sigma_r^2(1 - y^2)\right]} \right] &= 0 \\
+\ln{\left[\sigma_r^2(1 - y^2)\right]} \right] &= 0 \\\label{eqn:estimator}
 -r_A^\prime r_B^\prime \hat{y}^2 + ({r_A^\prime}^2 + {r_B^\prime}^2)\hat{y} - r_A^\prime
 r_B^\prime + \frac{\sigma_r^2}{\sigma_s^2}(1 - \hat{y}^2)^2(\hat{y} - \mu_s) - \sigma_r^2(1
 - \hat{y}^2)\hat{y} &= 0.
@@ -461,11 +461,11 @@ predicting the similarity of the items. A key discovery of the present work is
 that the accuracy of users' predictions in a training set is correlated with the
 accuracy in a test set. We exploit this finding by ascribing a quantity we call
 {\em user predictivity} to each user defined as
-\begin{align}
+\begin{align}\label{eqn:predictivity}
 p_u = e^{-\epsilon_u/\lambda},
 \end{align}
 where $\lambda$ is a parameter to be learned and
-\begin{align}
+\begin{align}\label{eqn:userError}
 \epsilon_u = \frac{1}{\left|I_u\right|}
 \sum_{A,B \in I_u}{\left|\hat{y}(r_{u,A},r_{u,B}) - GoldSim(A, B)\right|}
 \end{align}
@@ -496,7 +496,7 @@ common reviewers. Rating1 and Rating2 are chosen in arbitrary order.}
     \label{fig:RatingDist}
 \end{figure}
 
-Fig. \ref{fig:RetingDist} shows density plots of rating pairs, for $N \geq 40$
+Figure \ref{fig:RatingDist} shows density plots of rating pairs, for $N \geq 40$
 and $N \geq 80$. These data, together with the similarity score histograms of Fig.
 \ref{fig:Histograms}, suggest that the data for our two data sets are similar
 and that large biases are not introduced by varying the number of common users,
@@ -520,19 +520,28 @@ account for these by considering a $P(\vec{R} | Y)$ that is a mixture of
 Gaussians. 
 
 Having chosen values for $\mu_s$, $\sigma_s$, $\mu_r$, and $\sigma_r$ we are now
-able to estimate the similarity of item pairs. We do this for each common user
-$u$ in the training set in order to determine their average absolute error
-$\epsilon_u$. Next, we apply supervised learning techniques to optimize the
-value of the parameter $\lambda$ that appears in the definition of the {\em user
-predictivity} $p_u$. We do this by minimizing the error in the similarity
-estimates made against the training set where each estimate is the weighted
-average of the common user's implied prediction. That is, our new estimate for
-the similarity of items $A$ and $B$ is
-\begin{align}
+able to estimate the similarity of item pairs. To do this, we must solve Eq.
+(\ref{eqn:estimator}) for $\hat{y}$ given a pair of ratings. This can be easily
+done in practice using a root finding algorithm\footnote{To solve Eq.
+(\ref{eqn:estimator}) for $\hat{y}$ given ratings $r_A$ and $r_B$, we use the
+{\tt brentq} root finding function of the widely available Python module {\tt
+scipy.optimize}.}. The implied predictions of individual users can then be
+aggregated to form a new estimate of the similarity of items $A$ and $B$ as
+\begin{align}\label{eqn:userPredSim}
 UserPredSim(A,B) = \frac{\sum_{u \in U_{AB}}{p_u\cdot\hat{y}(r_{u,A}, r_{u,B})}}
 {\sum_{u \in U_{AB}}{p_u}},
 \end{align}
-where, as before, $U_{AB}$ is the set of common users for items $A$ and $B$.
+where, as before, $U_{AB}$ is the set of common users for items $A$ and $B$ and
+$p_u$ is the {\em user predictivity} defined in Eq. (\ref{eqn:predictivity}). We
+leverage the training set to find $p_u$ for each user $u$. This is done by
+recording the implied prediction $\hat{y}(r_{u,A},r_{u,B})$ for each common user
+$u$ for each item pair $(A, B)$ in the training set and then computing each
+user's average absolute error $\epsilon_u$ as per Eq. (\ref{eqn:userError}).
+Finally, we apply supervised learning techniques to optimize the value of the
+parameter $\lambda$ that appears in the definition of $p_u$. This is achieved by
+minimizing the error in Eq. {\ref{eqn:userPredSim} made against the training
+set.
+
 
 \begin{figure}[!htbp]
     \centering
