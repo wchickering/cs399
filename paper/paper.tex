@@ -155,22 +155,34 @@ the Stanford Network Analysis Project\footnote{http://snap.stanford.edu}. It
 consists of ~5.6M ratings by ~1.2M users of ~600k music items (e.g. albums and
 songs). Each rating is from 1 to 5 stars and is associated with a particular
 user and item at a particular time.  For practical reasons, we focus our work on
-two subsets of this data. The first consists of item pairs having at least 40
-common reviewers (i.e. users that have provided a rating for the item). The
-second consists of item pairs having at least 80 common reviewers. As discussed
-below, we must confine ourselves to item pairs that have many common reviewers
-in order to determine a good approximation of the their true similarity.
+two subsets of this data. The first consists of the 13,752 item pairs having at
+least 40 common users (i.e. users that have provided a rating for the item). The
+second consists of the 1,312 item pairs having at least 80 common reviewers. As
+discussed below, we must confine ourselves to item pairs that have many common
+reviewers in order to determine a good approximation of the their true
+similarity.
 
 \subsection*{Experiment}
 Ideally, we would know {\em a priori} the true similarity for a set of item
-pairs. But both $TrueSimRand$ and $TrueSimPref$ are theoretical constructs and
-not metrics we have access to in the real world.  Fortunately, we can achieve
-good approximations of either $TrueSim$ given sufficient data. We therefore
-define $GoldSim$ = $Sim_N$ where $N$ is a number large enough that $GoldSim
-\approx TrueSim$.
+pairs. We could then generate similarity estimates and readily determine the
+true error in these estimates. But both $TrueSimRand$ and $TrueSimPref$ are
+theoretical constructs and not metrics we have access to in the real world.
+Fortunately, we can achieve good approximations of either $TrueSim$ given
+sufficient data. We therefore define $GoldSim = Sim_N$ where $N$ is a number
+large enough that $GoldSim \approx TrueSim$. With a measurable $GoldSim$ as our
+goal, we can implement a simple predictivity experiment.
 
-With a measurable $GoldSim$ as our goal, we can implement a simple
-predictivity experiment. First, we find pairs of items that have at least 
+To obtain good $GoldSim$ values, we work with subsets consisting of item pairs
+with at least either $N=40$ and $80$ common users. These choices are a
+compromise between having enough data for statistically significant results and
+having a sufficiently large $N$ that $GoldSim \approx TrueSim$. Note that even
+with $N=80$ the average absolute error in $PearSim$ (i.e. $\left<\left| PearSim
+- GoldSim \right|\right>$) is $\approx 0.1$\footnote{See Fig.
+  \ref{fig:MSE_SimR}}.
+
+...
+
+First, we find pairs of items that have at least 
 $N$ common users and calculate their $GoldSim$. Next, for each of these pairs
 of items, we withhold user ratings, leaving $n$ common reviewers. This 
 simulates a pair of items at a time when there is sparser rating data. 
