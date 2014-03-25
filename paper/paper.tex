@@ -179,27 +179,27 @@ pairs. We could then generate similarity estimates and readily determine the
 true error in these estimates. But both $TrueSimRand$ and $TrueSimPref$ are
 theoretical constructs and not metrics we have access to in the real world.
 Fortunately, we can achieve good approximations of either $TrueSim$ given
-sufficient data. We therefore define $GoldSim = Sim_N$ where $N$ is a number
-large enough that $GoldSim \approx TrueSim$. With a measurable $GoldSim$ as our
-goal, we can implement a simple predictivity experiment.
+sufficient data. We therefore define $GoldPearSim = PearSim_N$ and $GoldCosSim =
+CosSim_N$ where $N$ is a large enough number of common users that $GoldSim 
+\approx TrueSim$.\footnote{To calculate $GoldSim$ in practice, we use $Sim$ with
+all rating data, as long as the number of common users is greater than or equal
+to $N$} With a measurable $GoldSim$ as our goal, we can implement 
+a simple predictivity experiment.
 
-To obtain good $GoldSim$ values, we work with subsets consisting of item pairs
-with at least either $N=40$ and $80$ common users. These choices are a
-compromise between having enough data for statistically significant results and
-having a sufficiently large $N$ that $GoldSim \approx TrueSim$. Note that even
-with $N=80$ the average absolute error in $PearSim$ (i.e. $\left<\left| PearSim
-- GoldSim \right|\right>$) is $\approx 0.1$ (see Fig.  \ref{fig:MSE_SimR}). So
-  while $PearSim$ and $CosSim$ are relatively stable after this many common
-users, there does remain a significant level of variance.
+To obtain good $GoldSim$ values, we work only with the item pairs that have at 
+least either $N=40$ and $80$ common users. These choices are a compromise 
+between having enough data for statistically significant results and having 
+a sufficiently large $N$ that $GoldSim \approx TrueSim$. 
 
-Our off-line experiment simulates the passing of time, applying ratings to items
-in the order they actually occured. The similarity of item pairs is then
-estimated each time a user has rated both items such that $N$ is incremented by
-one. In this way, we can compare various estimators by comparing their outputs
-to each other and to the known $GoldSim$ value for each pair. We proceed like
-this for each pair in a test set for $n=1,...,N$ to get varying degrees of
-sparsity. We then compute the average squared error of the estimate for each
-$n$.
+In order to test predicted $TrueSim$, we construct an off-line experiment to
+simulate observing sparse amounts of rating data. Our experiment reenacts  
+the passing of time. Starting with all ratings withheld, we apply ratings to 
+items in the order they actually occured. The similarity of item pairs is then
+estimated each time the number of common users $n$ is incremented. In this way,
+we can quanitatively compare various estimators by calculating their mean
+squared error when approximating $GoldSim$ across pairs of items. Since 
+different estimators may perform better for different degrees of sparsity, 
+we compute the mean squared error for $n=1,...,N$ separately.
 
 \section*{Score-based Method}
 \subsection*{Probabilistic Model}
