@@ -86,7 +86,7 @@ rating given by user $u$ to item $I$.
 In the second model, we imagine an unlimited supply of users, each of whom
 chooses to rate a subset of items. The lack of a rating is now meaningful since
 it indicates a lack of interest of a particular user for a particular item. This
-is captured by the model through a default rating of zero \footnote{We address
+is captured by the model through a default rating of zero\footnote{We address
 the issue of rating bias and the precise meaning of a zero valued ratings later
 in this report.}. At any point in time, we may estimate the true similarity in
 this model of {\em preferential} rating, by computing the cosine similarity of
@@ -111,7 +111,7 @@ serves as a simple and obvious estimate. In using this estimate, we are treating
 all missing ratings as intentionally omitted. When estimating $TrueSimRand$, the
 choice of how to handle missing ratings is perhaps less obvious. Following the
 convention of Breese et al. \cite{Breese1998}, we choose to use the Pearson
-correlation \footnote{The Pearson correlation is traditionally characterized by
+correlation\footnote{The Pearson correlation is traditionally characterized by
 subtracting an expectation value from each dimension. This is only approximately
 true in our case. We discuss the how we subtract rating biases later in this
 report.} for this estimate, ignoring all ratings by users who have not rated
@@ -278,12 +278,12 @@ construct the three-parameter prediction function of equation 19.
 \subsection*{Probabilistic Model}
 
 We now construct a different probabilistic model based on the pairs of ratings
-themselves. This model is readily exploited for making estimates of 
-$TrueSimRand$ and, to a lesser extent, $TrueSimPref$. In addition, this approach 
-has the added benefit of allowing us to infer implied predictions of 
-$TrueSimRand$ made by individual users each time they rate two items. This 
-latter feature allows us to define a new metric for users that we call {\em 
-user-predictivity}, which allows us to ascribe varying levels of confidence to 
+themselves. This model is readily exploited for making estimates of
+$TrueSimRand$ and, to a lesser extent, $TrueSimPref$. In addition, this approach
+has the added benefit of allowing us to infer implied predictions of
+$TrueSimRand$ made by individual users each time they rate two items. This
+latter feature allows us to define a new metric for users that we call {\em
+user-predictivity}, which allows us to ascribe varying levels of confidence to
 their contributions to a similarity estimate.
 
 Let $Y$ be a random variable representing the $TrueSimRand$ of a randomly chosen
@@ -291,19 +291,19 @@ pair of items. As before, we model $Y$ as a Normal distribution
 \begin{align}
 Y \sim N(\mu_s, \sigma_s^2),
 \end{align}
-where $\mu_s$ and $\sigma_s^2$ are the average and variance of all true similarity
-scores, respectively. Now, let $\vec{R} = \left(R_A~~R_B\right)$ be a random two
-element vector representing the ratings given to items $A$ and $B$.  We model
-the conditional distribution of $\vec{R} | Y$ as a multivariate Normal
+where $\mu_s$ and $\sigma_s^2$ are the average and variance of all true
+similarity scores, respectively. Now, let $\vec{R} = \left(R_A~~R_B\right)$ be a
+random two element vector representing the ratings given to items $A$ and $B$.
+We model the conditional distribution of $\vec{R} | Y$ as a multivariate Normal
 distribution
 \begin{align}
 (\vec{R} | Y=y) \sim N(\vec{\mu_r}, \mathbf{\Sigma_y}),
 \end{align}
 where the elements of $\vec{\mu_r}$ are the average ratings and
-$\mathbf{\Sigma_y}$ is the $y$-dependent $2\times2$ covariance matrix. 
-Since $y$ is the $TrueSimRand$ score, it can be thought of as the Pearson 
-correlation over the distribution of ratings $R_A | Y$ and $R_B | Y$. Assuming
-that the variance of individual ratings $\sigma_r^2$ is independent of $y$, we have 
+$\mathbf{\Sigma_y}$ is the $y$-dependent $2\times2$ covariance matrix.  Since
+$y$ is the $TrueSimRand$ score, it can be thought of as the Pearson correlation
+over the distribution of ratings $R_A | Y$ and $R_B | Y$. Assuming that the
+variance of individual ratings $\sigma_r^2$ is independent of $y$, we have 
 \begin{align}
 y = \frac{\Cov{\left[R_A | Y=y , R_B | Y=y\right]}}{\sigma_r^2},
 \end{align}
@@ -315,7 +315,7 @@ then the covariance matrix is related to the true similarity $y$ by
 \end{align}
 
 Using this model, we may view the problem of estimating the similarity $Y$ of
-items $A$ and $B$ that most likely produced ratings $R_A$ and $_B$ as
+items $A$ and $B$ that most likely produced ratings $R_A$ and $R_B$ as
 that of finding the Maximum Likelihood Estimate of $Y | \vec{R}$:
 \begin{align}
 \hat{y} &= \argmax_yP(Y=y|\vec{R}=\vec{r}) 
@@ -363,8 +363,37 @@ r_B^\prime + \frac{\sigma_r^2}{\sigma_s^2}(1 - y^2)^2(y - \mu_s) - \sigma_r^2(1
 \end{align}
 This final expression implicitly yields the MLE of $y$ as a function of the
 ratings $r_A$ and $r_B$. That is, by constraining the parameters $\mu_r$,
-$\sigma_r$, $\mu_s$, and $\sigma_s$ to realistic values, the equation
-can be used to efficiently estimate $y$ given a pair of ratings.
+$\sigma_r$, $\mu_s$, and $\sigma_s$ to realistic values (e.g. $\sigma_r,
+\sigma_s > 0$), this expression defines a surface that can be used to
+efficiently estimate $y$ given a pair of ratings\footnote{Note that this
+equation neglects the constraint that $-1 \leq y \leq 1$. As a consequence, some
+combinations of ratings and parameters can yield MLEs for $y$ that exceed $1$ in
+magnitude. This is easily fixed, however, by applying this additional
+constraint.}.
+
+\subsection*{User Predictivity}
+
+As already mentioned, the estimator $PearSim$ is unable to say much about the
+similarity of two items when only provided ratings from a single common user. In
+this case, $PearSim$ yields $\pm1$ (or the indeterminate value $0/0$ in the case
+that both ratings are zero) depending on whether the ratings have the same sign
+or not. The MLE provided by the above model rectifies this by generating
+similarity estimates in the range $[-1, +1]$ given a single pair of ratings. We
+therefore consider each user who rates a pair of items as implicitly predicting
+the similarity of the items. A key discovery of the present work is that the
+accuracy of users' predictions in a training set is correlated with the accuracy
+in a test set. We exploit this finding by ascribing a quantity we call {\em user
+predictivity} to each user defined as
+\begin{align}
+p_u = e^{-\epsilon_u/\lambda},
+\end{align}
+where $\lambda$ is a parameter to be learned and
+\begin{align}
+\epsilon_u = \frac{1}{\left|I_u\right|}
+\sum_{A,B \in I_u}{\left|ModelSimRand(A, B) - GoldSimRand(A, B)\right|}
+\end{align}
+with $I_u$ the set of item pairs rated by user $u$ such that $\epsilon_u$ is
+the average absolute error of user $u$'s similarity predictions.
 
 \section*{Experiment}
 
@@ -418,6 +447,8 @@ blue curve is {\em ModelSimP}. }
 \end{figure}
 
 \section*{Conclusion}
+\section*{Future Work}
+
 \begin{thebibliography}{9}
 
 \bibitem{Su2009}
