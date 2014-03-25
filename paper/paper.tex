@@ -353,7 +353,7 @@ distribution
 \begin{align}
 (\vec{R} | Y=y) \sim N(\vec{\mu_r}, \mathbf{\Sigma_y}),
 \end{align}
-where the elements of $\vec{\mu_r}$ are the average ratings and
+where $\vec{\mu_r} = (\mu_r~~\mu_r)$ are the average ratings and
 $\mathbf{\Sigma_y}$ is the $y$-dependent $2\times2$ covariance matrix.  Since
 $y$ is the $TrueSimRand$ score, it can be thought of as the Pearson correlation
 over the distribution of ratings $R_A | Y$ and $R_B | Y$. Assuming that the
@@ -411,9 +411,9 @@ to $y$ and setting it to zero:
 y^2}\left[r_A^\prime(r_A^\prime - yr_B^\prime) + r_B^\prime(r_B^\prime -
 yr_A^\prime)\right] + \frac{(y - \mu_s)^2}{\sigma_{s}^2} +
 \ln{\left[\sigma_r^2(1 - y^2)\right]} \right] &= 0 \\
--r_A^\prime r_B^\prime y^2 + ({r_A^\prime}^2 + {r_B^\prime}^2)y - r_A^\prime
-r_B^\prime + \frac{\sigma_r^2}{\sigma_s^2}(1 - y^2)^2(y - \mu_s) - \sigma_r^2(1
-- y^2)y &= 0.
+-r_A^\prime r_B^\prime \hat{y}^2 + ({r_A^\prime}^2 + {r_B^\prime}^2)\hat{y} - r_A^\prime
+r_B^\prime + \frac{\sigma_r^2}{\sigma_s^2}(1 - \hat{y}^2)^2(\hat{y} - \mu_s) - \sigma_r^2(1
+- \hat{y}^2)\hat{y} &= 0.
 \end{align}
 This final expression implicitly yields the MLE of $y$ as a function of the
 ratings $r_A$ and $r_B$. That is, by constraining the parameters $\mu_r$,
@@ -431,13 +431,13 @@ As already mentioned, the estimator $PearSim$ is unable to say much about the
 similarity of two items when only provided ratings from a single common user. In
 this case, $PearSim$ yields $\pm1$ (or the indeterminate value $0/0$ in the case
 that both ratings are zero) depending on whether the ratings have the same sign
-or not. The MLE provided by the above model rectifies this by generating
-similarity estimates in the range $[-1, +1]$ given a single pair of ratings. We
-therefore consider each user who rates a pair of items as implicitly predicting
-the similarity of the items. A key discovery of the present work is that the
-accuracy of users' predictions in a training set is correlated with the accuracy
-in a test set. We exploit this finding by ascribing a quantity we call {\em user
-predictivity} to each user defined as
+or not. The value of $\hat{y}$ provided by the above model rectifies this by
+generating similarity estimates in the range $[-1, +1]$ given a single pair of
+ratings. We therefore consider each user who rates a pair of items as implicitly
+predicting the similarity of the items. A key discovery of the present work is
+that the accuracy of users' predictions in a training set is correlated with the
+accuracy in a test set. We exploit this finding by ascribing a quantity we call
+{\em user predictivity} to each user defined as
 \begin{align}
 p_u = e^{-\epsilon_u/\lambda},
 \end{align}
@@ -446,12 +446,14 @@ where $\lambda$ is a parameter to be learned and
 \epsilon_u = \frac{1}{\left|I_u\right|}
 \sum_{A,B \in I_u}{\left|ModelSimRand(A, B) - GoldSimRand(A, B)\right|}
 \end{align}
-with $I_u$ the set of item pairs rated by user $u$ such that $\epsilon_u$ is
-the average absolute error of user $u$'s similarity predictions.
+with $I_u$ the set of item pairs rated by user $u$. We are once again using
+$GoldSim$ as a proxy for $TrueSim$ (See the {\bf The Experiment} section) such
+that $\epsilon_u$ is the average absolute error of user $u$'s similarity
+predictions.
 
-\section*{Experiment}
+\subsection*{The Technique}
 
-\section*{Results}
+
 
 \begin{figure}[!htbp]
     \centering
