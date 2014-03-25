@@ -470,11 +470,17 @@ where $\lambda$ is a parameter to be learned and
 \sum_{A,B \in I_u}{\left|ModelSimRand(A, B) - GoldSimRand(A, B)\right|}
 \end{align}
 with $I_u$ the set of item pairs rated by user $u$. We are once again using
-$GoldSim$ as a proxy for $TrueSim$ (See the {\bf The Experiment} section) such
-that $\epsilon_u$ is the average absolute error of user $u$'s similarity
-predictions.
+$GoldSim$ as a proxy for $TrueSim$ (See the {\bf Experiment} section) such that
+$\epsilon_u$ is the average absolute error of user $u$'s similarity predictions.
 
 \subsection*{Technique and Results}
+
+The parameter values $\mu_s$ and $\sigma_s$ are obtained by fitting the
+distribution of $GoldSimRand$ values in the training set (see Fig.
+\ref{fig:Histograms}). For example, the $N \geq 80$ dataset we have $\mu_s =
+0.27$ and $\sigma_s = 0.25$. The choice of $\mu_r$ and $\sigma_r$ is less clear.
+Some insight can be gained, however, by examining the prior distribution of
+ratings for our datasets, which are shown in Fig. \ref{fig:RatingDist}.
 
 \begin{figure}[!htbp]
     \centering
@@ -486,6 +492,28 @@ reviewers. Bottom figure shows distribution for item pairs having at least 80
 common reviewers.}
     \label{fig:RatingDist}
 \end{figure}
+
+The upper panel of Fig. \ref{fig:RatingDist} shows data for the $N \geq 40$
+training set while the lower panel shows the same for the $N \geq 80$ training
+set. In these density plots, for each rating pair, we randomly choose which is
+Rating1 and which is Rating2. The two density plots present similar
+distributions. These data, together with the similarity score histograms of Fig.
+\ref{fig:Histograms}, suggest that the data for our two data sets are similar
+and that large biases are not introduced by varying the number of common users,
+$N$. At the same time, both rating distributions reveal significant correlations
+between Rating1 and Rating2 as evidenced by the elongation in the $45^\circ$
+direction. This is consistent with the data of Fig. \ref{fig:Histograms}, which
+shows the mean $PearSim > 0$ for both sets. Further, these data indicate a
+bias toward positive values among rating pairs compared to those of ratings in
+general, which have an average value of zero by construction\footnote{See
+discussion of bias subtraction in {\bf Data} section.}. This latter feature
+indicates that items with large numbers of common users tend to be rated higher
+by their common users than by their other users since we have already subtracted
+the item's average rating thereby avoiding any simple popularity effects.
+
+We observe that while the data of Fig. \ref{fig:RatingDist} clearly do not
+conform precisely to a multivariate Gaussian distribution, this approximation is
+not an unreasonable one.
 
 \begin{figure}[!htbp]
     \centering
