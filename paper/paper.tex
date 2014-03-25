@@ -289,9 +289,9 @@ reasonable model.
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.8\textwidth]{Histograms.png}
-	\caption{Histograms of {\em TrueSimR} (top) and {\em TrueSimP} (bottom) for
-training datasets containing at least 40 common reviewers (left) and 80 common
-reviewers (right).}
+	\caption{Histograms of {\em TrueSimRand} (top) and {\em TrueSimPref}
+(bottom) for training datasets containing at least 40 common reviewers (left)
+and 80 common reviewers (right).}
     \label{fig:Histograms}
 \end{figure}
 
@@ -309,21 +309,21 @@ squared error is computed.
 The graph of Fig. 3 compares the results of three linear fits, with varying
 degrees of fidelity to the probabilistic model. The most faithful fit uses
 $\mu$, $\sigma_{s}^2$ and $\alpha$ as calculated above to predict the $GoldSim$
-using Eqn (18). The next fit uses the calculated values of $\sigma_{err,n}^2$ directly,
-following Eqn (16) for predictions. The third fit simply uses a series of linear
-regressions, one for each $n$. This model only assumes that for each $n$,
-$Sim_n$ and $GoldSim$ are linearly correlated. The linear regression technique 
-trades the generality of the model for a better fit on the training data. 
-As the results show, the trade-off is worth it.
+using Eqn (18). The next fit uses the calculated values of $\sigma_{err,n}^2$
+directly, following Eqn (16) for predictions. The third fit simply uses a series
+of linear regressions, one for each $n$. This model only assumes that for each
+$n$, $Sim_n$ and $GoldSim$ are linearly correlated. The linear regression
+technique trades the generality of the model for a better fit on the training
+data.  As the results show, the trade-off is worth it.
 
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.7\textwidth]{LinearTechniques.png}
-	\caption{Comparison of different linear techniques. For each number of reviewers
-    in common, $n$, the graphs represent the average squared error of predicted
-    $GoldSim$ calculated from the observed $Sim_n$. As a baseline, the technique
-    of guessing the average $GoldSim$ is included. For these experiments, we use
-    $Sim$ = $PearSim$ and $N=100$ for determining $GoldSim$.}
+	\caption{Comparison of different linear techniques. For each number of
+reviewers in common, $n$, the graphs represent the average squared error of
+predicted $GoldSim$ calculated from the observed $Sim_n$. As a baseline, the
+technique of guessing the average $GoldSim$ is included. For these experiments,
+we use $Sim$ = $PearSim$ and $N=100$ for determining $GoldSim$.}
     \label{fig:Linear}
 \end{figure}
 
