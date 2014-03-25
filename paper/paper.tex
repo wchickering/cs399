@@ -147,13 +147,27 @@ first method leverages the observed naive similarity estimate and the number of
 common users to better estimate the true similarity. The second method leverages
 the observed ratings themselves for the same ends.
 
-\subsection*{The Experiment}
-We construct an experiment to test the efficacy of a predictive model. 
-We would like to know {\em a priori} the true similarity for a pair of items.
-For either true similarity metric, $TrueSim$ is a theoretical construct and not 
-something we have access to in the real world. Fortunately, we can achieve good
-approximations of $TrueSim$ given sufficient data. We therefore define $GoldSim$
-= $Sim_N$ where $N$ is a number large enough that $GoldSim \approx TrueSim$.
+\subsection*{Data}
+In the following section, we will describe an off-line experiment used to
+evaluate our similarity estimators. But first, we provide some details about the
+data used for this work. The data, originally from Amazon.com, was acquired from
+the Stanford Network Analysis Project\footnote{http://snap.stanford.edu}. It
+consists of ~5.6M ratings by ~1.2M users of ~600k music items (e.g. albums and
+songs). Each rating is from 1 to 5 stars and is associated with a particular
+user and item at a particular time.  For practical reasons, we focus our work on
+two subsets of this data. The first consists of item pairs having at least 40
+common reviewers (i.e. users that have provided a rating for the item). The
+second consists of item pairs having at least 80 common reviewers. As discussed
+below, we must confine ourselves to item pairs that have many common reviewers
+in order to determine a good approximation of the their true similarity.
+
+\subsection*{Experiment}
+Ideally, we would know {\em a priori} the true similarity for a set of item
+pairs. But both $TrueSimRand$ and $TrueSimPref$ are theoretical constructs and
+not metrics we have access to in the real world.  Fortunately, we can achieve
+good approximations of either $TrueSim$ given sufficient data. We therefore
+define $GoldSim$ = $Sim_N$ where $N$ is a number large enough that $GoldSim
+\approx TrueSim$.
 
 With a measurable $GoldSim$ as our goal, we can implement a simple
 predictivity experiment. First, we find pairs of items that have at least 
@@ -178,7 +192,7 @@ average rating for item $i$ after $\mu_r$ has been subtracted from each, and
 $b_u$ is the user bias, calculated as the average rating from user $u$ after
 $\mu_r$ and $b_i$ have been subtracted from each. 
 
-\section*{Score-based Approach}
+\section*{Score-based Method}
 \subsection*{Probabilistic Model}
 
 In our first approach, we model the probability distributions of true and 
@@ -328,7 +342,7 @@ we use $Sim$ = $PearSim$ and $N=70$ for determining $GoldSim$.}
 \end{figure}
 
 
-\section*{Ratings-based Approach}
+\section*{Ratings-based Method}
 \subsection*{Probabilistic Model}
 
 We now construct a different probabilistic model based on the pairs of ratings
@@ -451,7 +465,7 @@ $GoldSim$ as a proxy for $TrueSim$ (See the {\bf The Experiment} section) such
 that $\epsilon_u$ is the average absolute error of user $u$'s similarity
 predictions.
 
-\subsection*{The Technique}
+\subsection*{Technique and Results}
 
 
 
