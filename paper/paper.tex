@@ -41,37 +41,38 @@ Stanford University}
 \emph{Will write this when the paper is done}
 
 \section*{Introduction}
-Determining the similarity of two users or items is valuable for a
-number of data-mining applications including recommender systems, product
-assortment and differentiation, as well as branding. Collaborative filtering is
-often used to exploit user-item rating data to make such estimates. This is 
-typically done by computing the Pearson correlation or cosine similarity of 
-vector representations of the users or items \cite{Su2009}. Given sufficient 
-user-item rating data, this approach can be very effective. However, when the
-rating data is sparse for one or both users/items, these metrics can
-yield dramatic discrepancies compared to values computed with sufficient
-data at a later point in time. In this report, we describe two novel techniques 
-for estimating the true similarity of two users or items given limited common 
-rating data.
+Determining the similarity of two users or items is valuable for a number of
+data-mining applications including recommender systems, product assortment and
+differentiation, as well as branding. Collaborative filtering is often used to
+exploit user-item rating data to make such estimates. This is typically done by
+computing the Pearson correlation or cosine similarity of vector representations
+of the users or items \cite{Su2009}. Given sufficient user-item rating data,
+this approach can be very effective. However, when the rating data is sparse for
+one or both users/items, these metrics can yield dramatic discrepancies compared
+to values computed with sufficient data at a later point in time. Moreover,
+these early, low-confidence measurements can be indistinguishable from later,
+high-confidence measurements.  In this report, we describe two novel techniques
+for estimating the true similarity of two users or items given limited common
+rating data by incorporating confidence into the measurement.
 
 To keep the present work focused, we confine ourselves to memory-based
 collaborative filtering (CF) in which we work with a logical user-item matrix.
-Each element of the matrix corresponds to a rating given by a particular user to a
-particular item. Further, we choose to limit our analysis to item-item
+Each element of the matrix corresponds to a rating given by a particular user to
+a particular item. Further, we choose to limit our analysis to item-item
 similarity but note that these techniques should be equally effective at
-improving user-user similarity estimation. In this representaion, an item is
-a vector of the ratings it has received from all users. We now formalize the 
-notion of item-item similarity. Two alternative models for the generation of 
-user-item ratings are useful in arriving at two different definitions of the 
-{\em true} item-item similarity.  
+improving user-user similarity estimation. In this representation, an item is a
+vector of the ratings it has received from all users. We now formalize the
+notion of item-item similarity. Two alternative models for the generation of
+user-item ratings are useful in arriving at two different definitions of the
+{\em true} item-item similarity.
 
 \section*{True Item-Item Similarity}
 
-In the first model, we imagine users are randomly presented items to rate. Given 
+In the first model, we imagine users are randomly presented items to rate. Given
 a sufficient period of time, all users will eventually rate all items, creating
-item vectors that contain provided ratings from all users. The true similarity 
-in this model of {\em random} rating, denoted $TrueSimRand$, is then the vector 
-product of two complete item vectors. That is, 
+item vectors that contain provided ratings from all users. The true similarity
+in this model of {\em random} rating, denoted $TrueSimRand$, is then the vector
+product of two complete item vectors. That is,
 \begin{align}
 TrueSimRand(A, B) = \frac{\sum\limits_{u\in U}
 r_{u,A}r_{u,B}}{\sqrt{\sum\limits_{u\in U} r_{u,A}^2}
@@ -127,59 +128,14 @@ r_{u,A}r_{u,B}}{\sqrt{\sum\limits_{u\in U_A} r_{u,A}^2}
 \stackrel{?}{\approx} TrueSimPref(A, B).
 \end{align}
 
-
-.....
-
-Even worse, low confidence measurements of similarity are indistinguishable from
-high confidence ones. In this paper, we develop and compare a number of methods
-to produce more accurate estimates of similarity by incorporating confidence
-into the similarity score.
- 
-Item-based collaborative filtering is a common technique for measuring the
-similarity of two items. There are different forms of collaborative filtering.
-For this paper, we use a traditional approach. Each item is represented as a
-vector of ratings. The similarity score of two items is computed by measuring
-the similarity of the two rating vectors.
-
-There are a few ways to compute the similarity of two vectors. One approach is
-to use Cosine-similarity, defined as the cosine of the angle between the two
-vectors:
-\begin{align}
-CosSim(A, B) = \frac{\sum\limits_{u\in U_{AB}}
-r_{u,A}r_{u,B}}{\sqrt{\sum\limits_{u\in U_{A}} r_{u,A}^2}
-\sqrt{\sum\limits_{u\in U_{B}} r_{u,B}^2}}
-\end{align}
-where $U_{I}$ is the set of all users who rated item $I$, $U_{AB}$ is the set of
-all users who rated both item $A$ and item $B$ and $r_{u,I}$ is the rating user
-$u$ gave to item $I$. Another popular approach is to use Pearson correlation:
-\begin{align}
-PearsSim(A, B) = \frac{\sum\limits_{u\in U_{AB}}
-r_{u,A}r_{u,B}}{\sqrt{\sum\limits_{u\in U_{AB}} r_{u,A}^2}
-\sqrt{\sum\limits_{u\in U_{AB}} r_{u,B}^2}}
-\end{align}
-
-Other similarity functions exist, such as one-sided similarities, but Pearson
-correlation and Cosine-similarity are the most popular and will be the two
-measurements used in this paper. \footnotemark
-
-\footnotetext{ Note that the difference between the two similarities is how they
-handle unpaired ratings; that is ratings from a user who has not rated the other
-item. Cosine-similarity considers the unknown rating from an unpaired rating to
-be $0$ and then calculates the cosine of the two vectors. Pearson correlation
-simply throws away all unpaired ratings and calculates the cosine of the two
-modified vectors.}
-
-Both similarity measurements primarily leverage information from common users,
-that is users who have rated both items. Because of this, they perform well with
-a large number common users, but give unreliable results when the items have few
-common users. In an extreme case, if only one user has rated item $A$ and item
-$B$, $PearsSim(A, B) = 1$ or $-1$. Not only is this unlikely to be an accurate
-assessment of the true similarity of $A$ and $B$, it also gives the most extreme
-results possible, without giving any indication that this is a low-confidence
-calculation.
-
-In this paper, we construct a more accurate similarity score by incorporating
-the number of common users, $n$, into the similarity function. 
+Both similarity estimates primarily leverage information from common users, that
+is users who have rated both items. Because of this, they perform well with a
+large number common users, but give unreliable, and dramatically varying,
+results when the items have few common users. In an extreme case, if only one
+user has rated item $A$ and item $B$, $PearsSim(A, B) = 1$ or $-1$. Not only is
+this unlikely to be an accurate assessment of the true similarity of $A$ and
+$B$, it also gives the most extreme results possible, without giving any
+indication that this is a low-confidence calculation.
 
 \section*{Problem}
 
@@ -337,6 +293,33 @@ $\sigma_{2,n}$ are approximated using the method of moments over the training
 data. Then $\alpha$ is calculated that minimizes the sum of squared errors
 between $\sigma_{2,n}^2$ and $\frac{\alpha}{\sqrt{n}}$. This $\alpha$ is used to
 construct the three-parameter prediction function of equation 19.
+
+\section*{A Model-based Technique}
+
+We now construct a relatively simple probabilistic model that is readily
+exploited for making estimates of $TrueSimRand$ and, to a lesser extent,
+$TrueSimPref$. In addition, this approach has the added benefit of allowing us
+to infer implied predictions of $TrueSimRand$ made by individual users each time
+they rate two items. This latter feature allows us to define a new metric for
+users that we call {\em user-predictivity}, which allows us to ascribe varying
+levels of confidence to their contributions to a similarity estimate.
+
+Let $Y$ be a random variable representing the $TrueSimRand$ of a randomly chosen
+pair of items. As before, we model $Y$ as a Normal distribution
+\begin{align}
+Y \sim N(\mu_s, \sigma_s^2),
+\end{align}
+where $\mu_s$ and $\sigma_s$ are the average and standard deviation of all
+similarity scores, respectively. Now, let $\vec{R} = \left(R_A~~R_B\right)$ be
+a random two element vector representing the ratings given to items $A$ and $B$.
+We model the conditional distribution of $\vec{R} | Y$ as a multivariate Normal
+distribution
+\begin{align}
+\vec{R} | Y=y \sim N(\vec{\mu_r}, \mathbf{\Sigma_y}),
+\end{align}
+where the elements of $\vec{\mu_r}$ are the average ratings and
+$\mathbf{\Sigma_y}$ is the $y$-dependent $2\times2$ covariance matrix.
+
 
 \section*{Experiment}
 
