@@ -300,12 +300,12 @@ construct the three-parameter prediction function of equation 19.
 \subsection*{Probabilistic Model}
 
 We now construct a different probabilistic model based on the pairs of ratings
-themselves. This model is readily exploited for making estimates of 
-$TrueSimRand$ and, to a lesser extent, $TrueSimPref$. In addition, this approach 
-has the added benefit of allowing us to infer implied predictions of 
-$TrueSimRand$ made by individual users each time they rate two items. This 
-latter feature allows us to define a new metric for users that we call {\em 
-user-predictivity}, which allows us to ascribe varying levels of confidence to 
+themselves. This model is readily exploited for making estimates of
+$TrueSimRand$ and, to a lesser extent, $TrueSimPref$. In addition, this approach
+has the added benefit of allowing us to infer implied predictions of
+$TrueSimRand$ made by individual users each time they rate two items. This
+latter feature allows us to define a new metric for users that we call {\em
+user-predictivity}, which allows us to ascribe varying levels of confidence to
 their contributions to a similarity estimate.
 
 Let $Y$ be a random variable representing the $TrueSimRand$ of a randomly chosen
@@ -313,19 +313,19 @@ pair of items. As before, we model $Y$ as a Normal distribution
 \begin{align}
 Y \sim N(\mu_s, \sigma_s^2),
 \end{align}
-where $\mu_s$ and $\sigma_s^2$ are the average and variance of all true similarity
-scores, respectively. Now, let $\vec{R} = \left(R_A~~R_B\right)$ be a random two
-element vector representing the ratings given to items $A$ and $B$.  We model
-the conditional distribution of $\vec{R} | Y$ as a multivariate Normal
+where $\mu_s$ and $\sigma_s^2$ are the average and variance of all true
+similarity scores, respectively. Now, let $\vec{R} = \left(R_A~~R_B\right)$ be a
+random two element vector representing the ratings given to items $A$ and $B$.
+We model the conditional distribution of $\vec{R} | Y$ as a multivariate Normal
 distribution
 \begin{align}
 (\vec{R} | Y=y) \sim N(\vec{\mu_r}, \mathbf{\Sigma_y}),
 \end{align}
 where the elements of $\vec{\mu_r}$ are the average ratings and
-$\mathbf{\Sigma_y}$ is the $y$-dependent $2\times2$ covariance matrix. 
-Since $y$ is the $TrueSimRand$ score, it can be thought of as the Pearson 
-correlation over the distribution of ratings $R_A | Y$ and $R_B | Y$. Assuming
-that the variance of individual ratings $\sigma_r^2$ is independent of $y$, we have 
+$\mathbf{\Sigma_y}$ is the $y$-dependent $2\times2$ covariance matrix.  Since
+$y$ is the $TrueSimRand$ score, it can be thought of as the Pearson correlation
+over the distribution of ratings $R_A | Y$ and $R_B | Y$. Assuming that the
+variance of individual ratings $\sigma_r^2$ is independent of $y$, we have 
 \begin{align}
 y = \frac{\Cov{\left[R_A | Y=y , R_B | Y=y\right]}}{\sigma_r^2},
 \end{align}
@@ -337,7 +337,7 @@ then the covariance matrix is related to the true similarity $y$ by
 \end{align}
 
 Using this model, we may view the problem of estimating the similarity $Y$ of
-items $A$ and $B$ that most likely produced ratings $R_A$ and $_B$ as
+items $A$ and $B$ that most likely produced ratings $R_A$ and $R_B$ as
 that of finding the Maximum Likelihood Estimate of $Y | \vec{R}$:
 \begin{align}
 P(Y | \vec{R}) = \frac{P(\vec{R} | Y)P(Y)}{P(\vec{R})}.
@@ -389,8 +389,9 @@ r_B^\prime + \frac{\sigma_r^2}{\sigma_s^2}(1 - y^2)^2(y - \mu_s) - \sigma_r^2(1
 \end{align}
 This final expression implicitly yields the MLE of $y$ as a function of the
 ratings $r_A$ and $r_B$. That is, constraining the parameters $\mu_r$,
-$\sigma_r$, $\mu_s$, and $\sigma_s$ to realistic values, this expression defines
-a surface that can be to efficiently estimate $y$ given a pair of ratings.
+$\sigma_r$, $\mu_s$, and $\sigma_s$ to realistic values (e.g. $\sigma_r,
+\sigma_s > 0$), this expression defines a surface that can be to efficiently
+estimate $y$ given a pair of ratings.
 
 
 \section*{Experiment}
