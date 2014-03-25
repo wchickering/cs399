@@ -25,6 +25,7 @@
 \newcommand{\spc}{\vspace{0.25in}}      % Shortcut commands
 \newcommand{\ds}{\displaystyle}         %\newcommand{\ds}[1]{\displaystyle{#1}}
 \newcommand{\ra}{\rightarrow}
+\newcommand{\Cov}{\mathrm{Cov}}
 \DeclareMathOperator*{\argmax}{arg\!\max}
 \DeclareMathOperator*{\argmin}{arg\!\min}
 
@@ -66,7 +67,8 @@ notion of item-item similarity. Two alternative models for the generation of
 user-item ratings are useful in arriving at two different definitions of the
 {\em true} item-item similarity.
 
-\section*{True Item-Item Similarity}
+\section*{Similarity}
+\subsection*{True Item-Item Similarity}
 
 In the first model, we imagine users are randomly presented items to rate. Given
 a sufficient period of time, all users will eventually rate all items, creating
@@ -99,7 +101,7 @@ where $U_A$ is the set of users who have rated $A$, $U_B$ is the set of users
 who have rated $B$, and $U_{AB}$ is the set of users who have rated both $A$ and
 $B$.
 
-\section*{Estimating Item-Item Similarity}
+\subsection*{Estimating Item-Item Similarity}
 
 Of course, most systems will never acquire ratings from all users for all items.
 Nor are we able to work in the limit of infinite time. We must therefore make
@@ -163,7 +165,7 @@ such that
 ModSim(Sim(A, B), n) \approx lim_{n\to\infty}Sim(A, B)
 \end{align}
 
-\section*{Linear Approach}
+\section*{Score-based Approach}
 \subsection*{Probabilistic Model}
 
 In our first approach, we model true and observed similarity probabilistically. For
@@ -175,17 +177,17 @@ representing the $Sim_{n}$ of a pair of items when $n$ common users are observed
 
 We model $Y$ as a Normal distribution 
 \begin{align}
-Y \sim N(\mu, \sigma_{1}^2)
+Y \sim N(\mu, \sigma_{s}^2)
 \end{align}
-where $\mu$ and $\sigma_{1}^2$ are the average similarity score and the variance 
+where $\mu$ and $\sigma_{s}^2$ are the average similarity score and the variance 
 of similarity scores of all pairs of items, respectively. Since $X_n$ represents
 a noisy reading of the true similarity $Y$, we model $X_n | Y=y$ as a Gaussian
 error around $y$:
 \begin{align}
-(X_n | Y=y) \sim N(y, \sigma_{2, n}^2)
+(X_n | Y=y) \sim N(y, \sigma_{err, n}^2)
 \end{align}
 
-Note that $\sigma_{2, n}^2$ represents how noisy $Sim_n$ is as an estimation of
+Note that $\sigma_{err, n}^2$ represents how noisy $Sim_n$ is as an estimation of
 $TrueSim$ and therefore should decrease as $n$ increases. The probability
 distribution of $X_n$ can be visualized in Figure 1.
 
@@ -206,63 +208,63 @@ desire the Maximum Likelihood Estimate of $Y | X_n$:
 \\&= \argmax_y\left[\frac{P(X_n=x | Y=y)P(Y=y)}{P(X_n=x)}\right]
 \\&= \argmax_y\left[P(X_n=x|Y=y)P(Y=y)\right]
 \\&= 
-\argmax_y\left[\frac{1}{\sigma_{2,n}\sqrt{2\pi}}\exp{\left(\frac{-(x-y)^2}
-{2\sigma_{2,n}^2}\right)}
-\frac{1}{\sigma_{1}\sqrt{2\pi}}\exp{\left(\frac{-(y-\mu)^2}
-{2\sigma_{1}^2}\right)}\right]
-\\&= \argmin_y\left[\frac{(x-y)^2}{2\sigma_{2,n}^2} +
-\frac{(y-\mu)^2}{2\sigma_{1}^2}\right]
-\\&= \argmin_y\left[\left(\sigma_{1}^2+\sigma_{2,n}^2\right)y^2 - 
-2\left(\sigma_{1}^2x+\sigma_{2,n}^2\mu\right)y\right]
+\argmax_y\left[\frac{1}{\sigma_{err,n}\sqrt{2\pi}}\exp{\left(\frac{-(x-y)^2}
+{2\sigma_{err,n}^2}\right)}
+\frac{1}{\sigma_{s}\sqrt{2\pi}}\exp{\left(\frac{-(y-\mu)^2}
+{2\sigma_{s}^2}\right)}\right]
+\\&= \argmin_y\left[\frac{(x-y)^2}{2\sigma_{err,n}^2} +
+\frac{(y-\mu)^2}{2\sigma_{s}^2}\right]
+\\&= \argmin_y\left[\left(\sigma_{s}^2+\sigma_{err,n}^2\right)y^2 - 
+2\left(\sigma_{s}^2x+\sigma_{err,n}^2\mu\right)y\right]
 \end{align}
 We find the exact minimum by taking the derivative with respect to $y$ and
 setting it to zero:
 \begin{align}
-\frac{d}{dy}\left[\left(\sigma_{1}^2+\sigma_{2,n}^2\right)y^2 - 
-2\left(\sigma_{1}^2x+\sigma_{2,n}^2\mu\right)y\right]
-&= 2\left(\sigma_{1}^2+\sigma_{2,n}^2\right)y - 
-2\left(\sigma_{1}^2x+\sigma_{2,n}^2\mu\right) 
+\frac{d}{dy}\left[\left(\sigma_{s}^2+\sigma_{err,n}^2\right)y^2 - 
+2\left(\sigma_{s}^2x+\sigma_{err,n}^2\mu\right)y\right]
+&= 2\left(\sigma_{s}^2+\sigma_{err,n}^2\right)y - 
+2\left(\sigma_{s}^2x+\sigma_{err,n}^2\mu\right) 
 \\&= 0
 \end{align}
 This produces the following linear equation for $\hat{y}$ in terms of $x$:
 \begin{align}
-\hat{y} &= \frac{\sigma_{1}^2x+\sigma_{2,n}^2\mu}{\sigma_{1}^2+\sigma_{2,n}^2}
+\hat{y} &= \frac{\sigma_{s}^2x+\sigma_{err,n}^2\mu}{\sigma_{s}^2+\sigma_{err,n}^2}
 \end{align}
 which can be rewritten as:
 \begin{align}
-\left(\hat{y} - \mu\right) &= \frac{\sigma_{1}^2}{\sigma_{1}^2+\sigma_{2,n}^2}
+\left(\hat{y} - \mu\right) &= \frac{\sigma_{s}^2}{\sigma_{s}^2+\sigma_{err,n}^2}
 \left(x-\mu\right)
 \end{align}
 
 The model suggests that there is a linear correlation between $X_n$ ($Sim_n$)
 and $Y$ ($TrueSim$). Moreover, the best predicted $TrueSim$ is a linear 
-combination of the mean and the observed similiarity. Since $\sigma_{2,n}^2$ is 
+combination of the mean and the observed similiarity. Since $\sigma_{err,n}^2$ is 
 nonnegative, the slope is always less than or equal to one, meaning that the 
 observed distance from $\mu$ (the average true similarity) overestimates the 
 true distance. This is reasonable, since there is a prior that expects the true 
 similarity to be around $\mu$.
 
-The parameters $\mu$, $\sigma_{1}^2$, and $\sigma_{2,n}^2$ can be approximated 
+The parameters $\mu$, $\sigma_{s}^2$, and $\sigma_{err,n}^2$ can be approximated 
 using the method of moments over training data where there are enough common
 users that $TrueSim$ can be approximated. This method requires approximating
-$\sigma_{2,n}^2$ for every value of $n$ separately. To gain a more general 
-model, we can model $\sigma_{2,n}^2$ as a function of $n$. Recall that 
-$\sigma_{2,n}^2$ is the noisiness of the measurement $Sim$ about $TrueSim$ and $TrueSim = lim_{n \to
+$\sigma_{err,n}^2$ for every value of $n$ separately. To gain a more general 
+model, we can model $\sigma_{err,n}^2$ as a function of $n$. Recall that 
+$\sigma_{err,n}^2$ is the noisiness of the measurement $Sim$ about $TrueSim$ and $TrueSim = lim_{n \to
 \infty}Sim$. Thus $Sim$ can be thought of as a sampling $n$ users from the
 infinite set used to calculate $TrueSim$. Although $Sim$ may not be linear, we
 the Central Limit Theorem motivates the intuition that the variance of $Sim$
-would decrease as the $sqrt(n)$. Thus we model $\sigma_{2,n}^2$ as:
+would decrease as the $sqrt(n)$. Thus we model $\sigma_{err,n}^2$ as:
 \begin{align}
-\sigma_{2,n}^2 = \frac{\alpha}{\sqrt{n}},
+\sigma_{err,n}^2 = \frac{\alpha}{\sqrt{n}},
 \end{align}
 yielding the single parameter model:
 \begin{align}
-\left(Y - \mu\right) = \frac{\sigma_{1}^2}{\sigma_{1}^2+\frac{\alpha}{\sqrt{n}}}
+\left(Y - \mu\right) = \frac{\sigma_{s}^2}{\sigma_{s}^2+\frac{\alpha}{\sqrt{n}}}
 \left(X_n-\mu\right)
 \end{align}
 In terms of a modified similarity function, as desired earlier, we now have:
 \begin{align}
-ModSim(Sim, n) = \frac{\sigma_{1}^2}{\sigma_{1}^2+\frac{\alpha}{\sqrt{n}}}
+ModSim(Sim, n) = \frac{\sigma_{s}^2}{\sigma_{s}^2+\frac{\alpha}{\sqrt{n}}}
 \left(Sim-\mu\right) + \mu
 \end{align}
 
@@ -276,59 +278,59 @@ and the resulting $TrueSim$, we can implement supervised learning.
 
 The first technique is the least faithful to the model. It simply runs a number
 of linear regressions between $Sim$ and $TrueSim$ for each $n$. This ignores the 
-data-specific parameters $\mu$, $\sigma_{1}$ and $\sigma_{2,n}$ to find the best 
+data-specific parameters $\mu$, $\sigma_{s}$ and $\sigma_{err,n}$ to find the best 
 linear fit. It also treats each $n$ completely independently. This technique 
 necessarilty has the lowest training error of all linear techniques, potentially 
 at the risk of overfitting.
 
-The second technique is more general. It approximates $\mu$ and $\sigma_{1}$
+The second technique is more general. It approximates $\mu$ and $\sigma_{s}$
 using the method of moments on the training data of all $TrueSim$ scores. Then,
-$\sigma_{2,n}$ is also approximated using a method of moments on the training
-data of all $Sim_n$ for each $n$ separately. Here $\sigma_{2,n}$'s are also
+$\sigma_{err,n}$ is also approximated using a method of moments on the training
+data of all $Sim_n$ for each $n$ separately. Here $\sigma_{err,n}$'s are also
 considered independently of each other.
 
-The third and most general technique models $\sigma_{2,n}$ as a function of
-$n$ using equation 19. As in the previous technique, $\mu$, $\sigma_{1}$ and each
-$\sigma_{2,n}$ are approximated using the method of moments over the training
+The third and most general technique models $\sigma_{err,n}$ as a function of
+$n$ using equation 19. As in the previous technique, $\mu$, $\sigma_{s}$ and each
+$\sigma_{err,n}$ are approximated using the method of moments over the training
 data. Then $\alpha$ is calculated that minimizes the sum of squared errors
-between $\sigma_{2,n}^2$ and $\frac{\alpha}{\sqrt{n}}$. This $\alpha$ is used to
+between $\sigma_{err,n}^2$ and $\frac{\alpha}{\sqrt{n}}$. This $\alpha$ is used to
 construct the three-parameter prediction function of equation 19.
 
-\section*{Model-based Approach}
+\section*{Ratings-based Approach}
 \subsection*{Probabilistic Model}
 
-We now construct a relatively simple probabilistic model that is readily
-exploited for making estimates of $TrueSimRand$ and, to a lesser extent,
-$TrueSimPref$. In addition, this approach has the added benefit of allowing us
-to infer implied predictions of $TrueSimRand$ made by individual users each time
-they rate two items. This latter feature allows us to define a new metric for
-users that we call {\em user-predictivity}, which allows us to ascribe varying
-levels of confidence to their contributions to a similarity estimate.
+We now construct a different probabilistic model based on the pairs of ratings
+themselves. This model is readily exploited for making estimates of 
+$TrueSimRand$ and, to a lesser extent, $TrueSimPref$. In addition, this approach 
+has the added benefit of allowing us to infer implied predictions of 
+$TrueSimRand$ made by individual users each time they rate two items. This 
+latter feature allows us to define a new metric for users that we call {\em 
+user-predictivity}, which allows us to ascribe varying levels of confidence to 
+their contributions to a similarity estimate.
 
 Let $Y$ be a random variable representing the $TrueSimRand$ of a randomly chosen
 pair of items. As before, we model $Y$ as a Normal distribution
 \begin{align}
 Y \sim N(\mu_s, \sigma_s^2),
 \end{align}
-where $\mu_s$ and $\sigma_s^2$ are the average and variance of all similarity
+where $\mu_s$ and $\sigma_s^2$ are the average and variance of all true similarity
 scores, respectively. Now, let $\vec{R} = \left(R_A~~R_B\right)$ be a random two
 element vector representing the ratings given to items $A$ and $B$.  We model
 the conditional distribution of $\vec{R} | Y$ as a multivariate Normal
 distribution
 \begin{align}
-\vec{R} | Y=y \sim N(\vec{\mu_r}, \mathbf{\Sigma_y}),
+(\vec{R} | Y=y) \sim N(\vec{\mu_r}, \mathbf{\Sigma_y}),
 \end{align}
 where the elements of $\vec{\mu_r}$ are the average ratings and
-$\mathbf{\Sigma_y}$ is the $y$-dependent $2\times2$ covariance matrix. Now,
-being that $Y=y$ is the Pearson correlation of the ratings $R_A | y$ and $R_B |
-y$ generated by this distribution, if we assume the variance of individual
-ratings $\sigma_r^2$ is independent of $y$, we have that
+$\mathbf{\Sigma_y}$ is the $y$-dependent $2\times2$ covariance matrix. 
+Since $y$ is the $TrueSimRand$ score, it can be thought of as the Pearson 
+correlation over the distribution of ratings $R_A | Y$ and $R_B | Y$. Assuming
+that the variance of individual ratings $\sigma_r^2$ is independent of $y$, we have 
 \begin{align}
-y = \frac{\mathrm{COV}(R_A | y, R_B | y)}{\sigma_r^2},
+y = \frac{\Cov{\left[R_A | Y=y , R_B | Y=y\right]}}{\sigma_r^2},
 \end{align}
-where $\mathrm{COV}(R_A | y, R_B | y)$ is the covariance of the ratings $R_A |
-y$ and $R_B | y$.  It therefore follows that if the ratings are indeed normally
-distributed that the covariance matrix is related to the similarity $y$ by
+It therefore follows that if the ratings are indeed normally distributed 
+then the covariance matrix is related to the true similarity $y$ by
 \begin{align}
 \mathbf{\Sigma_y} = \sigma_r^2 \cdot
 \left[ \begin{array}{cc}  1 & y \\ y & 1 \end{array} \right]
