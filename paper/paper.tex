@@ -479,8 +479,11 @@ The parameter values $\mu_s$ and $\sigma_s$ are obtained by fitting the
 distribution of $GoldSim$ values in the training set (see Fig.
 \ref{fig:Histograms}). For example, in the $N \geq 80$ dataset we have $\mu_s =
 0.27$ and $\sigma_s = 0.25$. The choice of $\mu_r$ and $\sigma_r$ is less clear.
-Some insight can be gained, however, by examining the prior distribution of
-ratings for our datasets, which are shown in Fig. \ref{fig:RatingDist}.
+Some insight can be gained by examining the prior distribution of ratings for 
+our datasets, which are shown in Fig. \ref{fig:RatingDist}. From there, we
+experiment with different values of these parameters to minimize the resulting
+error over the training set. We find $\mu_r = 0.25$ and $\sigma_r = 0.3$ to be
+good parameters and use them when estimating $TrueSimRand$.
 
 \begin{figure}[!htbp]
     \centering
@@ -514,9 +517,7 @@ not an unreasonable one. In passing, we remark on the faint clusters that flank
 the central cluster in the figures. We understand these to be artifacts of the
 bias subtraction. Moreover, a more sophisticated Rating-based model could
 account for these by considering a $P(\vec{R} | Y)$ that is a mixture of
-Gaussians. Motivated partly by these density plots and partly by estimator
-performance against the training set, we choose $\mu_r = 0.25$ and $\sigma_r =
-0.3$ when estimating $TrueSimRand$.
+Gaussians. 
 
 Having chosen values for $\mu_s$, $\sigma_s$, $\mu_r$, and $\sigma_r$ we are now
 able to estimate the similarity of item pairs. We do this for each common user
