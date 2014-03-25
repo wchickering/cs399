@@ -166,10 +166,17 @@ $GoldSim$, which is compared to the actual $GoldSim$. This is repeated over
 a large number of test pairs and the average squared error of the prediction 
 is calculated for each $n$.
 
-For this experimetn, we use Amazon's book data. Books are rated by users on a 1
-to 5 star-scale. As in 
-Some stuff about the experiment details: the data we use, how we subtract the
-biases, the biasedness of the experimental dataset, training vs testing.
+For this experiment, we use Amazon's book data. Books are rated by users on a 1
+to 5 star-scale. Before any analysis of the data, we remove the biases from each
+rating, as in \cite{Koren2009}:
+\begin{align}
+\hat{r_{ui}} = r_{ui} - \mu_r - b_i - b_u
+\end{align}
+where $r_{ui}$ is the raw rating user $u$ gave item $i$, $\mu_r$ is the average
+rating over the entire dataset, $b_i$ is the item bias, calculated as the
+average rating for item $i$ after $\mu_r$ has been subtracted from each, and 
+$b_u$ is the user bias, calculated as the average rating from user $u$ after
+$\mu_r$ and $b_i$ have been subtracted from each. 
 
 \section*{Score-based Approach}
 \subsection*{Probabilistic Model}
