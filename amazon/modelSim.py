@@ -14,14 +14,15 @@ a single reviewer.
 
 # "official" modelSim params
 #mu_s = 0.27 # topEdges_80_randSim
-#mu_s = 0.16 # topEdges_40_randSim
-mu_s = 0.050 # topEdges_80_prefSim
-#sigma_s = 0.3 # randSim
-sigma_s = 0.050 # prefSim
-mu_r = 0.085 # topEdges_80
+mu_s = 0.16 # topEdges_40_randSim
+#mu_s = 0.050 # topEdges_80_prefSim
+sigma_s = 0.3 # randSim
+#sigma_s = 0.050 # prefSim
+#mu_r = 0.085 # topEdges_80
+mu_r = 0.25 # fix
 #mu_r = 0.026 # topEdges_40
-#sigma_r = 0.3 # randSim
-sigma_r = 0.15 # prefSim
+sigma_r = 0.3 # randSim
+#sigma_r = 0.15 # prefSim
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -39,7 +40,8 @@ def modelSim(rating1, rating2):
     p = (rating1 - mu_r)*(rating2 - mu_r)
     q = (rating1 - mu_r)**2 + (rating2 - mu_r)**2
     extremum = brentq(lambda s: -p*s**2 + q*s - p +\
-                  (sigma_r/sigma_s)**2*(1 - s**2)**2*(s - mu_s),
+                  (sigma_r/sigma_s)**2*(1 - s**2)**2*(s - mu_s) +\
+                  -sigma_r**2*(1 - s**2)*s,
                   -100, 100, xtol=0.0001)
     if extremum > 1:
         return 1

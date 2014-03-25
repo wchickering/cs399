@@ -333,8 +333,51 @@ It therefore follows that if the ratings are indeed normally distributed
 then the covariance matrix is related to the true similarity $y$ by
 \begin{align}
 \mathbf{\Sigma_y} = \sigma_r^2 \cdot
-\left[ \begin{array}{cc}  1 & y \\ y & 1 \end{array} \right]
+\left[ \begin{array}{cc}  1 & y \\ y & 1 \end{array} \right].
 \end{align}
+
+Using this model, we may view the problem of estimating the similarity $Y$ of
+items $A$ and $B$ that most likely produced ratings $R_A$ and $_B$ as
+that of finding the Maximum Likelihood Estimate of $Y | \vec{R}$:
+\begin{align}
+P(Y | \vec{R}) = \frac{P(\vec{R} | Y)P(Y)}{P(\vec{R})}.
+\end{align}
+
+\begin{align}
+\hat{y} &= \argmax_yP(Y=y|\vec{R}=\vec{r}) 
+\\&= \argmax_y\left[\frac{P(\vec{R}=\vec{r} |
+Y=y)P(Y=y)}{P(\vec{R}=\vec{r})}\right]
+\\&= \argmax_y\left[P(\vec{R}=\vec{r}|Y=y)P(Y=y)\right]
+\\&=
+\argmax_y\left[\frac{1}{2\pi\sqrt{\left|\mathbf{\Sigma_y}\right|}}\exp{\left(-\frac{1}{2}
+(\vec{r} - \vec{\mu_r})^\mathrm{T}\mathbf{\Sigma_y}^{-1}(\vec{r} - \vec{\mu_r})\right)}
+\frac{1}{\sigma_{s}\sqrt{2\pi}}\exp{\left(\frac{-(y-\mu_s)^2}
+{2\sigma_{s}^2}\right)}\right]
+\\&= \argmin_y\left[(\vec{r} -
+\vec{\mu_r})^\mathrm{T}\mathbf{\Sigma_y}^{-1}(\vec{r} - \vec{\mu_r}) + \frac{(y -
+\mu_s)^2}{\sigma_{s}^2} + \ln{\left|\mathbf{\Sigma_y}\right|} \right]
+\\&=
+\argmin_y\left[\vec{r^\prime}^\mathrm{T}\mathbf{\Sigma_y}^{-1}\vec{r^\prime}
+ + \frac{(y - \mu_s)^2}{\sigma_{s}^2} + \ln{\left|\mathbf{\Sigma_y}\right|} \right]
+\\&= \argmin_y\left[\frac{1}{\sigma_r^2}\frac{1}{1 -
+y^2}\left[r_A^\prime(r_A^\prime - yr_B^\prime) + r_B^\prime(r_B^\prime -
+yr_A^\prime)\right] + \frac{(y - \mu_s)^2}{\sigma_{s}^2} +
+\ln{\left[\sigma_r^2(1 - y^2)\right]} \right],
+\end{align}
+where we used the fact that
+\begin{align}
+\mathbf{\Sigma_y}^{-1} = \frac{1}{\sigma_r^2}
+\left[ \begin{array}{cc}  1 & y \\ y & 1 \end{array} \right]^{-1} =
+\frac{1}{\sigma_r^2}\frac{1}{1 - y^2}\left[ \begin{array}{cc}  1 & -y \\ -y & 1
+\end{array} \right].
+\end{align}
+and that
+\begin{align}
+\left|\mathbf{\Sigma}\right| = \sigma_r^2(1 - y^2)
+\end{align}
+along with the substitution $\vec{r^\prime} = (r_A^\prime~~r_B^\prime) = \vec{r}
+- \vec{\mu_r}$.
+
 
 \section*{Experiment}
 
