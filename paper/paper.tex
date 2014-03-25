@@ -139,28 +139,6 @@ this unlikely to be an accurate assessment of the true similarity of $A$ and
 $B$, it also gives the most extreme results possible, without giving any
 indication that this is a low-confidence calculation.
 
-\section*{Problem}
-
-The goal is to calculate a modified similiary function that leverages the number
-of commonn users to better estimate the true similarity. Formally, we design
-$ModSim$ such that for two items $A$ and $B$ with $n$ users in common
-
-\begin{align}
-ModSim(A, B, n) \approx TrueSim(A, B)
-\end{align}
-where $TrueSim$ is the true similarity of the two items. Of course, there is no
-way to actually know the true similarity of two items, but for a good enough
-similarity function, such as $PearsSim$ or $CosSim$ and a large enough $n$, we
-can get a good estimate. Thus, we model $TrueSim$ as 
-\begin{align}
-TrueSim(A, B) = lim_{n\to\infty}Sim(A, B)
-\end{align}
-where $Sim$ is the most appropriate generic similarity function for the dataset.
-
-Since $TrueSim$ dependends on the choice of $Sim$, we abstract away the details
-of $Sim$ and use its output directly. In all, the goal is to construct $ModSim$
-such that
-
 \begin{align}
 ModSim(Sim(A, B), n) \approx lim_{n\to\infty}Sim(A, B)
 \end{align}
@@ -168,8 +146,9 @@ ModSim(Sim(A, B), n) \approx lim_{n\to\infty}Sim(A, B)
 \section*{Score-based Approach}
 \subsection*{Probabilistic Model}
 
-In our first approach, we model true and observed similarity probabilistically. For
-this analysis, we can consider an abstact $TrueSim$ which ignores the details of 
+In our first approach, we model true and observed similarity probabilistically. The
+goal is to use the observed similarity score directly to approximate the true similarity.
+In this way, we can consider an abstact $TrueSim$ which ignores the details of 
 $TrueSimRand$ or $TrueSimPref$. Similarly, we consider $Sim_{n}$ and $GoldSim$ to be
 the generic observed similarity scores. Let $Y$ be a random variable representing 
 the $TrueSim$ of a randomly chosen pair of items. Let $X_{n}$ be a random variable 
@@ -239,21 +218,20 @@ which can be rewritten as:
 The model suggests that there is a linear correlation between $X_n$ ($Sim_n$)
 and $Y$ ($TrueSim$). Moreover, the best predicted $TrueSim$ is a linear 
 combination of the mean and the observed similiarity. Since $\sigma_{err,n}^2$ is 
-nonnegative, the slope is always less than or equal to one, meaning that the 
+nonnegative, the slope is always less than or equal to one, meaningthat the 
 observed distance from $\mu$ (the average true similarity) overestimates the 
 true distance. This is reasonable, since there is a prior that expects the true 
 similarity to be around $\mu$.
 
-The parameters $\mu$, $\sigma_{s}^2$, and $\sigma_{err,n}^2$ can be approximated 
-using the method of moments over training data where there are enough common
-users that $TrueSim$ can be approximated. This method requires approximating
-$\sigma_{err,n}^2$ for every value of $n$ separately. To gain a more general 
-model, we can model $\sigma_{err,n}^2$ as a function of $n$. Recall that 
-$\sigma_{err,n}^2$ is the noisiness of the measurement $Sim$ about $TrueSim$ and $TrueSim = lim_{n \to
-\infty}Sim$. Thus $Sim$ can be thought of as a sampling $n$ users from the
-infinite set used to calculate $TrueSim$. Although $Sim$ may not be linear, we
-the Central Limit Theorem motivates the intuition that the variance of $Sim$
-would decrease as the $sqrt(n)$. Thus we model $\sigma_{err,n}^2$ as:
+This model requires calculating $\sigma_{err,n}^2$ for every value of $n$ 
+separately. To gain a more general model, which relates the $\sigma_{err, n}$'s, 
+we model $\sigma_{err,n}^2$ as a function of $n$. Recall that $\sigma_{err,n}^2$ 
+is the noisiness of the observed $Sim_n$ about $TrueSim$. Since the $TrueSim$ is
+the $Sim$ when all users that will rate the items have rated them, $Sim_n$ can be
+thought of as sampling $n$ users from the set used to calculate $TrueSim$. 
+Although $Sim$ is likely more complicated than an average, the Central Limit 
+Theorem motivates the intuition that the variance of $Sim$ would decrease as the 
+$\sqrt{n}$. Thus we model $\sigma_{err,n}^2$ as:
 \begin{align}
 \sigma_{err,n}^2 = \frac{\alpha}{\sqrt{n}},
 \end{align}
@@ -262,13 +240,13 @@ yielding the single parameter model:
 \left(Y - \mu\right) = \frac{\sigma_{s}^2}{\sigma_{s}^2+\frac{\alpha}{\sqrt{n}}}
 \left(X_n-\mu\right)
 \end{align}
-In terms of a modified similarity function, as desired earlier, we now have:
-\begin{align}
-ModSim(Sim, n) = \frac{\sigma_{s}^2}{\sigma_{s}^2+\frac{\alpha}{\sqrt{n}}}
-\left(Sim-\mu\right) + \mu
-\end{align}
 
 \subsection*{Technique}
+The parameters $\mu$, $\sigma_{s}^2$, and $\sigma_{err,n}^2$ can be approximated 
+using the method of moments over training data. $\mu$ and $\sigma_{s}$ are
+calculated
+
+
 Based on this maodel, we try three different techniques to predict the true similarity from a
 measured similarity. The techniques vary in their fidelity to the model. For
 each, we limit our data to all pairs of items that have enough common users that
@@ -340,10 +318,6 @@ Using this model, we may view the problem of estimating the similarity $Y$ of
 items $A$ and $B$ that most likely produced ratings $R_A$ and $_B$ as
 that of finding the Maximum Likelihood Estimate of $Y | \vec{R}$:
 \begin{align}
-P(Y | \vec{R}) = \frac{P(\vec{R} | Y)P(Y)}{P(\vec{R})}.
-\end{align}
-
-\begin{align}
 \hat{y} &= \argmax_yP(Y=y|\vec{R}=\vec{r}) 
 \\&= \argmax_y\left[\frac{P(\vec{R}=\vec{r} |
 Y=y)P(Y=y)}{P(\vec{R}=\vec{r})}\right]
@@ -388,10 +362,9 @@ r_B^\prime + \frac{\sigma_r^2}{\sigma_s^2}(1 - y^2)^2(y - \mu_s) - \sigma_r^2(1
 - y^2)y &= 0.
 \end{align}
 This final expression implicitly yields the MLE of $y$ as a function of the
-ratings $r_A$ and $r_B$. That is, constraining the parameters $\mu_r$,
-$\sigma_r$, $\mu_s$, and $\sigma_s$ to realistic values, this expression defines
-a surface that can be to efficiently estimate $y$ given a pair of ratings.
-
+ratings $r_A$ and $r_B$. That is, by constraining the parameters $\mu_r$,
+$\sigma_r$, $\mu_s$, and $\sigma_s$ to realistic values, the equation
+can be used to efficiently estimate $y$ given a pair of ratings.
 
 \section*{Experiment}
 
