@@ -16,8 +16,8 @@ from SimilarityGrid import SimilarityGrid
 
 # params
 #constSimScore = 0.16   # topEdges_40_randSim
-#constSimScore = 0.27    # topEdges_80_randSim
-constSimScore = 0.050    # topEdges_80_prefSim
+constSimScore = 0.27    # topEdges_80_randSim
+#constSimScore = 0.050    # topEdges_80_prefSim
 K = 20
 sigma = 1.0
 writer = csv.writer(sys.stdout)
