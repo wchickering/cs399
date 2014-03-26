@@ -562,7 +562,6 @@ Below about $n = 20$, the horizontal red line, which represents the MSE obtained
 from always guessing the average $GoldSimRand$ value from the training set,
 outperforms $PearSim$. These two estimators serve as simple benchmarks.
 
-
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.9\textwidth]{MSE_SimR_40.png}
@@ -576,6 +575,25 @@ flat red line indicate the MSE that results from always guessing the average
 blue curve is {\em UserPredSim}. }
     \label{fig:MSE_SimR}
 \end{figure}
+
+The green curve in the upper panel of Fig. \ref{fig:MSE_SimR} is the MSE of
+$LinRegSim$, which was already shown in Fig. \ref{fig:Linear}, and is included
+here for comparison.  $LinRegSim$ outperforms always-guessing-the-average for
+all $n > 2$ and does better than $PearSim$ over the entire scope of the plot.
+$UserPredSim$ is shown in blue and for $3 < n < 33$ achieves a lower MSE than
+$LinRegSim$.
+
+The lower panel of Fig. \ref{fig:MSE_SimR} shows the MSE of estimators in the
+experiment carried out with item pairs with $N \geq 80$. The curves for
+$PearSim$, always guessing the average, and $LinRegSim$ exhibit behavior
+analogous to that observed in the $N \geq 40$ experiment, with addition of
+increased noise. The performance of $UserPredSim$, meanwhile, is significantly
+improved, achieving the MSE that $PearSim$ reaches at $n \approx 70$ by $n
+\approx 20$. This result demonstrates the efficacy, at least in some datasets,
+of measuring and exploiting {\em user predictivity} when estimating item-item
+similarity.
+
+Next, we consider the results of using $UserPredSim$ to estimate $TrueSimPref$.
 
 \begin{figure}[!htbp]
     \centering
