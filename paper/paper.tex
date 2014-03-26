@@ -591,8 +591,6 @@ improved, achieving the MSE that $PearSim$ reaches at $n \approx 70$ by $n
 of measuring and exploiting {\em user predictivity} when estimating item-item
 similarity.
 
-Next, we consider the results of using $UserPredSim$ to estimate $TrueSimPref$.
-
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.9\textwidth]{MSE_SimP_80.png}
@@ -605,6 +603,43 @@ set. The green curve is {\em LinRegSim} and the blue curve is {\em UserPredSim}.
 }
     \label{fig:MSE_SimP}
 \end{figure}
+
+Next, we consider the results of using $UserPredSim$ to estimate $TrueSimPref$.
+Recall that $UserSimPref$ corresponds to $CosSim$ as time goes to infinity. As
+such, the relationship in our model between the covariance of the conditional
+probability distributions that generate ratings given a similarity does not hold
+for $TrueSimPref$. That is, in our model
+\begin{align}
+\mathbf{\Sigma_z} \neq \sigma_r^2 \cdot
+\left[ \begin{array}{cc}  1 & z \\ z & 1 \end{array} \right],
+\end{align}
+where $\mathbf{\Sigma_z}$ is the covariance matrix of $P(\vec{R} | Z=z)$ with
+$Z$ a random variable representing the $TrueSimPref$ of two items. Nonetheless,
+we can choose parameters and naively use $UserPredSim$ to estimate
+$TrueSimPref$. For this experiment, we choose $\mu_s = 0.054$, $\sigma_s =
+0.049$, $\mu_r = 0.25$, $\sigma_r = 0.15$, and $\lambda = 0.002$ using the same
+methods as before.
+
+In Fig. \ref{fig:MSE_SimP} we show the results of our experiments estimating
+$TrueSimPref$ using the $N \geq 80$ data set. The MSE of $CosSim$, like that of
+$PearSim$ in the case of $TrueSimRand$, rapidly diverges as the number of common
+users $n$ goes to zero. Interestingly, $CosSim$ outperforms
+always-guess-the-average for all $n > 25$, in contrast with $PearSim$, which
+does the same only after $n > 45$. The speaks to the greater stability of
+$CosSim$, which takes into consideration all ratings, not only those from common
+users. Meanwhile, the $LinRegSim$ performs surprisingly similar for estimations
+of $TrueSimPref$ and $TrueSimRand$. In both cases, the MSE begins at
+approximately that of always-guess-the-average for $n = 1$ and then decreases
+approximately linearly with increasing $n$. Indeed, this was also true for the
+$N \geq 40$ experiment. We attribute this robustness to the fact that the model
+from which $LinRegSim$ is derived abstracts away the underlying mechanism from
+which $TrueSim$ is computed. Finally, $UserPredSim$, perhaps surprisingly, has
+the lowest MSE for $n < 15$, although not by much. For all $n > 15$, $LinRegSim$
+outperforms $UserPredSim$ in estimating $TrueSimPref$. And for all $n > 40$,
+$CosSim$ achieves lower MSE than that of $UserPredSim$. This lackluster
+performance by $UserPredSim$ might be expected, however, given the model on
+which it is based is a dubious fit for $TrueSimPref$.
+
 
 \section*{Conclusion}
 \section*{Future Work}
