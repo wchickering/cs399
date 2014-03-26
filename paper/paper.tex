@@ -540,7 +540,27 @@ user's average absolute error $\epsilon_u$ as per Eq. (\ref{eqn:userError}).
 Finally, we apply supervised learning techniques to optimize the value of the
 parameter $\lambda$ that appears in the definition of $p_u$. This is achieved by
 minimizing the error in Eq. {\ref{eqn:userPredSim} made against the training
-set.
+set. We find that $\lambda = 0.01$, which yields a strong preference for high
+{\em user predictivity}, works well for the data studied here.
+
+Figure \ref{fig:MSE_SimR} shows the results of our experiment using
+$UserPredSim$ to estimate $TrueSimRand$. To be clear, these plots are showing
+the mean squared error (MSE) given by
+\begin{align}
+\mathrm{MSE} = \frac{1}{\left|S\right|}\sum_{(A,B) \in S}
+{\left(Estimator(A,B) - GoldSim(A,B)\right)^2},
+\end{align}
+where $S$ is the test set of item pairs and $Estimator(A, B)$ represents an
+arbitrary estimator of the similarity between items $A$ and $B$. In the upper
+panel, we show the MSE for the $N \geq 40$ data. The black dashed line
+represents the estimates of $PearSim$. For example, with $n = 20$ common users,
+the MSE of $PearSim$ is about $0.07$, which corresponds to an average absolute
+error of $0.26$ in the similarity score---roughly the magnitude of $\sigma_s/2$
+(see Fig. \ref{fig:Histograms}). These data clearly show that the reliability of
+$PearSim$ in estimating $TrueSimRand$ deteriorates rapidly as $n$ decreases.
+Below about $n = 20$, the horizontal red line, which represents the MSE obtained
+from always guessing the average $GoldSimRand$ value from the training set,
+outperforms $PearSim$. These two estimators serve as simple benchmarks.
 
 
 \begin{figure}[!htbp]
