@@ -594,13 +594,37 @@ set. The green curve is {\em LinRegSim} and the blue curve is {\em UserPredSim}.
 \section*{Future Work}
 The results achieved over this dataset were significant. In order to show that
 the techniques are general, though, we would like to run the same experiments on
-other datasets, with different types of items and user behavior. Most of the 
-assumptions made for this model were not specific to the data used, and so we 
+other datasets, with different types of items and user behavior. The 
+assumptions made for this model were not specific to the data used, so we 
 hope to achieve similar results. It would also be interesting to see how 
 different the learned parameters would be for other datasets and how well 
 the techniques could perform using the same parameters learned here.
 
-We would also like to investigate the use of latent variable
+We would also like to incorporate latent factors into our model.
+Latent factor techniques, such as the those presented in \cite{Koren2009}, have
+become very popular since the Netflix Challenge and have proved to be better for
+predicting user-item rating than classical CF. One experiment would be to
+construct a new $TrueSimLatent$ based on the similarity of two items in 
+latent factor space. Then we could apply both of the approaches in this
+paper analagously in latent factor space. Another idea is to use latent factors 
+as a new input to a model for predicting $TrueSimRand$ or $TrueSimPref$. 
+
+One difficulty with each of these experiments is that it is time consuming to 
+compute the latent factors at different points in simulated time. Since we could
+not recompute the matrix factorization for every new user rating, we would 
+instead compute the latent factorization of the whole matrix at a few 
+``snap-shots'' in simulated time. We then calculate the latent factors of many
+different pairs at this time, each varying in their degrees of certainty. 
+Hopefully, this should give enough pairs with dfferent degrees of certainty 
+to train and test over.
+
+In a different direction, we believe there are a number of possible applications
+of the user predictivity score presented in this paper. Based on the results
+found here, it is reasonable to believe that adding weights to users by their
+predictivity would increase the performance of any user-item rating predictor.
+The predictivity could also have applications in the problem of Robust
+Collaborative Filtering \cite{Mehta2007}, where rating data is particularly noisy
+or riddled with spam.
 
 \begin{thebibliography}{9}
 
@@ -622,7 +646,11 @@ We would also like to investigate the use of latent variable
     Yehuda Koren, Robert Bell, and Chris Volinsky. 
     ``Matrix factorization techniques for recommender systems.''
     \emph{Computer} 42.8, 2009. 30-37.
-
+\bibitem{Mehta2007}
+    Bhaskar Mehta, Thomas Hofmann, and Wolfgang Nejdl.
+    ``Robust collaborative filtering.'' 
+    \emph{Proceedings of the 2007 ACM conference on Recommender systems.}
+    ACM, 2007.
 \end{thebibliography}
 
 \end{document}
