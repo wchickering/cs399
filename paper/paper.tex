@@ -594,6 +594,10 @@ of measuring and exploiting {\em user predictivity} when estimating item-item
 similarity.
 
 Next, we consider the results of using $UserPredSim$ to estimate $TrueSimPref$.
+Recall that $UserSimPref$ corresponds to $CosSim$ as time goes to infinity. As
+such, the relationship in our model between the covariance of the conditional
+probability distributions that generate ratings given a similarity does not hold
+for $TrueSimPref$.
 
 \begin{figure}[!htbp]
     \centering
