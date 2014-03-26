@@ -73,7 +73,7 @@ user-item ratings are useful in arriving at two different definitions of the
 In the first model, we imagine users are randomly presented items to rate. Given
 a sufficient period of time, all users will eventually rate all items, creating
 item vectors that contain provided ratings from all users. The true similarity
-in this model of {\em random} rating, denoted $TrueSimRand$, is then the vector
+in this model of {\em random rating}, denoted $TrueSimRand$, is then the vector
 product of two complete item vectors. That is,
 \begin{align}
 TrueSimRand(A, B) = \frac{\sum\limits_{u\in U}
@@ -89,7 +89,7 @@ it indicates a lack of interest of a particular user for a particular item. This
 is captured by the model through a default rating of zero\footnote{We address
 the issue of rating bias and the precise meaning of a zero valued ratings later
 in this report.}. At any point in time, we may estimate the true similarity in
-this model of {\em preferential} rating, by computing the cosine similarity of
+this model of {\em preferential rating}, by computing the cosine similarity of
 the two item vectors. Only in the limit of inifinite time does this estimate
 converge to the true similarity, which we denote $TrueSimPref$.  That is,
 \begin{align}
@@ -179,11 +179,9 @@ pairs. We could then generate similarity estimates and readily determine the
 true error in these estimates. But both $TrueSimRand$ and $TrueSimPref$ are
 theoretical constructs and not metrics we have access to in the real world.
 Fortunately, we can achieve good approximations of either $TrueSim$ given
-sufficient data. We therefore define $GoldPearSim = PearSim_N$ and $GoldCosSim =
+sufficient data. We therefore define $GoldSimRand = PearSim_N$ and $GoldSimPref =
 CosSim_N$ where $N$ is a large enough number of common users that $GoldSim 
-\approx TrueSim$.\footnote{To calculate $GoldSim$ in practice, we use $Sim$ with
-all rating data, as long as the number of common users is greater than or equal
-to $N$} With a measurable $GoldSim$ as our goal, we can implement 
+\approx TrueSim$.  With a measurable $GoldSim$ as our goal, we can implement 
 a simple predictivity experiment.
 
 To obtain good $GoldSim$ values, we work only with the item pairs that have at 
@@ -220,12 +218,12 @@ Y \sim N(\mu_s, \sigma_{s}^2),
 \end{align}
 where $\mu_s$ and $\sigma_{s}^2$ are the average similarity score and the variance
 of similarity scores of all pairs of items, respectively. Figure 1 shows the
-distributions of $GoldSim$, which motivates a Gaussina model for $TrueSim$.
+distributions of $GoldSim$, which motivates the Gaussian model for $TrueSim$.
 
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.8\textwidth]{Histograms.png}
-	\caption{Histograms of {\em GoldPearSim} (top) and {\em GoldCosSim}
+	\caption{Histograms of {\em GoldSimRand} (top) and {\em GoldSimPref}
 (bottom) for training datasets containing at least 40 common reviewers (left)
 and 80 common reviewers (right).}
     \label{fig:Histograms}
@@ -303,17 +301,17 @@ distribution suggests that the true similarity is likely to be near $\mu_s$.
 This model requires a different parameter $\sigma_{err,n}^2$ for each $n$.  To
 gain more generality, we model $\sigma_{err,n}^2$ as a function of $n$ instead
 of considering them independent of each other. Recall that $\sigma_{err,n}^2$ is
-the noisiness of the observed $Sim_n$ about $TrueSim$.  $Sim$ converges to
-$TrueSim$ as the number of users $n$ increases.  The Central Limit Theorem
-therefore motivates the intuition that the variance of $Sim$ would decrease as
-the square root of $n$. Thus we model $\sigma_{err,n}^2$ as
+the noisiness of the observed $Sim_n$ about $TrueSim$.  $Sim_n$ converges to
+$TrueSim$ as the number of users $n$ increases. Although $Sim$ is not simply a
+sample mean, The Central Limit Theorem motivates the intuition that the variance of 
+$Sim$ would decrease as the square root of $n$. Thus we model $\sigma_{err,n}^2$ as
 \begin{align}
 \sigma_{err,n}^2 = \frac{\alpha}{\sqrt{n}},
 \end{align}
 yielding the single parameter model
 \begin{align}
-\left(Y - \mu_s\right) = \frac{\sigma_{s}^2}{\sigma_{s}^2+\frac{\alpha}{\sqrt{n}}}
-\left(X_n-\mu_s\right).
+\hat{y}= \frac{\sigma_{s}^2}{\sigma_{s}^2+\frac{\alpha}{\sqrt{n}}}
+\left(x -\mu_s\right) + \mu_s.
 \end{align}
 
 
@@ -329,20 +327,20 @@ training data. The values of $\sigma_{err,n}^2$ are fit to the function
 $\frac{\alpha}{\sqrt{n}}$ and the $\alpha$ that minimizes the sum of squared 
 error is computed.
 
-The graph of Fig. 3 compares the results of three linear fits, with varying
-degrees of fidelity to the probabilistic model. The most faithful fit uses
-$\mu_s$, $\sigma_{s}^2$ and $\alpha$ as calculated above to predict the $GoldSim$
-using Eqn (18). The next fit uses the calculated values of $\sigma_{err,n}^2$
-directly, following Eqn (16) for predictions. The third fit simply uses a series
+The graph of Fig. 3 compares the results of three linear predictors, with varying
+degrees of fidelity to the probabilistic model. The most faithful predictor uses
+$\mu_s$, $\sigma_{s}^2$ and $\alpha$ as calculated above to predict the $TrueSim$
+using Eqn (19). The next predictor uses the calculated values of $\sigma_{err,n}^2$
+directly, following Eqn (16) for predictions. The third predictor simply uses a series
 of linear regressions, one for each $n$. This model only assumes that for each
-$n$, $Sim_n$ and $GoldSim$ are linearly correlated. The linear regression
+$n$, $Sim_n$ and $TrueSim$ are linearly correlated. The linear regression
 technique trades the generality of the model for a better fit on the training
 data.  As the results show, the trade-off is worth it.
 
 \begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.7\textwidth]{LinearTechniques.png}
-	\caption{Comparison of different linear techniques. For each number of
+	\caption{Comparison of different linear predictors. For each number of
 reviewers in common, $n$, the graphs represent the average squared error of
 predicted $GoldSim$ calculated from the observed $Sim_n$. As a baseline, the
 technique of guessing the average $GoldSim$ is included. For these experiments,
@@ -357,11 +355,11 @@ we use $Sim$ = $PearSim$ and $N=80$ for determining $GoldSim$.}
 We now construct a different probabilistic model based on the pairs of ratings
 themselves. This model is readily exploited for making estimates of
 $TrueSimRand$ and, to a lesser extent, $TrueSimPref$. In addition, this approach
-has the added benefit of allowing us to infer implied predictions of
-$TrueSimRand$ made by individual users each time they rate two items. This
-latter feature allows us to define a new metric for users that we call {\em
-user-predictivity}, which allows us to ascribe varying levels of confidence to
-their contributions to a similarity estimate.
+allows us to infer implied predictions of $TrueSimRand$ from individual users 
+each time they rate two items. This latter feature allows us to define a new 
+metric for users that we call {\em user-predictivity}. User-predictivity allows
+us to ascribe varying levels of confidence to a user's ratings and thus modify
+the contribution a user makes to a similarity estimate accordingly.
 
 Let $Y$ be a random variable representing the $TrueSimRand$ of a randomly chosen
 pair of items. As before, we model $Y$ as a Normal distribution
