@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 from LDAPredictor import LDAPredictor
 from gensim import corpora, models, similarities
@@ -12,14 +12,14 @@ class ArgMaxPredictor(LDAPredictor):
     """
 
     def __init__(self, ignore_dislikes=True, topn_items=1000, **kwds):
-        """Constructs a new BayesPredictor.
+        """Constructs a new ArgMaxPredictor.
 
         Note that predictions associated with a topic are limited to the most
         likely topn_items items.
         """
         super(ArgMaxPredictor, self).__init__(**kwds)
         self.ignore_dislikes = ignore_dislikes
-        self.topn_items = topn_items=1000
+        self.topn_items = topn_items
 
     def initSession(self):
         self.session_likes = set()
@@ -90,7 +90,8 @@ class ArgMaxPredictor(LDAPredictor):
 
 def main():
     """A simple, sanity-checking test."""
-    predictor = ArgMaxPredictor(dict_fname='data/tokens.dict', model_fname='data/lda.pickle')
+    predictor = ArgMaxPredictor(dict_fname='data/tokens.dict',
+                                model_fname='data/lda_graph2.pickle')
     print 'Loading Model. . .'
     predictor.loadModel()
     likes = set([960598,666644,632709,551024,932073,960606,824431,914853,1093859,1053814])
