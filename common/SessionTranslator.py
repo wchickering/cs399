@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 import sqlite3
 
@@ -8,7 +8,7 @@ class SessionTranslator(object):
    """
 
    selectCatStmt = 'SELECT Category FROM Categories WHERE Id = :Id'
-   selectDescTemplate = 'SELECT Description FROM Products WHERE Id IN (%s)'
+   selectDescStmt = 'SELECT Description FROM Products WHERE Id = :Id'
 
    def __init__(self, db_fname):
        """Constructs SessionTranslator, which connects to sqlite3 db."""
@@ -17,9 +17,11 @@ class SessionTranslator(object):
 
    def sessionToDesc(self, session):
        """Takes a list of itemsids and returns a list of item descriptions."""
-       selectDescStmt = self.selectDescTemplate % ','.join('?'*len(session))
-       self.cursor.execute(selectDescStmt, session)
-       return [row[0] for row in self.cursor.fetchall()]
+       descriptions = []
+       for itemid in session:
+           self.cursor.execute(self.selectDescStmt, (itemid,))
+           descriptions.append(self.cursor.fetchone()[0])
+       return descriptions
 
    def sessionToCats(self, session):
        """Takes a list of itemids and returns a dictionary of category
@@ -40,7 +42,11 @@ def main():
     """A simple, sanity-checking test."""
     print 'Constructing SessionTranslator (and hence, connecting to db). . .'
     translator = SessionTranslator('data/macys.db')
-    session = [960598,666644,632709,551024,932073,960606,824431,914853,1093859,1053814]
+    #session = [960598,666644,632709,551024,932073,960606,824431,914853,1093859,1053814]
+    #session = [1166763, 921078, 1166761, 773981, 1051953, 1166794, 703127,
+    #           1200097, 1166379, 1242549]
+    session = [1093859, 632709, 932073, 824431, 551024, 666644, 960598, 1053814,
+               960606, 914853]
     print 'session =', session
     print 'Translating to category populations. . .'
     cats = translator.sessionToCats(session)
