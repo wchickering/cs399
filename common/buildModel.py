@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 """
 Construct and save LDA model using Radim Rehurek's gensim module.
@@ -45,11 +45,15 @@ def getCorpus(dictionary, filename):
 
 def buildLDA(dictionary, corpus, num_topics):
     lda = ldamodel.LdaModel(corpus=corpus,
-                            id2word=dictionary,
                             num_topics=num_topics,
-                            passes=40,
+                            id2word=dictionary,
+                            chunksize=2000,
+                            passes=1,
                             update_every=1,
-                            chunksize=800)
+                            alpha='symmetric',
+                            eta=None,
+                            decay=0.5,
+                            eval_every=10)
     return lda
 
 def main():
