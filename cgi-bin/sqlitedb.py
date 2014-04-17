@@ -42,7 +42,7 @@ def getProduct(productId):
 def getNextProduct(productId, liked):
     productId = int(productId)
     if productId == 0:
-        productId = 1082639 # Magic productId for testing
+        productId = 803678 # Magic productId for testing
     likes = []
     dislikes = []
     if liked == 'disliked':
