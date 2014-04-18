@@ -54,7 +54,7 @@ def buildLDA(dictionary, corpus, num_topics, passes):
     lda = ldamodel.LdaModel(corpus=corpus,
                             num_topics=num_topics,
                             id2word=dictionary,
-                            chunksize=2000,
+                            chunksize=100,
                             passes=passes,
                             update_every=1,
                             alpha='symmetric',
