@@ -6,6 +6,7 @@ the first K nodes visited.
 """
 
 from collections import deque
+from random import shuffle
 
 def roundRobinBFS(graph, sources, ignores, k):
 
@@ -14,7 +15,9 @@ def roundRobinBFS(graph, sources, ignores, k):
     queues = deque(maxlen=len(sources))
     for s in sources:
         q = deque()
-        for neighbor in graph[s][0]:
+        neighbors = graph[s][0]
+        shuffle(neighbors)
+        for neighbor in neighbors:
             q.appendleft(neighbor)
         queues.appendleft(q)
    
@@ -32,7 +35,9 @@ def roundRobinBFS(graph, sources, ignores, k):
         found.append(n)
         if len(found) >= k:
             break
-        for neighbor in graph[n][0]:
+        neighbors = graph[n][0]
+        shuffle(neighbors)
+        for neighbor in neighbors:
             if neighbor not in visited:
                 q.appendleft(neighbor)
         if q:

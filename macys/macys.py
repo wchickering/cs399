@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 import urllib
 import urllib2
@@ -11,6 +11,7 @@ import math
 import sys
 import os
 import time
+import signal
 
 # params
 categories_fname = 'categories.json'
@@ -19,6 +20,7 @@ metaUrlTemplate = 'http://www1.macys.com/catalog/category/facetedmeta?sortBy=NAM
 productsUrlTemplate = 'http://www1.macys.com/shop/catalog/product/thumbnail/1?edge=hybrid&limit=none&suppressColorSwatches=false&categoryId=%d&ids=%s'
 productsPerPage = 100
 pauseTime = 0.2 # number of second to pause between HTTP requests.
+urlretrieveTimeout = 20
 
 # db params
 db_fname = 'data/macys.db'
@@ -75,11 +77,20 @@ def processProduct(productTag, parentCategoryName, categoryName, db_curs):
         print 'img_fname = %s' % img_fname
         # retrieve and save image
         if not os.path.isfile(img_fname):
+            def timeout_handler(signum, frame):
+                print >> sys.stderr, 'WARNING: Timeout occurred.'
+                raise TimeoutError
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(urlretrieveTimeout)
             try:
                 urllib.urlretrieve(imgSrc, img_fname)
+                signal.alarm(0) # disable alarm
+            except TimeoutError:
+                print >> sys.stderr, 'WARNING: Image retrieval timed out.'
             except:
                 print >> sys.stderr, 'WARNING: Failed to retrieve product image'
-        shortDescriptionTag = productTag.find('div', {'class' : 'shortDescription'})
+        shortDescriptionTag = productTag.find('div',
+                                              {'class' : 'shortDescription'})
         productUrl = shortDescriptionTag.find('a')['href']
         print 'productUrl = %s' % productUrl
         # remove "NEW!" from description

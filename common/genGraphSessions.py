@@ -37,8 +37,6 @@ def getParser():
         metavar='FLOAT')
     parser.add_option('-n', '--num', type='int', dest='num', default=1000,
         help='Number of sessions to generate.', metavar='NUM')
-    parser.add_option('-k', type='int', dest='k', default=1,
-        help='Number of items per trial.', metavar='NUM')
     parser.add_option('--category', dest='category', default=None,
         help='Category to confine start of random walks.', metavar='CAT')
     return parser
@@ -48,7 +46,7 @@ def loadGraph(fname):
         graph = pickle.load(f)
     return graph
 
-def genSession(graph, p, k, db_curs=None, category=None):
+def genSession(graph, p, db_curs=None, category=None):
     session = []
     sources = deque()
 
@@ -73,7 +71,7 @@ def genSession(graph, p, k, db_curs=None, category=None):
             break
         # randomly choose a source
         s = [random.choice(sources)]
-        items = roundRobinBFS(graph, s, session, k)
+        items = roundRobinBFS(graph, s, session, 1)
         session += items
         for item in items:
             sources.appendleft(item)
@@ -102,8 +100,8 @@ def main():
     with open(options.outfilename, 'wb') as csvfile:
         writer = csv.writer(csvfile)
         for i in range(options.num):
-            session = genSession(graph, options.p, options.k,
-                                 db_curs=db_curs, category=options.category)
+            session = genSession(graph, options.p, db_curs=db_curs,
+                                 category=options.category)
             writer.writerow(session)
         
 if __name__ == '__main__':

@@ -25,17 +25,26 @@ def getParser(usage=None):
     return parser
 
 def getItemTopics(dictionary, model, item):
-    mixture = [0]*model.num_topics
+    alpha_sum = sum(model.alpha)
+    p_topic = [x/alpha_sum for x in model.alpha]
+    p_item = 0
+    p_item_given_topic = [0]*model.num_topics
     for topic in range(model.num_topics):
         item_dist = model.show_topic(topic, topn=len(dictionary))
-        mixture[topic] = [kvp[0] for kvp in item_dist if kvp[1] == item][0]
-    total = sum([x for x in mixture])
-    return [(ind, x/total) for ind, x in enumerate(mixture)]
+        p_item_given_topic[topic] =\
+            [kvp[0] for kvp in item_dist if kvp[1] == item][0]
+        p_item += p_item_given_topic[topic]*p_topic[topic]
+    p_topic_given_item = [0]*model.num_topics
+    for topic in range(model.num_topics):
+        p_topic_given_item[topic] =\
+            p_item_given_topic[topic]*p_topic[topic]/p_item
+    return [(ind, x) for ind, x in enumerate(p_topic_given_item)]
 
 def genHtml(dictionary, model, translator, topn):
     print '<html lang="en" debug="true">'
     print '<head><title>Display LDA Topics</title></head>'
     print '<body>'
+    print '<p>model.alpha =', model.alpha, '</p>'
     # print top N items from each topic
     for topic in range(model.num_topics):
         item_dist = model.show_topic(topic, topn=topn)
@@ -46,7 +55,6 @@ def genHtml(dictionary, model, translator, topn):
             imgsrc = imgsrcTemplate % items[i]
             print '<div><table><tr><td><img src="%s"></td>' % imgsrc
             doc_bow = [(dictionary.token2id[items[i]], 1)]
-            #mixture = model[doc_bow]
             mixture = getItemTopics(dictionary, model, items[i])
             print >> sys.stderr, 'DBG: mixture =', mixture
             print '<td><table>'
