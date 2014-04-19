@@ -44,6 +44,7 @@ def genHtml(dictionary, model, translator, topn):
     print '<html lang="en" debug="true">'
     print '<head><title>Display LDA Topics</title></head>'
     print '<body>'
+    print '<p>model.alpha =', model.alpha, '</p>'
     # print top N items from each topic
     for topic in range(model.num_topics):
         item_dist = model.show_topic(topic, topn=topn)
