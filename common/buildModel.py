@@ -31,6 +31,8 @@ def getParser():
         default=100, help='Number of topics in LDA model.', metavar='NUM')
     parser.add_option('-p', '--passes', dest='passes', type='int', default=1,
         help='Number of passes for training LDA model.', metavar='NUM')
+    parser.add_option('--alpha', dest='alpha', default='symmetric',
+        help='Alpha param for gensim.LdaModel().', metavar='VAL')
     return parser
 
 def buildDictionary(fname_in, fname_out):
@@ -50,14 +52,14 @@ def getCorpus(dictionary, filename):
         records = [record for record in reader]
     return [dictionary.doc2bow(record) for record in records]
 
-def buildLDA(dictionary, corpus, num_topics, passes):
+def buildLDA(dictionary, corpus, num_topics, passes, alpha):
     lda = ldamodel.LdaModel(corpus=corpus,
                             num_topics=num_topics,
                             id2word=dictionary,
                             chunksize=100,
                             passes=passes,
                             update_every=1,
-                            alpha='symmetric',
+                            alpha=alpha,
                             eta=None,
                             decay=0.5,
                             eval_every=10)
@@ -79,7 +81,8 @@ def main():
     corpus = getCorpus(dictionary, options.filename)
 
     # Construct LDA Model
-    lda = buildLDA(dictionary, corpus, options.num_topics, options.passes)
+    lda = buildLDA(dictionary, corpus, options.num_topics, options.passes,
+                   options.alpha)
     logging.info('Saving LDA model to %s.' % options.lda_filename)
     pickle.dump(lda, open(options.lda_filename, 'w'))
 
