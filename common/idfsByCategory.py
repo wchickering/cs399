@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
 from optparse import OptionParser
+from collections import defaultdict
+from stemming.porter2 import stem
 import pickle
 import os
 import sys
 import math
 import sqlite3
-from collections import defaultdict
-from stemming.porter2 import stem
+import string
 
 # params
 displayInterval = 10000
@@ -43,6 +44,9 @@ def calculateIDFs(db_conn, category, stopwords=None):
         if numProducts % displayInterval == 0:
             print '%d Products' % numProducts
         description = row[0]
+        # strip out punctuation
+        description = ''.join(ch for ch in description\
+                              if ch not in string.punctuation)
         words = set([stem(w.lower()) for w in description.split()])
         for word in words:
             if stopwords is not None and word in stopwords:

@@ -11,6 +11,7 @@ import pickle
 import os
 import sys
 import sqlite3
+import string
 
 # db params
 selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
@@ -46,6 +47,9 @@ def getTopWordsByTopic(db_conn, model, idf, topn, stopwords=None):
             item = item_dist[i][1]
             db_curs.execute(selectDescriptionStmt, (item,))
             description = db_curs.fetchone()[0]
+            # strip out punctuation
+            description = ''.join(ch for ch in description\
+                                  if ch not in string.punctuation)
             words = [stem(word.lower()) for word in description.split()]
             for word in words:
                 if stopwords is not None and word in stopwords:
