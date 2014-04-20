@@ -1,19 +1,20 @@
 #!/usr/bin/env python
 
-from gensim import corpora
-from gensim.models import ldamodel
 from optparse import OptionParser
 import pickle
 import os
 import sys
 import math
 import sqlite3
+from collections import defaultdict
+from stemming.porter2 import stem
 
-from SessionTranslator import SessionTranslator
+# params
+displayInterval = 10000
 
 # db_params
-selectProducts =\
-   ('SELECT Id, Description '
+selectCategoryProductsStmt =\
+   ('SELECT Description '
     'FROM Products '
     'WHERE Id in '
     '(SELECT Id FROM Categories '
@@ -22,36 +23,28 @@ selectProducts =\
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-d', '--database', dest='dbname',
-        default='data/macys.db',
-        help='Name of Sqlite3 product database.', metavar='DBNAME')
+        default='data/macys.db', help='Name of Sqlite3 product database.',
+        metavar='DBNAME')
     parser.add_option('-o', '--outputpickle', dest='outputpickle',
-        help='Name of pickle to save idfs')
+        default='data/idf.pickle', help='Name of pickle to save idfs')
     return parser
 
-def calculateIDFs(dbname, category):
-    numProducts = 0.0 
-    wordDocCounts = {}
-    idf = {}
-    db_conn = sqlite3.connect(dbname)
+def calculateIDFs(db_conn, category):
     db_curs = db_conn.cursor()
-    print 'executing database query...'
-    db_curs.execute(selectProducts, (category,))
-    print 'reading rows..'
+    print 'Reading category products. . .'
+    db_curs.execute(selectCategoryProductsStmt, (category,))
+    numProducts = 0
+    wordDocCounts = defaultdict(int)
     for row in db_curs:
         numProducts += 1
-        if numProducts % 100000 == 0:
-            print 'reading row ' + str(numProducts)
-        productId = row[0]   
-        description = row[1]
-        words = description.split()
-        uniqueWords = set(words)
-        for word in uniqueWords:
-            word = word.lower()
-            if word in wordDocCounts: 
-                wordDocCounts[word] += 1
-            else:
-                wordDocCounts[word] = 1
-    print 'calculating idfs...'
+        if numProducts % displayInterval == 0:
+            print '%d Products' % numProducts
+        description = row[0]
+        words = set([stem(w.lower()) for w in description.split()])
+        for word in words:
+            wordDocCounts[word] += 1
+    print 'Calculating IDFs. . .'
+    idf = {}
     for word in wordDocCounts:
         idf[word] = math.log(numProducts / wordDocCounts[word])
     return idf
@@ -65,9 +58,14 @@ def main():
         parser.error('Wrong number of arguments')
     category = args[0]
 
-    # calculate idfs over all products
-    print 'calculating idfs...'
-    idf = calculateIDFs(options.dbname, category)
+    # Connect to db
+    db_conn = sqlite3.connect(options.dbname)
+
+    # Calculate idfs over all products
+    idf = calculateIDFs(db_conn, category)
+    print 'Computed IDFs for %d terms.' % len(idf)
+
+    # Dump results
     pickle.dump(idf, open(options.outputpickle, 'w'))
 
 if __name__ == '__main__':
