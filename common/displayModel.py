@@ -3,6 +3,7 @@
 from gensim import corpora
 from gensim.models import ldamodel
 from optparse import OptionParser
+import math
 import pickle
 import os
 import sys
@@ -25,7 +26,43 @@ def getParser(usage=None):
         help='Number of items per topic to print.', metavar='NUM')
     parser.add_option('--tfidf', dest='tfidf', default=None,
         help='File containing pickled TF-IDF scores.', metavar='FILE')
+    parser.add_option('--compare', action='store_true', dest='compare',
+        help='Quantitatively compare topics.')
     return parser
+
+def cosineSim(listA, listB):
+    numerator = 0.0
+    varA = 0.0
+    varB = 0.0
+    i = 0
+    j = 0
+    while i < len(listA) and j < len(listB):
+        if listA[i][1] < listB[j][1]:
+            varA += listA[i][0]**2
+            i += 1
+        elif listA[i][1] > listB[j][1]:
+            varB += listB[j][0]**2
+            j += 1
+        else:
+            numerator += listA[i][0]*listB[j][0]
+            varA += listA[i][0]**2
+            varB += listB[j][0]**2
+            i += 1
+            j += 1
+    return numerator/(math.sqrt(varA)*math.sqrt(varB))
+
+def sampleCorrelation(listA, listB):
+    assert(len(listA) == len(listB))
+    avgA = sum(listA)/len(listA)
+    avgB = sum(listB)/len(listB)
+    numerator = 0.0
+    varA = 0.0
+    varB = 0.0
+    for i in range(len(listA)):
+        numerator += (listA[i] - avgA)*(listB[i] - avgB)
+        varA += (listA[i] - avgA)**2
+        varB += (listB[i] - avgB)**2
+    return numerator/math.sqrt(varA*varB)
 
 def getItemTopics(dictionary, model, item):
     alpha_sum = sum(model.alpha)
@@ -43,7 +80,7 @@ def getItemTopics(dictionary, model, item):
             p_item_given_topic[topic]*p_topic[topic]/p_item
     return [(ind, x) for ind, x in enumerate(p_topic_given_item)]
 
-def genHtml(dictionary, model, translator, topn, tfidf=None):
+def genHtml(dictionary, model, translator, topn, tfidf=None, compare=False):
     print '<html lang="en" debug="true">'
     print '<head><title>Display LDA Topics</title></head>'
     print '<body>'
@@ -74,6 +111,31 @@ def genHtml(dictionary, model, translator, topn, tfidf=None):
             print '<tr><td>(%s) %s</td></tr>' % (items[i], descriptions[i])
             print '</table></td></tr></table></div>' 
         print '</div>'
+    if compare and model.num_topics > 1:
+        prod_sims = []
+        tfidf_sims = []
+        for topicA in range(model.num_topics-1):
+            topic_distA = model.show_topic(topicA, len(dictionary))
+            topic_distA.sort(key=lambda x: x[1])
+            tfidfA = [(x[1], x[0]) for x in tfidf[topicA]]
+            tfidfA.sort(key=lambda x: x[1])
+            for topicB in range(topicA+1, model.num_topics):
+                # compare topicA and topicB
+                print '<hr><div><b>Compare Topics %d and %d</b>' %\
+                      (topicA, topicB)
+                topic_distB = model.show_topic(topicB, len(dictionary))
+                topic_distB.sort(key=lambda x: x[1])
+                tfidfB = [(x[1], x[0]) for x in tfidf[topicB]]
+                tfidfB.sort(key=lambda x: x[1])
+                prod_sims.append(cosineSim(topic_distA, topic_distB))
+                print '<p>Product Space: CosineSim: %f</p>' % prod_sims[-1]
+                tfidf_sims.append(cosineSim(tfidfA, tfidfB))
+                print '<p>TF-IDF Space: CosineSim: %f</p>' % tfidf_sims[-1]
+                print '</div>'
+        print '<hr><div>'
+        print '<b>Sample Correlation between Product and TF-IDF Sims: '
+        correlation = sampleCorrelation(prod_sims, tfidf_sims)
+        print '%f</b></div>' % correlation
     print '</body></html>'
 
 def main():
@@ -110,7 +172,8 @@ def main():
         tfidf = None
 
     # generate html document
-    genHtml(dictionary, model, translator, options.topn, tfidf=tfidf)
+    genHtml(dictionary, model, translator, options.topn, tfidf=tfidf,
+            compare=options.compare)
 
 if __name__ == '__main__':
     main()
