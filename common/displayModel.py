@@ -28,6 +28,8 @@ def getParser(usage=None):
         help='File containing pickled TF-IDF scores.', metavar='FILE')
     parser.add_option('--compare', action='store_true', dest='compare',
         help='Quantitatively compare topics.')
+    parser.add_option('--noimages', action='store_true', dest='noimages',
+        help='Do not include topn images (faster processing).')
     return parser
 
 def cosineSim(listA, listB):
@@ -80,7 +82,8 @@ def getItemTopics(dictionary, model, item):
             p_item_given_topic[topic]*p_topic[topic]/p_item
     return [(ind, x) for ind, x in enumerate(p_topic_given_item)]
 
-def genHtml(dictionary, model, translator, topn, tfidf=None, compare=False):
+def genHtml(dictionary, model, translator, topn, tfidf=None, compare=False,
+            noimages=False):
     print '<html lang="en" debug="true">'
     print '<head><title>Display LDA Topics</title></head>'
     print '<body>'
@@ -95,21 +98,22 @@ def genHtml(dictionary, model, translator, topn, tfidf=None, compare=False):
                 print '<li>%s : %.3f</li>' %\
                     (tfidf[topic][i][0], tfidf[topic][i][1])
             print '</ul>'
-        item_dist = model.show_topic(topic, topn=topn)
-        items = [pair[1] for pair in item_dist]
-        descriptions = translator.sessionToDesc(items)
-        for i in range(len(items)):
-            imgsrc = imgsrcTemplate % items[i]
-            print '<div><table><tr><td><img src="%s"></td>' % imgsrc
-            doc_bow = [(dictionary.token2id[items[i]], 1)]
-            mixture = getItemTopics(dictionary, model, items[i])
-            print >> sys.stderr, 'DBG: mixture =', mixture
-            print '<td><table>'
-            for component in mixture:
-                print '<tr><td>%d, %.3f</td></tr>' %\
-                      (component[0], component[1])
-            print '<tr><td>(%s) %s</td></tr>' % (items[i], descriptions[i])
-            print '</table></td></tr></table></div>' 
+        if not noimages:
+            item_dist = model.show_topic(topic, topn=topn)
+            items = [pair[1] for pair in item_dist]
+            descriptions = translator.sessionToDesc(items)
+            for i in range(len(items)):
+                imgsrc = imgsrcTemplate % items[i]
+                print '<div><table><tr><td><img src="%s"></td>' % imgsrc
+                doc_bow = [(dictionary.token2id[items[i]], 1)]
+                mixture = getItemTopics(dictionary, model, items[i])
+                print >> sys.stderr, 'DBG: mixture =', mixture
+                print '<td><table>'
+                for component in mixture:
+                    print '<tr><td>%d, %.3f</td></tr>' %\
+                          (component[0], component[1])
+                print '<tr><td>(%s) %s</td></tr>' % (items[i], descriptions[i])
+                print '</table></td></tr></table></div>' 
         print '</div>'
     if compare and model.num_topics > 1:
         prod_sims = []
@@ -173,7 +177,7 @@ def main():
 
     # generate html document
     genHtml(dictionary, model, translator, options.topn, tfidf=tfidf,
-            compare=options.compare)
+            compare=options.compare, noimages=options.noimages)
 
 if __name__ == '__main__':
     main()
