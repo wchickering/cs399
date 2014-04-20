@@ -22,17 +22,18 @@ def getParser(usage=None):
         default='data/macys.db',
         help='Name of Sqlite3 product database.', metavar='DBNAME')
     parser.add_option('-i', '--idfname', dest='idfname',
-        help='Name of pickle with saved idfs')
+        help='Name of pickle with saved idfs', metavar='FILE')
     parser.add_option('-n', '--topn', type='int', dest='topn', default=100,
         help='Number of items per topic to print.', metavar='NUM')
     parser.add_option('-k', '--topnWords', type='int', dest='topnWords',
         default=10, help='Number of words per topic to print.', metavar='NUM')
     parser.add_option('-o', '--outputpickle', dest='outputpickle',
-        default='data/tfidfs.pickle',
-        help='Name of pickle to save tfidfs per topic.')
+        default='data/tfidf.pickle',
+        help='Name of pickle to save tfidfs per topic.', metavar='FILE')
     parser.add_option('--stopwords', dest='stopwords',
         default='data/stopwords.txt',
-        help='File containing a comma separated list of stop words.')
+        help='File containing a comma separated list of stop words.',
+        metavar='FILE')
     return parser
 
 def getTopWordsByTopic(db_conn, model, idf, topn, stopwords=None):
@@ -102,17 +103,16 @@ def main():
 
     # get IDFs
     print 'Load IDFs. . .'
-    idfpickle = options.idfname
-    with open(idfpickle, 'r') as f:
+    with open(options.idfname, 'r') as f:
         idf = pickle.load(f)
 
     # get top words for each topic 
     print 'Get top words. . .'
-    tfidfs = getTopWordsByTopic(db_conn, model, idf, options.topn,
-                                stopwords=stopwords)
+    tfidf = getTopWordsByTopic(db_conn, model, idf, options.topn,
+                               stopwords=stopwords)
 
     # dump tf-idfs
-    pickle.dump(tfidfs, open(options.outputpickle, 'w'))
+    pickle.dump(tfidf, open(options.outputpickle, 'w'))
 
     # Print the topnWords
     for topic in range(model.num_topics):
@@ -120,7 +120,7 @@ def main():
         print 'Top words for topic %d' % topic
         print '======================='
         for i in range(options.topnWords):
-            print '%s : %.3f' % (tfidfs[topic][i][0], tfidfs[topic][i][1])
+            print '%s : %.3f' % (tfidf[topic][i][0], tfidf[topic][i][1])
 
 if __name__ == '__main__':
     main()

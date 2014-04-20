@@ -27,10 +27,12 @@ def getParser(usage=None):
         default='data/macys.db', help='Name of Sqlite3 product database.',
         metavar='DBNAME')
     parser.add_option('-o', '--outputpickle', dest='outputpickle',
-        default='data/idf.pickle', help='Name of pickle to save idfs')
+        default='data/idf.pickle', help='Name of pickle to save idfs',
+        metavar='FILE')
     parser.add_option('--stopwords', dest='stopwords',
         default='data/stopwords.txt',
-        help='File containing a comma separated list of stop words.')
+        help='File containing a comma separated list of stop words.',
+        metavar='FILE')
     return parser
 
 def calculateIDFs(db_conn, category, stopwords=None):
