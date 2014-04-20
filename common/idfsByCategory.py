@@ -27,9 +27,12 @@ def getParser(usage=None):
         metavar='DBNAME')
     parser.add_option('-o', '--outputpickle', dest='outputpickle',
         default='data/idf.pickle', help='Name of pickle to save idfs')
+    parser.add_option('--stopwords', dest='stopwords',
+        default='data/stopwords.txt',
+        help='File containing a comma separated list of stop words.')
     return parser
 
-def calculateIDFs(db_conn, category):
+def calculateIDFs(db_conn, category, stopwords=None):
     db_curs = db_conn.cursor()
     print 'Reading category products. . .'
     db_curs.execute(selectCategoryProductsStmt, (category,))
@@ -42,6 +45,8 @@ def calculateIDFs(db_conn, category):
         description = row[0]
         words = set([stem(w.lower()) for w in description.split()])
         for word in words:
+            if stopwords is not None and word in stopwords:
+                continue
             wordDocCounts[word] += 1
     print 'Calculating IDFs. . .'
     idf = {}
@@ -61,8 +66,21 @@ def main():
     # Connect to db
     db_conn = sqlite3.connect(options.dbname)
 
+    # get stop words
+    if os.path.isfile(options.stopwords):
+        with open(options.stopwords, 'r') as f:
+            try:
+                stopwords = f.readline().split(',')
+            except:
+                print >> sys.stderr, 'Failed to parse stop words.'
+                return
+    else:
+        print >> sys.stderr,\
+            'WARNING: stop words file not found: %s' % options.stopwords
+        stopwords = None
+
     # Calculate idfs over all products
-    idf = calculateIDFs(db_conn, category)
+    idf = calculateIDFs(db_conn, category, stopwords=stopwords)
     print 'Computed IDFs for %d terms.' % len(idf)
 
     # Dump results

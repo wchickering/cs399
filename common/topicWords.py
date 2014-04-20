@@ -29,9 +29,12 @@ def getParser(usage=None):
     parser.add_option('-o', '--outputpickle', dest='outputpickle',
         default='data/tfidfs.pickle',
         help='Name of pickle to save tfidfs per topic.')
+    parser.add_option('--stopwords', dest='stopwords',
+        default='data/stopwords.txt',
+        help='File containing a comma separated list of stop words.')
     return parser
 
-def getTopWordsByTopic(db_conn, model, idf, topn):
+def getTopWordsByTopic(db_conn, model, idf, topn, stopwords=None):
     db_curs = db_conn.cursor()
     tfidfPerTopic = []
     for topic in range(model.num_topics):
@@ -45,6 +48,8 @@ def getTopWordsByTopic(db_conn, model, idf, topn):
             description = db_curs.fetchone()[0]
             words = [stem(word.lower()) for word in description.split()]
             for word in words:
+                if stopwords is not None and word in stopwords:
+                    continue
                 tf[word] += topicStrength
         # Sort words by tfidf
         tfidfs = []
@@ -73,6 +78,19 @@ def main():
     # connect to db
     db_conn = sqlite3.connect(options.dbname)
 
+    # get stop words
+    if os.path.isfile(options.stopwords):
+        with open(options.stopwords, 'r') as f:
+            try:
+                stopwords = f.readline().split(',')
+            except:
+                print >> sys.stderr, 'Failed to parse stop words.'
+                return
+    else:
+        print >> sys.stderr,\
+            'WARNING: stop words file not found: %s' % options.stopwords
+        stopwords = None
+
     # load lda model
     print 'Load LDA model. . .'
     with open(modelfname, 'r') as f:
@@ -86,7 +104,8 @@ def main():
 
     # get top words for each topic 
     print 'Get top words. . .'
-    tfidfs = getTopWordsByTopic(db_conn, model, idf, options.topn)
+    tfidfs = getTopWordsByTopic(db_conn, model, idf, options.topn,
+                                stopwords=stopwords)
 
     # dump tf-idfs
     pickle.dump(tfidfs, open(options.outputpickle, 'w'))
