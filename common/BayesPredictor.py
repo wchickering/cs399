@@ -1,8 +1,6 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 from LDAPredictor import LDAPredictor
-from gensim import corpora, models, similarities
-from gensim.models import ldamodel
 from numpy.random import multinomial
 
 class BayesPredictor(LDAPredictor):
@@ -27,12 +25,12 @@ class BayesPredictor(LDAPredictor):
 
     def feedback(self, likes, dislikes):
         if not self.ignore_dislikes:
-            negative_content =\
-                set([self.dictionary.token2id[str(-token)] for token in dislikes])
+            negative_content = set([self.model.id2word.token2id[str(-token)]\
+                                    for token in dislikes])
         likes =\
-            set([self.dictionary.token2id[str(token)] for token in likes])
+            set([self.model.id2word.token2id[str(token)] for token in likes])
         dislikes =\
-            set([self.dictionary.token2id[str(token)] for token in dislikes])
+            set([self.model.id2word.token2id[str(token)] for token in dislikes])
 
         assert likes.isdisjoint(dislikes),\
             'likes and dislikes are not disjoint'
@@ -73,7 +71,7 @@ class BayesPredictor(LDAPredictor):
                     token_str = item_dist[j][1]
                     if not self.ignore_dislikes and int(token_str) < 0:
                         continue
-                    itemid = self.dictionary.token2id[token_str]
+                    itemid = self.model.id2word.token2id[token_str]
                     if itemid not in items and \
                        itemid not in self.session_likes and \
                        itemid not in self.session_dislikes:
@@ -84,7 +82,7 @@ class BayesPredictor(LDAPredictor):
 
 def main():
     """A simple, sanity-checking test."""
-    predictor = BayesPredictor(dict_fname='data/tokens.dict', model_fname='data/lda.pickle')
+    predictor = BayesPredictor(model_fname='data/lda.pickle')
     print 'Loading Model. . .'
     predictor.loadModel()
     likes = set([960598,666644,632709,551024,932073,960606,824431,914853,1093859,1053814])

@@ -4,7 +4,7 @@
 Construct and save LDA model using Radim Rehurek's gensim module.
 """
 
-from gensim import corpora, models, similarities
+from gensim import corpora
 from gensim.models import ldamodel
 from optparse import OptionParser
 import logging

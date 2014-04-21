@@ -1,7 +1,5 @@
 #!/usr/local/bin/python
 
-from gensim import corpora, models, similarities
-from gensim.models import ldamodel
 import pickle
 
 class LDAPredictor(object):
@@ -9,20 +7,17 @@ class LDAPredictor(object):
     predict new items for a session given previously liked and disliked items.
     """
 
-    def __init__(self, dict_fname=None, model_fname=None):
+    def __init__(self, model_fname=None):
         """Constructs a new LDAPredictor.
 
-        Arguments are the filenames that store the dictionary and LDA model.
+        Argument is the filename that stores the LDA model.
         """
-        self.dict_fname = dict_fname
         self.model_fname = model_fname
         self.initSession()
 
     def loadModel(self):
-        """Loads a dictionary that maps item tokens to LDA Ids as well as a
-        corresonding LDA model from disk.
+        """Loads LDA model from disk.
         """
-        self.dictionary = self._loadDictionary(self.dict_fname)
         self.model = self._loadModel(self.model_fname)
 
     def initSession(self):
@@ -32,8 +27,8 @@ class LDAPredictor(object):
     def feedback(self, likes, dislikes):
         """Informs the LDAPredictor that items in the `likes' set are liked and
         the items in the `dislikes' set are disliked in the present session. The
-        provided sets must be disjoint with each other and with all sets previously
-        provided. This function does not return anything.
+        provided sets must be disjoint with each other and with all sets
+        previously provided. This function does not return anything.
         """
         raise NotImplementedError
 
@@ -43,11 +38,6 @@ class LDAPredictor(object):
         """
         raise NotImplementedError
 
-    def _loadDictionary(self, filename):
-        """Loads dictionary from a text file."""
-        dictionary = corpora.Dictionary.load_from_text(filename)
-        return dictionary
-    
     def _loadModel(self, filename):
         """Loads a pickled LDA model."""
         with open(filename, 'r') as f:
