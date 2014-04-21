@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-from gensim import corpora
-from gensim.models import ldamodel
 from optparse import OptionParser
+import csv
 import math
 import pickle
 import os
 import sys
 
+import LDA_util as lda
 from SessionTranslator import SessionTranslator
 
 # params
@@ -19,11 +19,10 @@ def getParser(usage=None):
     parser.add_option('-d', '--database', dest='dbname',
         default='data/macys.db',
         help='Name of Sqlite3 product database.', metavar='DBNAME')
-    parser.add_option('--dictfname', dest='dictfname',
-        default='data/tokens.dict',
-        help='Dictionary that maps itemids to tokens.', metavar='FILE')
     parser.add_option('-n', '--topn', type='int', dest='topn', default=10,
         help='Number of items per topic to print.', metavar='NUM')
+    parser.add_option('--testcorpus', dest='testcorpus', default=None,
+        help='CSV File containing test corpus.', metavar='FILE')
     parser.add_option('--tfidf', dest='tfidf', default=None,
         help='File containing pickled TF-IDF scores.', metavar='FILE')
     parser.add_option('--compare', action='store_true', dest='compare',
@@ -32,7 +31,13 @@ def getParser(usage=None):
         help='Do not include topn images (faster processing).')
     return parser
 
-def cosineSim(listA, listB):
+def getCorpus(model, filename):
+    with open(filename) as csvIn:
+        reader = csv.reader(csvIn)
+        records = [record for record in reader]
+    return [model.id2word.doc2bow(record) for record in records]
+
+def cosSimSparseVecs(listA, listB):
     numerator = 0.0
     varA = 0.0
     varB = 0.0
@@ -51,7 +56,7 @@ def cosineSim(listA, listB):
             varB += listB[j][0]**2
             i += 1
             j += 1
-    return numerator/(math.sqrt(varA)*math.sqrt(varB))
+    return numerator/math.sqrt(varA*varB)
 
 def sampleCorrelation(listA, listB):
     assert(len(listA) == len(listB))
@@ -66,29 +71,22 @@ def sampleCorrelation(listA, listB):
         varB += (listB[i] - avgB)**2
     return numerator/math.sqrt(varA*varB)
 
-def getItemTopics(dictionary, model, item):
-    alpha_sum = sum(model.alpha)
-    p_topic = [x/alpha_sum for x in model.alpha]
-    p_item = 0
-    p_item_given_topic = [0]*model.num_topics
-    for topic in range(model.num_topics):
-        item_dist = model.show_topic(topic, topn=len(dictionary))
-        p_item_given_topic[topic] =\
-            [kvp[0] for kvp in item_dist if kvp[1] == item][0]
-        p_item += p_item_given_topic[topic]*p_topic[topic]
-    p_topic_given_item = [0]*model.num_topics
-    for topic in range(model.num_topics):
-        p_topic_given_item[topic] =\
-            p_item_given_topic[topic]*p_topic[topic]/p_item
-    return [(ind, x) for ind, x in enumerate(p_topic_given_item)]
-
-def genHtml(dictionary, model, translator, topn, tfidf=None, compare=False,
-            noimages=False):
+def genHtml(model, translator, topn, test_corpus=None, tfidf=None,
+            compare=False, noimages=False):
+    print >> sys.stderr, 'Compute p(topic | item) values. . .'
+    p_topic_given_item = lda.getTopicGivenItemProbs(model)
     print '<html lang="en" debug="true">'
     print '<head><title>Display LDA Topics</title></head>'
     print '<body>'
     print '<p>model.alpha =', model.alpha, '</p>'
+    if test_corpus is not None:
+        print >> sys.stderr, 'Compute model perplexity for test corpus. . .'
+        print '<p>model.bound(test_corpus) = %.1f</p>' %\
+              model.bound(test_corpus)
+        print '<p>model.log_perplexity(test_corpus) = %.3f</p>' %\
+              model.log_perplexity(test_corpus)
     # print top N items from each topic
+    print >> sys.stderr, 'Display topic info. . .'
     for topic in range(model.num_topics):
         print '<hr><div><b>Topic: %d</b>' % topic
         if tfidf is not None:
@@ -105,35 +103,29 @@ def genHtml(dictionary, model, translator, topn, tfidf=None, compare=False,
             for i in range(len(items)):
                 imgsrc = imgsrcTemplate % items[i]
                 print '<div><table><tr><td><img src="%s"></td>' % imgsrc
-                doc_bow = [(dictionary.token2id[items[i]], 1)]
-                mixture = getItemTopics(dictionary, model, items[i])
-                print >> sys.stderr, 'DBG: mixture =', mixture
+                mixture = p_topic_given_item[:,model.id2word.token2id[items[i]]]
                 print '<td><table>'
-                for component in mixture:
-                    print '<tr><td>%d, %.3f</td></tr>' %\
-                          (component[0], component[1])
+                for topic in range(model.num_topics):
+                    print '<tr><td>%d, %.3f</td></tr>' % (topic, mixture[topic])
                 print '<tr><td>(%s) %s</td></tr>' % (items[i], descriptions[i])
                 print '</table></td></tr></table></div>' 
         print '</div>'
     if compare and model.num_topics > 1:
+        print >> sys.stderr, 'Compare topics. . .'
         prod_sims = []
         tfidf_sims = []
         for topicA in range(model.num_topics-1):
-            topic_distA = model.show_topic(topicA, len(dictionary))
-            topic_distA.sort(key=lambda x: x[1])
             tfidfA = [(x[1], x[0]) for x in tfidf[topicA]]
             tfidfA.sort(key=lambda x: x[1])
             for topicB in range(topicA+1, model.num_topics):
                 # compare topicA and topicB
                 print '<hr><div><b>Compare Topics %d and %d</b>' %\
                       (topicA, topicB)
-                topic_distB = model.show_topic(topicB, len(dictionary))
-                topic_distB.sort(key=lambda x: x[1])
                 tfidfB = [(x[1], x[0]) for x in tfidf[topicB]]
                 tfidfB.sort(key=lambda x: x[1])
-                prod_sims.append(cosineSim(topic_distA, topic_distB))
+                prod_sims.append(lda.cosSimTopics(model, topicA, topicB))
                 print '<p>Product Space: CosineSim: %f</p>' % prod_sims[-1]
-                tfidf_sims.append(cosineSim(tfidfA, tfidfB))
+                tfidf_sims.append(cosSimSparseVecs(tfidfA, tfidfB))
                 print '<p>TF-IDF Space: CosineSim: %f</p>' % tfidf_sims[-1]
                 print '</div>'
         print '<hr><div>'
@@ -151,21 +143,31 @@ def main():
         parser.error('Wrong number of arguments')
     modelfname = args[0]
     if not os.path.isfile(modelfname):
-        print >> sys.stderr, 'Cannot find %s' % modelfname
+        print >> sys.stderr, 'ERROR: Cannot find %s' % modelfname
         return
 
-    # get dictionary
-    dictionary = corpora.Dictionary.load_from_text(options.dictfname)
-
     # load lda model
+    print >> sys.stderr, 'Load LDA model. . .'
     with open(modelfname, 'r') as f:
         model = pickle.load(f)
 
     # get translator
     translator = SessionTranslator(options.dbname)
 
+    # get test corpus
+    if options.testcorpus is not None:
+        print >> sys.stderr, 'Load test corpus. . .'
+        if not os.path.isfile(options.testcorpus):
+            print >> sys.stderr, 'WARNING: Cannot find %s' % options.testcorpus
+            test_corpus = None
+        else:
+            test_corpus = getCorpus(model, options.testcorpus)
+    else:
+        test_corpus = None
+
     # get tf-idf scores
     if options.tfidf is not None:
+        print >> sys.stderr, 'Load TF-IDF scores. . .'
         with open(options.tfidf, 'r') as f:
             try:
                 tfidf = pickle.load(f)
@@ -176,8 +178,8 @@ def main():
         tfidf = None
 
     # generate html document
-    genHtml(dictionary, model, translator, options.topn, tfidf=tfidf,
-            compare=options.compare, noimages=options.noimages)
+    genHtml(model, translator, options.topn, test_corpus=test_corpus,
+            tfidf=tfidf, compare=options.compare, noimages=options.noimages)
 
 if __name__ == '__main__':
     main()
