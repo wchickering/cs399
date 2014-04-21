@@ -81,8 +81,6 @@ def genHtml(model, translator, topn, test_corpus=None, tfidf=None,
     print '<p>model.alpha =', model.alpha, '</p>'
     if test_corpus is not None:
         print >> sys.stderr, 'Compute model perplexity for test corpus. . .'
-        print '<p>model.bound(test_corpus) = %.1f</p>' %\
-              model.bound(test_corpus)
         print '<p>model.log_perplexity(test_corpus) = %.3f</p>' %\
               model.log_perplexity(test_corpus)
     # print top N items from each topic
