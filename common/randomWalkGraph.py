@@ -1,0 +1,108 @@
+#!/usr/bin/env python
+
+"""
+Performs a random walk on a directed graph to yield a matrix of probabilities
+that a walker starting at node i ends up at node j after k steps.
+"""
+
+from optparse import OptionParser
+import pickle
+import os
+import sys
+import numpy as np
+import sqlite3
+
+# db params
+selectCategoryProductsStmt =\
+    ('SELECT Id '
+     'FROM Categories '
+     'WHERE Category = :Category')
+
+def getParser(usage=None):
+    parser = OptionParser(usage=usage)
+    parser.add_option('-d', '--database', dest='dbname', default=None,
+        help='Name of Sqlite3 product database.', metavar='DBNAME')
+    parser.add_option('--category', dest='category', default=None,
+        help='Category to confine start of random walks.', metavar='CAT')
+    parser.add_option('-k', type='int', dest='k', default=10,
+        help='Number of steps in random walk.', metavar='NUM')
+    return parser
+
+def loadGraph(fname):
+    with open(fname, 'r') as f:
+        graph = pickle.load(f)
+    return graph
+
+def buildTransitionMatrix(graph, items=None):
+    item2id = {}
+    for i in range(len(items)):
+        item2id[items[i]] = i
+    tranMatrix = np.zeros((len(items), len(items)))
+    for item in items:
+        neighbors = [neighbor for neighbor in graph[item][0]\
+                     if neighbor in item2id]
+        if neighbors:
+            p = 1.0/len(neighbors)
+            for neighbor in neighbors:
+                #print '%s to %s: %0.3f' % (item, neighbor, p)
+                tranMatrix[item2id[item], item2id[neighbor]] = p
+    return tranMatrix, item2id
+
+def randomWalk(tranMatrix, k):
+    assert(tranMatrix.shape[0] == tranMatrix.shape[1])
+    walkMatrix = np.identity(tranMatrix.shape[0])
+    for i in range(k):
+        walkMatrix = np.dot(tranMatrix, walkMatrix)
+    return walkMatrix
+
+# for debugging 
+def displaySparseMatrix(matrix, nodes):
+    for i in range(matrix.shape[0]):
+        for j in range(matrix.shape[1]):
+            if matrix[i,j] != 0.0:
+                print 'matrix[%d, %d] = %f' % (nodes[i], nodes[j], matrix[i, j])
+       
+def main():
+    # Parse options
+    usage = 'Usage: %prog [options] graph.pickle'
+    parser = getParser(usage=usage)
+    (options, args) = parser.parse_args()
+    if len(args) != 1:
+        parser.error('Wrong number of arguments')
+    graphfname = args[0]
+    if not os.path.isfile(graphfname):
+        print >> sys.stderr, 'ERROR: Cannot find %s' % graphfname
+        return
+
+    # load graph
+    graph = loadGraph(graphfname)
+
+    # get category items if category provided
+    if options.category is not None:
+        if options.dbname is None:
+            print >> sys.stderr,\
+                'ERROR: Must provide --database if --category provided'
+            return
+        print 'Connecting to %s. . .' % options.dbname
+        db_conn = sqlite3.connect(options.dbname)
+        db_curs = db_conn.cursor()
+        print 'Reading category products. . .'
+        db_curs.execute(selectCategoryProductsStmt, (options.category,))
+        nodes = [row[0] for row in db_curs.fetchall() if row[0] in graph]
+        print 'Retrieved %d category products.' % len(nodes)
+    else:
+        nodes = graph.keys()
+
+    # create transition matrix
+    print 'Building transition matrix. . .'
+    tranMatrix, item2id = buildTransitionMatrix(graph, nodes)
+
+    # do random walk
+    print 'Performing %d step random walk. . .' % options.k
+    walkMatrix = randomWalk(tranMatrix, options.k)
+
+    # TODO: write walkMatrix to disk and/or construct a new graph from
+    # walkMatrix.
+
+if __name__ == '__main__':
+    main()
