@@ -26,6 +26,9 @@ def getParser(usage=None):
         help='Category to confine start of random walks.', metavar='CAT')
     parser.add_option('-k', type='int', dest='k', default=10,
         help='Number of steps in random walk.', metavar='NUM')
+    parser.add_option('-t', '--teleport', type='float', dest='teleport',
+        default=0.0, help='Weight of additional "teleportation" edge.',
+        metavar='FLOAT')
     return parser
 
 def loadGraph(fname):
@@ -33,20 +36,21 @@ def loadGraph(fname):
         graph = pickle.load(f)
     return graph
 
-def buildTransitionMatrix(graph, items=None):
-    item2id = {}
-    for i in range(len(items)):
-        item2id[items[i]] = i
-    tranMatrix = np.zeros((len(items), len(items)))
-    for item in items:
-        neighbors = [neighbor for neighbor in graph[item][0]\
-                     if neighbor in item2id]
-        if neighbors:
-            p = 1.0/len(neighbors)
-            for neighbor in neighbors:
-                #print '%s to %s: %0.3f' % (item, neighbor, p)
-                tranMatrix[item2id[item], item2id[neighbor]] = p
-    return tranMatrix, item2id
+def buildTransitionMatrix(graph, nodes, teleport):
+    node2id = {}
+    for i in range(len(nodes)):
+        node2id[nodes[i]] = i
+    tranMatrix = np.zeros((len(nodes), len(nodes)))
+    for node in nodes:
+        neighbors = [neighbor for neighbor in graph[node][0]\
+                     if neighbor in node2id]
+        neighbors.append(node) # self loop
+        normalization = len(neighbors) + teleport
+        tranMatrix[node2id[node],:] = teleport/(normalization*len(nodes));
+        p = 1.0/normalization
+        for neighbor in neighbors:
+            tranMatrix[node2id[node], node2id[neighbor]] += p
+    return tranMatrix, node2id
 
 def randomWalk(tranMatrix, k):
     assert(tranMatrix.shape[0] == tranMatrix.shape[1])
@@ -55,13 +59,6 @@ def randomWalk(tranMatrix, k):
         walkMatrix = np.dot(tranMatrix, walkMatrix)
     return walkMatrix
 
-# for debugging 
-def displaySparseMatrix(matrix, nodes):
-    for i in range(matrix.shape[0]):
-        for j in range(matrix.shape[1]):
-            if matrix[i,j] != 0.0:
-                print 'matrix[%d, %d] = %f' % (nodes[i], nodes[j], matrix[i, j])
-       
 def main():
     # Parse options
     usage = 'Usage: %prog [options] graph.pickle'
@@ -95,11 +92,22 @@ def main():
 
     # create transition matrix
     print 'Building transition matrix. . .'
-    tranMatrix, item2id = buildTransitionMatrix(graph, nodes)
+    tranMatrix, item2id = buildTransitionMatrix(graph, nodes, options.teleport)
 
     # do random walk
     print 'Performing %d step random walk. . .' % options.k
     walkMatrix = randomWalk(tranMatrix, options.k)
+
+    # debugging
+    #print 'Do debugging. . .'
+    #item = 1246874
+    #topn = 10
+    #destinations =\
+    #    [(ind, prob) for ind, prob in enumerate(walkMatrix[item2id[item],:])]
+    #destinations = sorted(destinations, key=lambda x: x[1], reverse=True)
+    #print 'dest: prob for %d (top %d)' % (item, topn)
+    #for i in range(topn):
+    #    print '%d: %f' % (nodes[destinations[i][0]], destinations[i][1])
 
     # TODO: write walkMatrix to disk and/or construct a new graph from
     # walkMatrix.
