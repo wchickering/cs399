@@ -13,20 +13,16 @@ import os
 import sys
 
 # db_params
-selectRandomItem =\
+selectRandomItemStmt =\
    ('SELECT Id '
     'FROM Categories '
     'WHERE Category = :Category '
     'ORDER BY random() LIMIT 1')
 
-def getParser():
-    parser = OptionParser()
-    parser.add_option('-d', '--database', dest='dbname',
-        default='data/macys.db',
+def getParser(usage=None):
+    parser = OptionParser(usage=usage)
+    parser.add_option('-d', '--database', dest='dbname', default=None,
         help='Name of Sqlite3 product database.', metavar='DBNAME')
-    parser.add_option('-g', '--graph', dest='graphfilename',
-        default='data/recDirectedGraph.pickle',
-        help='Name of picked directed graph.', metavar='FILE')
     parser.add_option('-o', '--output', dest='outfilename',
         default='data/recGraphSessions.csv', help='Name of output csv file.',
         metavar='FILE')
@@ -53,7 +49,7 @@ def genSession(graph, p, db_curs=None, category=None):
     # randomly choose a starting point on the graph
     if db_curs is not None and category is not None:
         while True:
-            db_curs.execute(selectRandomItem, (category,))
+            db_curs.execute(selectRandomItemStmt, (category,))
             item = int(db_curs.fetchone()[0])
             if item in graph:
                 break
@@ -80,21 +76,32 @@ def genSession(graph, p, db_curs=None, category=None):
 
 def main():
     # Parse options
-    parser = getParser()
+    usage = 'Usage: %prog [options] graph.pickle'
+    parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
+    if len(args) != 1:
+        parser.error('Wrong number of arguments')
+    graphfname = args[0]
+    if not os.path.isfile(graphfname):
+        print >> sys.stderr, 'ERROR: Cannot find %s' % graphfname
+        return
+
+    # load recommendation graph
+    graph = loadGraph(graphfname)
 
     # seed rng
     random.seed(options.seed)
 
     # connect to db if confined to category
     if options.category is not None:
+        if options.dbname is None:
+            print >> sys.stderr,\
+                'ERROR: Must provide --database if --category provided'
+            return
         db_conn = sqlite3.connect(options.dbname)
         db_curs = db_conn.cursor()
     else:
         db_curs = None
-
-    # load recommendation graph
-    graph = loadGraph(options.graphfilename)
 
     # generate and write sessions
     with open(options.outfilename, 'wb') as csvfile:
