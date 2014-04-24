@@ -11,8 +11,8 @@ import logging
 import pickle
 import csv
 
-def getParser():
-    parser = OptionParser()
+def getParser(usage=None):
+    parser = OptionParser(usage=usage)
     parser.add_option('-f', '--file', dest='filename',
         default='data/trainSessions.csv',
         help=('CSV file containing training data. Each line consists of tokens '
@@ -71,7 +71,8 @@ def main():
                         level=logging.INFO)
 
     # Parse options
-    parser = getParser()
+    usage = 'Usage: %prog [options]'
+    parser = getParser(usaage=usage)
     (options, args) = parser.parse_args()
 
     # Construct dictionary
