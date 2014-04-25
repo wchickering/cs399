@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Test the partition from partitionGraph.py
+Test the partition from partitionGraph.py.
 """
 
 from optparse import OptionParser
