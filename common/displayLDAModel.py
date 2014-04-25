@@ -86,7 +86,7 @@ def genHtml(model, translator, topn, test_corpus=None, tfidf=None,
     # print top N items from each topic
     print >> sys.stderr, 'Display topic info. . .'
     for topic in range(model.num_topics):
-        print '<hr><div><b>Topic: %d</b>' % topic
+        print '<hr><div><h3>Topic: %d</h3>' % topic
         if tfidf is not None:
             print '<p>Top words for topic %d</p>' % topic
             print '<ul>'
@@ -103,8 +103,8 @@ def genHtml(model, translator, topn, test_corpus=None, tfidf=None,
                 print '<div><table><tr><td><img src="%s"></td>' % imgsrc
                 mixture = p_topic_given_item[:,model.id2word.token2id[items[i]]]
                 print '<td><table>'
-                for topic in range(model.num_topics):
-                    print '<tr><td>%d, %.3f</td></tr>' % (topic, mixture[topic])
+                for t in range(model.num_topics):
+                    print '<tr><td>%d, %.3f</td></tr>' % (t, mixture[t])
                 print '<tr><td>(%s) %s</td></tr>' % (items[i], descriptions[i])
                 print '</table></td></tr></table></div>' 
         print '</div>'
@@ -113,23 +113,26 @@ def genHtml(model, translator, topn, test_corpus=None, tfidf=None,
         prod_sims = []
         tfidf_sims = []
         for topicA in range(model.num_topics-1):
-            tfidfA = [(x[1], x[0]) for x in tfidf[topicA]]
-            tfidfA.sort(key=lambda x: x[1])
+            if tfidf:
+                tfidfA = [(x[1], x[0]) for x in tfidf[topicA]]
+                tfidfA.sort(key=lambda x: x[1])
             for topicB in range(topicA+1, model.num_topics):
                 # compare topicA and topicB
                 print '<hr><div><b>Compare Topics %d and %d</b>' %\
                       (topicA, topicB)
-                tfidfB = [(x[1], x[0]) for x in tfidf[topicB]]
-                tfidfB.sort(key=lambda x: x[1])
                 prod_sims.append(lda.cosSimTopics(model, topicA, topicB))
-                print '<p>Product Space: CosineSim: %f</p>' % prod_sims[-1]
-                tfidf_sims.append(cosSimSparseVecs(tfidfA, tfidfB))
-                print '<p>TF-IDF Space: CosineSim: %f</p>' % tfidf_sims[-1]
+                print '<p>Topic Space: CosineSim: %f</p>' % prod_sims[-1]
+                if tfidf:
+                    tfidfB = [(x[1], x[0]) for x in tfidf[topicB]]
+                    tfidfB.sort(key=lambda x: x[1])
+                    tfidf_sims.append(cosSimSparseVecs(tfidfA, tfidfB))
+                    print '<p>TF-IDF Space: CosineSim: %f</p>' % tfidf_sims[-1]
                 print '</div>'
-        print '<hr><div>'
-        print '<b>Sample Correlation between Product and TF-IDF Sims: '
-        correlation = sampleCorrelation(prod_sims, tfidf_sims)
-        print '%f</b></div>' % correlation
+        if tfidf:
+            print '<hr><div>'
+            print '<b>Sample Correlation between Product and TF-IDF Sims: '
+            correlation = sampleCorrelation(prod_sims, tfidf_sims)
+            print '%f</b></div>' % correlation
     print '</body></html>'
 
 def main():
