@@ -105,19 +105,5 @@ def main():
     print 'Saving walk matrix to %s. . .' % options.savefile
     np.savez(options.savefile, matrix=walkMatrix, nodes=nodes)
 
-    # debugging
-    #print 'Do debugging. . .'
-    #item = 1246874
-    #topn = 10
-    #destinations =\
-    #    [(ind, prob) for ind, prob in enumerate(walkMatrix[item2id[item],:])]
-    #destinations = sorted(destinations, key=lambda x: x[1], reverse=True)
-    #print 'dest: prob for %d (top %d)' % (item, topn)
-    #for i in range(topn):
-    #    print '%d: %f' % (nodes[destinations[i][0]], destinations[i][1])
-
-    # TODO: write walkMatrix to disk and/or construct a new graph from
-    # walkMatrix.
-
 if __name__ == '__main__':
     main()
