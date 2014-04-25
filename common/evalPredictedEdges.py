@@ -11,6 +11,7 @@ import pickle
 import random
 import os
 import sys
+import numpy as np
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -38,6 +39,24 @@ def overlappingEdges(edges1, edges2):
             j += 1
     return overlaps
 
+def getRelevantLostEdges(lost_edges, predicted_nodes):
+    relevant_lost_edges = []
+    i = 0
+    j = 0
+    lost_edges_len = len(lost_edges)
+    predicted_nodes_len = len(predicted_nodes)
+    while i < lost_edges_len and j < predicted_nodes_len:
+        if lost_edges[i][0] < predicted_nodes[j]:
+            i += 1
+        else:
+            while i < lost_edges_len and lost_edges[i][0] == predicted_nodes[j]:
+                i += 1
+            j += 1
+
+def getPredictedNodes(predicted_edges):
+    predicted_edges = np.array(predicted_edges)
+    return np.unique(predicted_edges[:, 0:1])
+
 def main():
     # Parse options
     usage = 'Usage: %prog lost_edges.pickle predicted_edges.pickle'
@@ -59,6 +78,10 @@ def main():
     # sort edges
     lost_edges.sort()
     predicted_edges.sort()
+
+    # ignore lost_edges frome nodes not predicted
+    predicted_nodes = getPredictedNodes(predicted_edges)
+    relevant_lost_edges = getRelevantLostEdges(lost_edges, predicted_nodes)
 
     # get number of overlapping edges in these lists
     overlap = overlappingEdges(lost_edges, predicted_edges)
