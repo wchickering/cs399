@@ -29,6 +29,9 @@ def getParser(usage=None):
     parser.add_option('-t', '--teleport', type='float', dest='teleport',
         default=0.0, help='Weight of additional "teleportation" edge.',
         metavar='FLOAT')
+    parser.add_option('--savefile', dest='savefile',
+        default='data/walkMatrix.npz',
+        help='Save file name for random walk matrix.', metavar='FILE')
     return parser
 
 def loadGraph(fname):
@@ -97,6 +100,10 @@ def main():
     # do random walk
     print 'Performing %d step random walk. . .' % options.k
     walkMatrix = randomWalk(tranMatrix, options.k)
+
+    # write walkMatrix nodes to disk
+    print 'Saving walk matrix to %s. . .' % options.savefile
+    np.savez(options.savefile, matrix=walkMatrix, nodes=nodes)
 
     # debugging
     #print 'Do debugging. . .'
