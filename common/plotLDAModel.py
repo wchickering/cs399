@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from optparse import OptionParser
-import sqlite3
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
@@ -13,18 +12,8 @@ import LDA_util as lda
 # params
 saveFormat = 'jpg'
 
-# db params
-selectCategoryProductsStmt =\
-   ('SELECT Id '
-    'FROM Categories '
-    'WHERE Category = :Category ')
-
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-d', '--database', dest='dbname', default=None,
-        help='Name of Sqlite3 product database.', metavar='DBNAME')
-    parser.add_option('--category', dest='category', default=None,
-        help='Category to confine start of random walks.', metavar='CAT')
     parser.add_option('--bins', type='int', dest='bins', default=100,
         help='Number of bins in histograms.', metavar='NUM')
     parser.add_option('--savedir', dest='savedir', default=None,
@@ -33,13 +22,7 @@ def getParser(usage=None):
         help='Show plots.')
     return parser
 
-def plotModel(model, items, numBins, savedir, show=False):
-    print >> sys.stderr, 'Plot each topic distribution. . .'
-    if items is not None:
-        ids = [model.id2word.token2id[str(item)] for item in items\
-               if str(item) in model.id2word.token2id]
-    else:
-        ids = None
+def plotModel(model, numBins, savedir, show=False):
     p_topic_given_item = lda.getTopicGivenItemProbs(model)
     first = True
     for topic in range(model.num_topics):
@@ -47,13 +30,7 @@ def plotModel(model, items, numBins, savedir, show=False):
             first = False
         else:
             plt.figure()
-        if ids is not None:
-            probs = [prob for ind, prob in\
-                     enumerate(p_topic_given_item[topic,:]) if ind in ids]
-        else:
-            probs = p_topic_given_item[topic,:]
-        print 'topic %d: mean=%f, min=%f, max=%f' %\
-              (topic, np.mean(probs), min(probs), max(probs))
+        probs = p_topic_given_item[topic,:]
         n, bins, patches = plt.hist(probs, numBins)
         plt.savefig(os.path.join(savedir, 'topic%d.%s' % (topic, saveFormat)))
     if show:
@@ -61,7 +38,7 @@ def plotModel(model, items, numBins, savedir, show=False):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <lda.pickle>'
+    usage = 'Usage: %prog [options] <model.pickle>'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 1:
@@ -79,25 +56,13 @@ def main():
         return
 
     # load lda model
-    print >> sys.stderr, 'Load LDA model. . .'
+    print 'Loading model. . .'
     with open(modelfname, 'r') as f:
         model = pickle.load(f)
 
-    # connect to db if confined to category
-    if options.category is not None:
-        if options.dbname is None:
-            print >> sys.stderr,\
-                'ERROR: Must provide --database if --category provided'
-            return
-        db_conn = sqlite3.connect(options.dbname)
-        db_curs = db_conn.cursor()
-        db_curs.execute(selectCategoryProductsStmt, (options.category,))
-        items = [row[0] for row in db_curs.fetchall()]
-    else:
-        items = None
-
     # generate plots
-    plotModel(model, items, options.bins, savedir, options.show)
+    print >> 'Plotting topic distributions. . .'
+    plotModel(model, options.bins, savedir, options.show)
 
 if __name__ == '__main__':
     main()

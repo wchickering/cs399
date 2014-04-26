@@ -25,7 +25,6 @@ def getParser(usage=None):
     return parser
 
 def plotModel(u, s, k, numBins, savedir, show=False):
-    print >> sys.stderr, 'Plot each concept projection. . .'
     term_concepts = lsi.getTermConcepts(u, s, k)
     first = True
     for concept in range(k):
@@ -34,8 +33,6 @@ def plotModel(u, s, k, numBins, savedir, show=False):
         else:
             plt.figure()
         values = term_concepts[concept,:]
-        print 'concept %d: mean=%f, min=%f, max=%f' %\
-              (concept, np.mean(values), min(values), max(values))
         n, bins, patches = plt.hist(values, numBins)
         plt.savefig(os.path.join(savedir,
                                  'concept%d.%s' % (concept, saveFormat)))
@@ -44,7 +41,7 @@ def plotModel(u, s, k, numBins, savedir, show=False):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <lda.pickle>'
+    usage = 'Usage: %prog [options] <svd.npz>'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 1:
@@ -62,7 +59,7 @@ def main():
         return
 
     # load LSI model
-    print >> sys.stderr, 'Load LSI model. . .'
+    print 'Loading model. . .'
     npzfile = np.load(modelfname)
     u = npzfile['u']
     s = npzfile['s']
@@ -70,6 +67,7 @@ def main():
     id2word = npzfile['nodes']
 
     # generate plots
+    print 'Plotting concept distributions. . .'
     plotModel(u, s, options.k, options.bins, savedir, options.show)
 
 if __name__ == '__main__':
