@@ -24,7 +24,7 @@ def loadGraph(fname):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <matrix.npz> <item>'
+    usage = 'Usage: %prog [options] <randomWalk.npz> <item>'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 2:
@@ -39,22 +39,22 @@ def main():
     print 'Loading matrix from %s. . .' % matrixfname
     npzfile = np.load(matrixfname)
     matrix = npzfile['matrix']
-    id2item = npzfile['nodes']
+    dictionary = npzfile['dictionary']
 
     itemId = -1
-    for i in range(len(id2item)):
-        if str(id2item[i]) == item:
+    for i in range(len(dictionary)):
+        if str(dictionary[i]) == item:
             itemId = i
             break
     if itemId == -1:
-        print >> sys.stderr, 'ERROR: Failed to find item in id2item dictionary.'
+        print >> sys.stderr, 'ERROR: Failed to find item in dictionary.'
         return
     destinations =\
         [(ind, prob) for ind, prob in enumerate(matrix[itemId,:])]
     destinations = sorted(destinations, key=lambda x: x[1], reverse=True)
     print 'dest: prob for %s (top %d)' % (item, options.topn)
     for i in range(options.topn):
-        print '%d: %f' % (id2item[destinations[i][0]], destinations[i][1])
+        print '%d: %f' % (dictionary[destinations[i][0]], destinations[i][1])
 
 if __name__ == '__main__':
     main()

@@ -64,7 +64,7 @@ def main():
     u = npzfile['u']
     s = npzfile['s']
     v = npzfile['v']
-    id2word = npzfile['nodes']
+    dictionary = npzfile['dictionary']
 
     # generate plots
     print 'Plotting concept distributions. . .'

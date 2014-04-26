@@ -66,10 +66,10 @@ def sampleCorrelation(listA, listB):
         varB += (listB[i] - avgB)**2
     return numerator/math.sqrt(varA*varB)
 
-def displayConceptImages(u, k, concept, topn, reverse, id2word, translator,
+def displayConceptImages(u, k, concept, topn, reverse, dictionary, translator,
                          term_concepts):
     item_dist = lsi.showConcept(u, k, concept, topn=topn, reverse=reverse)
-    items = [str(id2word[pair[1]]) for pair in item_dist]
+    items = [str(dictionary[pair[1]]) for pair in item_dist]
     descriptions = translator.sessionToDesc(items)
     if reverse:
         sectionTitle = 'Top'
@@ -87,7 +87,7 @@ def displayConceptImages(u, k, concept, topn, reverse, id2word, translator,
         print '</table></td></tr></table></div>' 
     print '</div>'
 
-def genHtml(u, s, k, id2word, translator, topn, tfidf=None, compare=False,
+def genHtml(u, s, k, dictionary, translator, topn, tfidf=None, compare=False,
             noimages=False):
     print >> sys.stderr, 'Compute term concepts. . .'
     term_concepts = lsi.getTermConcepts(u, s, k)
@@ -107,10 +107,10 @@ def genHtml(u, s, k, id2word, translator, topn, tfidf=None, compare=False,
             print '</ul>'
         if not noimages:
             # top 10
-            displayConceptImages(u, k, concept, topn, True, id2word,
+            displayConceptImages(u, k, concept, topn, True, dictionary,
                                  translator, term_concepts)
             # bottom 10
-            displayConceptImages(u, k, concept, topn, False, id2word,
+            displayConceptImages(u, k, concept, topn, False, dictionary,
                                  translator, term_concepts)
         print '</div>'
     if compare and k > 1:
@@ -158,7 +158,7 @@ def main():
     u = npzfile['u']
     s = npzfile['s']
     v = npzfile['v']
-    id2word = npzfile['nodes']
+    dictionary = npzfile['dictionary']
 
     # get translator
     translator = SessionTranslator(options.dbname)
@@ -176,7 +176,7 @@ def main():
         tfidf = None
 
     # generate html document
-    genHtml(u, s, options.k, id2word, translator, options.topn, tfidf=tfidf,
+    genHtml(u, s, options.k, dictionary, translator, options.topn, tfidf=tfidf,
             compare=options.compare, noimages=options.noimages)
 
 if __name__ == '__main__':

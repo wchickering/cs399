@@ -39,7 +39,7 @@ def main():
     print 'Loading matrix from %s. . .' % matrixfname
     npzfile = np.load(matrixfname)
     matrix = npzfile['matrix']
-    nodes = npzfile['nodes']
+    dictionary = npzfile['dictionary']
 
     # do svd
     print 'Performing SVD. . .'
@@ -47,7 +47,7 @@ def main():
 
     ## write SVD products to disk
     print 'Saving SVD products to %s. . .' % options.savefile
-    np.savez(options.savefile, u=u, s=s, v=v, nodes=nodes)
+    np.savez(options.savefile, u=u, s=s, v=v, dictionary=dictionary)
 
 if __name__ == '__main__':
     main()

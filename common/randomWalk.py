@@ -33,7 +33,7 @@ def getParser(usage=None):
         help='Probability of teleporting back to starting node.',
         metavar='FLOAT')
     parser.add_option('--savefile', dest='savefile',
-        default='data/walkMatrix.npz',
+        default='data/randomWalk.npz',
         help='Save file name for random walk matrix.', metavar='FILE')
     return parser
 
@@ -56,20 +56,19 @@ def buildTransitionMatrix(graph, nodes, teleport):
         p = 1.0/normalization
         for neighbor in neighbors:
             tranMatrix[node2id[node], node2id[neighbor]] += p
-    return tranMatrix, node2id
+    return tranMatrix
 
 def randomWalk(tranMatrix, k, home):
     assert(tranMatrix.shape[0] == tranMatrix.shape[1])
-    walkMatrix = np.identity(tranMatrix.shape[0])
+    probMatrix = np.identity(tranMatrix.shape[0])
     for i in range(k):
         # transition
-        walkMatrix = np.dot(tranMatrix, walkMatrix)
+        probMatrix = np.dot(tranMatrix, probMatrix)
         # teleport home
-        homeMatrix = home*walkMatrix
-        walkMatrix -= homeMatrix
-        walkMatrix += np.diag(homeMatrix.sum(axis=1))
-        
-    return walkMatrix
+        homeMatrix = home*probMatrix
+        probMatrix -= homeMatrix
+        probMatrix += np.diag(homeMatrix.sum(axis=1))
+    return probMatrix
 
 def main():
     # Parse options
@@ -97,22 +96,22 @@ def main():
         db_curs = db_conn.cursor()
         print 'Reading category products. . .'
         db_curs.execute(selectCategoryProductsStmt, (options.category,))
-        nodes = [row[0] for row in db_curs.fetchall() if row[0] in graph]
-        print 'Retrieved %d category products.' % len(nodes)
+        dictionary = [row[0] for row in db_curs.fetchall() if row[0] in graph]
+        print 'Retrieved %d category products.' % len(dictionary)
     else:
-        nodes = graph.keys()
+        dictionary = graph.keys()
 
     # create transition matrix
     print 'Building transition matrix. . .'
-    tranMatrix, item2id = buildTransitionMatrix(graph, nodes, options.teleport)
+    tranMatrix = buildTransitionMatrix(graph, dictionary, options.teleport)
 
     # do random walk
     print 'Performing %d step random walk. . .' % options.k
-    walkMatrix = randomWalk(tranMatrix, options.k, options.home)
+    probMatrix = randomWalk(tranMatrix, options.k, options.home)
 
-    # write walkMatrix nodes to disk
+    # write probMatrix nodes to disk
     print 'Saving walk matrix to %s. . .' % options.savefile
-    np.savez(options.savefile, matrix=walkMatrix, nodes=nodes)
+    np.savez(options.savefile, matrix=probMatrix, dictionary=dictionary)
 
 if __name__ == '__main__':
     main()
