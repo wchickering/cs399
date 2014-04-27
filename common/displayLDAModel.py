@@ -71,6 +71,32 @@ def sampleCorrelation(listA, listB):
         varB += (listB[i] - avgB)**2
     return numerator/math.sqrt(varA*varB)
 
+def displayTopicImages(model, topic, topn, reverse, translator,
+                       p_topic_given_item):
+    if reverse:
+        item_dist = model.show_topic(topic, topn=topn)
+    else:
+        full_item_dist = model.show_topic(topic, topn=len(model.id2word))
+        full_item_dist.reverse()
+        item_dist = full_item_dist[0:topn]
+    items = [pair[1] for pair in item_dist]
+    descriptions = translator.sessionToDesc(items)
+    if reverse:
+        sectionTitle = 'Top'
+    else:
+         sectionTitle = 'Bottom'
+    print '<div><b>%s %d</b>' % (sectionTitle, len(items))
+    for i in range(len(items)):
+        imgsrc = imgsrcTemplate % items[i]
+        print '<div><table><tr><td><img src="%s"></td>' % imgsrc
+        mixture = p_topic_given_item[:,model.id2word.token2id[items[i]]]
+        print '<td><table>'
+        for t in range(model.num_topics):
+            print '<tr><td>%d, %.3f</td></tr>' % (t, mixture[t])
+        print '<tr><td>(%s) %s</td></tr>' % (items[i], descriptions[i])
+        print '</table></td></tr></table></div>'
+    print '</div>'
+
 def genHtml(model, translator, topn, test_corpus=None, tfidf=None,
             compare=False, noimages=False):
     print >> sys.stderr, 'Compute p(topic | item) values. . .'
@@ -95,18 +121,8 @@ def genHtml(model, translator, topn, test_corpus=None, tfidf=None,
                     (tfidf[topic][i][0], tfidf[topic][i][1])
             print '</ul>'
         if not noimages:
-            item_dist = model.show_topic(topic, topn=topn)
-            items = [pair[1] for pair in item_dist]
-            descriptions = translator.sessionToDesc(items)
-            for i in range(len(items)):
-                imgsrc = imgsrcTemplate % items[i]
-                print '<div><table><tr><td><img src="%s"></td>' % imgsrc
-                mixture = p_topic_given_item[:,model.id2word.token2id[items[i]]]
-                print '<td><table>'
-                for t in range(model.num_topics):
-                    print '<tr><td>%d, %.3f</td></tr>' % (t, mixture[t])
-                print '<tr><td>(%s) %s</td></tr>' % (items[i], descriptions[i])
-                print '</table></td></tr></table></div>' 
+            displayTopicImages(model, topic, topn, True, translator,
+                               p_topic_given_item)
         print '</div>'
     if compare and model.num_topics > 1:
         print >> sys.stderr, 'Compare topics. . .'

@@ -106,10 +106,10 @@ def genHtml(u, s, k, dictionary, translator, topn, tfidf=None, compare=False,
                     (tfidf[concept][i][0], tfidf[concept][i][1])
             print '</ul>'
         if not noimages:
-            # top 10
+            # top N
             displayConceptImages(u, k, concept, topn, True, dictionary,
                                  translator, term_concepts)
-            # bottom 10
+            # bottom N
             displayConceptImages(u, k, concept, topn, False, dictionary,
                                  translator, term_concepts)
         print '</div>'
