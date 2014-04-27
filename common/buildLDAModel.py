@@ -68,22 +68,21 @@ def getCorpusFromDocs(filename, dictionary):
     corpus = [dictionary.doc2bow(record) for record in records]
     return corpus
 
-def buildModel(corpus, dictionary, num_topics, passes, alpha):
-    model = ldamodel.LdaModel(corpus=corpus,
-                            num_topics=num_topics,
-                            id2word=dictionary,
-                            chunksize=chunksize,
-                            passes=passes,
-                            update_every=update_every,
-                            alpha=alpha,
-                            eta=eta,
-                            decay=decay,
-                            eval_every=eval_every)
-    return model
+def buildModel(dictionary, num_topics, passes, alpha):
+    return ldamodel.LdaModel(corpus=None,
+                             num_topics=num_topics,
+                             id2word=dictionary,
+                             chunksize=chunksize,
+                             passes=passes,
+                             update_every=update_every,
+                             alpha=alpha,
+                             eta=eta,
+                             decay=decay,
+                             eval_every=eval_every)
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options]'
+    usage = 'Usage: %prog [options] [model.pickle]'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if options.docfile is None and options.matrixfile is None:
@@ -91,13 +90,27 @@ def main():
                               '(--docfile) or matrix file (--matrixfile).')
         return
 
+    # Load LDA model
+    model = None
+    dictionary = None
+    if len(args) == 1:
+        modelfname = args[0]
+        if not os.path.isfile(modelfname):
+            print >> sys.stderr, 'ERROR: Cannot find %s' % modelfname
+            return
+        print 'Loading model from %s. . .' % modelfname
+        with open(modelfname, 'r') as f:
+            model = pickle.load(f)
+            dictionary = model.id2word
+
     # Build dictionary
-    if options.matrixfile is not None:
-        print 'Building dictionary from %s. . .' % options.matrixfile
-        dictionary = getDictFromMatrix(options.matrixfile)
-    else:
-        print 'Building dictionary from %s. . .' % options.docfile
-        dictionary = getDictFromDocs(options.docfile)
+    if dictionary is None:
+        if options.matrixfile is not None:
+            print 'Building dictionary from %s. . .' % options.matrixfile
+            dictionary = getDictFromMatrix(options.matrixfile)
+        else:
+            print 'Building dictionary from %s. . .' % options.docfile
+            dictionary = getDictFromDocs(options.docfile)
 
     # Construct corpus
     if options.matrixfile is not None:
@@ -107,10 +120,15 @@ def main():
         print 'Building corpus from %s. . .' % options.docfile
         corpus = getCorpusFromDocs(options.docfile, dictionary)
 
+    # Build model
+    if model is None:
+        print 'Building model. . .'
+        model = buildModel(dictionary, options.num_topics, options.passes,
+                           options.alpha)
+
     # Train LDA Model
     print 'Training model. . .'
-    model = buildModel(corpus, dictionary, options.num_topics, options.passes,
-                       options.alpha)
+    model.update(corpus)
 
     # Save LDA Model
     print 'Saving model to %s. . .' % options.lda_filename
