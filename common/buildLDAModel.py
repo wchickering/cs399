@@ -7,14 +7,27 @@ Construct and save LDA model using Radim Rehurek's gensim module.
 from gensim import corpora
 from gensim.models import ldamodel
 from optparse import OptionParser
+import numpy as np
 import pickle
 import csv
+import os
+import sys
+
+# gensim params
+chunksize=100
+update_every=1
+eta=None
+decay=0.5
+eval_every=10
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-f', '--file', dest='filename', default=None,
+    parser.add_option('-f', '--docfile', dest='docfile', default=None,
         help=('CSV file containing training data. Each line consists of tokens '
               'liked in a single session.'), metavar='FILE')
+    parser.add_option('-m', '--matrixfile', dest='matrixfile', default=None,
+        help=('NPZ file with probability matrix from random walks '
+              '(rows are distributions).'), metavar='FILE')
     parser.add_option('-l', '--lda-file', dest='lda_filename',
         default='lda.pickle', help='Save file for LDA model.',
         metavar='FILE')
@@ -26,6 +39,19 @@ def getParser(usage=None):
         help='Alpha param for gensim.LdaModel().', metavar='VAL')
     return parser
 
+def getDictFromMatrix(filename):
+    npzfile = np.load(filename)
+    matrix = npzfile['matrix']
+    id2item = npzfile['dictionary']
+    return corpora.Dictionary([[str(item)] for item in id2item])
+
+def getCorpusFromMatrix(filename, dictionary):
+    npzfile = np.load(filename)
+    matrix = npzfile['matrix']
+    id2item = npzfile['dictionary']
+    return [[(dictionary.token2id[str(id2item[ind])], prob)\
+            for ind, prob in enumerate(doc)] for doc in matrix]
+
 def getDictFromDocs(filename):
     termDict = {}
     with open(filename) as csvIn:
@@ -33,9 +59,8 @@ def getDictFromDocs(filename):
         for record in reader:
             for term in record:
                 termDict[term] = 1
-    terms = [[term] for term in termDict.keys()]
-    return corpora.Dictionary(terms)
-            
+    return corpora.Dictionary([[term] for term in termDict.keys()])
+
 def getCorpusFromDocs(filename, dictionary):
     with open(filename) as csvIn:
         reader = csv.reader(csvIn)
@@ -47,13 +72,13 @@ def buildModel(corpus, dictionary, num_topics, passes, alpha):
     model = ldamodel.LdaModel(corpus=corpus,
                             num_topics=num_topics,
                             id2word=dictionary,
-                            chunksize=100,
+                            chunksize=chunksize,
                             passes=passes,
-                            update_every=1,
+                            update_every=update_every,
                             alpha=alpha,
-                            eta=None,
-                            decay=0.5,
-                            eval_every=10)
+                            eta=eta,
+                            decay=decay,
+                            eval_every=eval_every)
     return model
 
 def main():
@@ -61,14 +86,26 @@ def main():
     usage = 'Usage: %prog [options]'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
+    if options.docfile is None and options.matrixfile is None:
+        print >> sys.stderr, ('ERROR: Must provide either document file '
+                              '(--docfile) or matrix file (--matrixfile).')
+        return
 
     # Build dictionary
-    print 'Building dictionary from %s. . .' % options.filename
-    dictionary = getDictFromDocs(options.filename)
+    if options.matrixfile is not None:
+        print 'Building dictionary from %s. . .' % options.matrixfile
+        dictionary = getDictFromMatrix(options.matrixfile)
+    else:
+        print 'Building dictionary from %s. . .' % options.docfile
+        dictionary = getDictFromDocs(options.docfile)
 
     # Construct corpus
-    print 'Building corpus from %s. . .' % options.filename
-    corpus = getCorpusFromDocs(options.filename, dictionary)
+    if options.matrixfile is not None:
+        print 'Building corpus from %s. . .' % options.matrixfile
+        corpus = getCorpusFromMatrix(options.matrixfile, dictionary)
+    else:
+        print 'Building corpus from %s. . .' % options.docfile
+        corpus = getCorpusFromDocs(options.docfile, dictionary)
 
     # Train LDA Model
     print 'Training model. . .'
