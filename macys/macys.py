@@ -15,7 +15,7 @@ import signal
 
 # params
 categories_fname = 'categories.json'
-imageFileTemplate = 'images/%d.jpg'
+imageFileTemplate = 'data/images/%d.jpg'
 metaUrlTemplate = 'http://www1.macys.com/catalog/category/facetedmeta?sortBy=NAME&productsPerPage=%d&pageIndex=%d&parentCategoryId=%d&categoryId=%d'
 productsUrlTemplate = 'http://www1.macys.com/shop/catalog/product/thumbnail/1?edge=hybrid&limit=none&suppressColorSwatches=false&categoryId=%d&ids=%s'
 productsPerPage = 100
