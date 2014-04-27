@@ -32,6 +32,7 @@ def plotModel(model, numBins, savedir, show=False):
             plt.figure()
         probs = p_topic_given_item[topic,:]
         n, bins, patches = plt.hist(probs, numBins)
+        plt.xlim([0.0,1.0])
         plt.savefig(os.path.join(savedir, 'topic%d.%s' % (topic, saveFormat)))
     if show:
         plt.show()
@@ -61,7 +62,7 @@ def main():
         model = pickle.load(f)
 
     # generate plots
-    print >> 'Plotting topic distributions. . .'
+    print 'Plotting topic distributions. . .'
     plotModel(model, options.bins, savedir, options.show)
 
 if __name__ == '__main__':
