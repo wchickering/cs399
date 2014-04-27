@@ -32,6 +32,8 @@ def getParser(usage=None):
     parser.add_option('--home', type='float', dest='home', default=0.0,
         help='Probability of teleporting back to starting node.',
         metavar='FLOAT')
+    parser.add_option('--reverse', action='store_true', dest='reverse',
+        default=False, help='Follow incoming edges.')
     parser.add_option('--savefile', dest='savefile',
         default='data/randomWalk.npz',
         help='Save file name for random walk matrix.', metavar='FILE')
@@ -42,23 +44,23 @@ def loadGraph(fname):
         graph = pickle.load(f)
     return graph
 
-def buildTransitionMatrix(graph, nodes, teleport):
+def buildTransitionMatrix(graph, nodes, teleport=0.0, reverse=False):
     node2id = {}
     for i in range(len(nodes)):
         node2id[nodes[i]] = i
     tranMatrix = np.zeros((len(nodes), len(nodes)))
     for node in nodes:
-        neighbors = [neighbor for neighbor in graph[node][0]\
+        neighbors = [neighbor for neighbor in graph[node][1 if reverse else 0]\
                      if neighbor in node2id]
         neighbors.append(node) # self loop
         normalization = len(neighbors) + teleport
-        tranMatrix[node2id[node],:] = teleport/(normalization*len(nodes));
+        tranMatrix[:,node2id[node]] = teleport/(normalization*len(nodes));
         p = 1.0/normalization
         for neighbor in neighbors:
-            tranMatrix[node2id[node], node2id[neighbor]] += p
+            tranMatrix[node2id[neighbor], node2id[node]] += p
     return tranMatrix
 
-def randomWalk(tranMatrix, k, home):
+def randomWalk(tranMatrix, k, home=0.0):
     assert(tranMatrix.shape[0] == tranMatrix.shape[1])
     probMatrix = np.identity(tranMatrix.shape[0])
     for i in range(k):
@@ -67,8 +69,8 @@ def randomWalk(tranMatrix, k, home):
         # teleport home
         homeMatrix = home*probMatrix
         probMatrix -= homeMatrix
-        probMatrix += np.diag(homeMatrix.sum(axis=1))
-    return probMatrix
+        probMatrix += np.diag(homeMatrix.sum(axis=0))
+    return probMatrix.transpose() # s.t. rows are distributions
 
 def main():
     # Parse options
@@ -103,13 +105,15 @@ def main():
 
     # create transition matrix
     print 'Building transition matrix. . .'
-    tranMatrix = buildTransitionMatrix(graph, dictionary, options.teleport)
+    tranMatrix = buildTransitionMatrix(graph, dictionary,
+                                       teleport=options.teleport,
+                                       reverse=options.reverse)
 
     # do random walk
     print 'Performing %d step random walk. . .' % options.k
-    probMatrix = randomWalk(tranMatrix, options.k, options.home)
+    probMatrix = randomWalk(tranMatrix, options.k, home=options.home)
 
-    # write probMatrix nodes to disk
+    # save probMatrix
     print 'Saving walk matrix to %s. . .' % options.savefile
     np.savez(options.savefile, matrix=probMatrix, dictionary=dictionary)
 
