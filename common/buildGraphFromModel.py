@@ -62,8 +62,6 @@ def main():
         return
 
     # load model
-    ldamodel = None
-    u, s = None, None
     if options.ldafile is not None:
         # process LDA model
         if not os.path.isfile(options.ldafile):
@@ -92,7 +90,7 @@ def main():
 
     # find neighbors
     distances, neighbors =\
-        searchEngine.kneighbors(data, n_neighbors=options.numedges)
+        searchEngine.kneighbors(data, n_neighbors=options.numedges+1)
 
     # make graph
     graph = makeGraph(neighbors)
