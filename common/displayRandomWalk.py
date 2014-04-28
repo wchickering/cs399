@@ -11,8 +11,13 @@ import os
 import sys
 import numpy as np
 
+# local modules
+from SessionTranslator import SessionTranslator
+
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
+    parser.add_option('-d', '--database', dest='dbname', default=None,
+        help='Name of Sqlite3 product database.', metavar='DBNAME')
     parser.add_option('-n', '--topn', type='int', dest='topn', default=10,
         help='Number of destinations to display.', metavar='NUM')
     return parser
@@ -21,6 +26,19 @@ def loadGraph(fname):
     with open(fname, 'r') as f:
         graph = pickle.load(f)
     return graph
+
+def getDestinations(item, matrix, dictionary):
+    itemId = -1
+    for i in range(len(dictionary)):
+        if dictionary[i] == item:
+            itemId = i
+            break
+    if itemId == -1:
+        print >> sys.stderr, 'ERROR: Failed to find item in dictionary.'
+        return None
+    destinations =\
+        [(dictionary[ind], prob) for ind, prob in enumerate(matrix[itemId,:])]
+    return sorted(destinations, key=lambda x: x[1], reverse=True)
 
 def main():
     # Parse options
@@ -33,7 +51,7 @@ def main():
     if not os.path.isfile(matrixfname):
         print >> sys.stderr, 'ERROR: Cannot find %s' % matrixfname
         return
-    item = args[1]
+    item = int(args[1])
 
     # load matrix
     print 'Loading matrix from %s. . .' % matrixfname
@@ -41,20 +59,33 @@ def main():
     matrix = npzfile['matrix']
     dictionary = npzfile['dictionary']
 
-    itemId = -1
-    for i in range(len(dictionary)):
-        if str(dictionary[i]) == item:
-            itemId = i
-            break
-    if itemId == -1:
-        print >> sys.stderr, 'ERROR: Failed to find item in dictionary.'
-        return
-    destinations =\
-        [(ind, prob) for ind, prob in enumerate(matrix[itemId,:])]
-    destinations = sorted(destinations, key=lambda x: x[1], reverse=True)
-    print 'dest: prob for %s (top %d)' % (item, options.topn)
+    # get translator
+    if options.dbname is not None:
+        translator = SessionTranslator(options.dbname)
+    else:
+        translator = None
+
+    # get destinations
+    destinations = getDestinations(item, matrix, dictionary)
+
+    # display top N destinations
+    name = None
+    if translator is not None:
+        description = translator.sessionToDesc([item])[0]
+        name = '(%d) %s' % (item, description)
+    if name is None:
+        name = '%d' % item
+    print 'dest: prob for %s (top %d)' % (name, options.topn)
     for i in range(options.topn):
-        print '%d: %f' % (dictionary[destinations[i][0]], destinations[i][1])
+        item = destinations[i][0]
+        distance = destinations[i][1]
+        name = None
+        if translator is not None:
+            description = translator.sessionToDesc([item])[0]
+            name = '(%d) %s' % (item, description)
+        if name is None:
+            name = '%d' % item
+        print '%s: %f' % (name, distance)
 
 if __name__ == '__main__':
     main()
