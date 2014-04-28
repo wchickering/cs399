@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 class ItemPredictor(object):
     """An abstract class for item prediction."""

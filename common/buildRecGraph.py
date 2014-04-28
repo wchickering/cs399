@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 """
 Create and save an undirected graph from Recommends relations.

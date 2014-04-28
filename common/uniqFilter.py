@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 """
 Removes repeated lines while also requiring minimum number of repeats to qualify

@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 """
 Constructs an image by concatenating two provided images side-by-side.

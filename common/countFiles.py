@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 """
 Count files in a directory matching a Unix shell-style wildcard expression.

@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 """
 Finds components of the recommendation graph, labeling each item with its

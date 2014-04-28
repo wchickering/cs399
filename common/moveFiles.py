@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 """
 Move files matching a Unix shell-style wildcard expression between directories.

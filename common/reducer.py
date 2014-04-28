@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 """
 Takes a sorted csv file containing two columns: a integer-valued key and a

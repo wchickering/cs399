@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 """
 Performs a breadth first search (BFS) originating from multiple sources. Returns

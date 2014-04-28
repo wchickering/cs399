@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 from ItemPredictor import ItemPredictor
 from RoundRobinBFS_directed import roundRobinBFS
