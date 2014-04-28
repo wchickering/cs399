@@ -85,7 +85,7 @@ def main():
             name = '(%d) %s' % (neighbor, description)
         if name is None:
             name = '%d' % neighbor
-        print '%s: %.2e' % (name, distance)
+        print '%s: %.4f' % (name, distance)
 
 if __name__ == '__main__':
     main()

@@ -29,7 +29,7 @@ class KNNSearchEngine:
     def _makeReverseDictionary(self):
         self.reverseDictionary = {}
         for i in range(len(self.dictionary)):
-            self.reverseDictionary[self.dictionary[i]] = i
+            self.reverseDictionary[str(self.dictionary[i])] = i
 
 
 ##########################

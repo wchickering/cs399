@@ -49,7 +49,7 @@ def main():
         if not os.path.isfile(options.ldafile):
             print >> sys.stderr, 'ERROR: Cannot find %s' % options.ldafile
             return
-        print >> sys.stderr, 'Load LDA model. . .'
+        print >> sys.stderr, 'Load LDA model from %s. . .' % options.ldafile
         with open(options.ldafile, 'r') as f:
             ldamodel = pickle.load(f)
         dictionary = ldamodel.id2word
@@ -59,7 +59,7 @@ def main():
         if not os.path.isfile(options.svdfile):
             print >> sys.stderr, 'ERROR: Cannot finf %s' % options.svdfile
             return
-        print >> sys.stderr, 'Load LSI model. . .'
+        print >> sys.stderr, 'Load LSI model from %s. . .' % options.svdfile
         npzfile = np.load(options.svdfile)
         u = npzfile['u']
         s = npzfile['s']
@@ -87,7 +87,7 @@ def main():
         name = '(%d) %s' % (item, description)
     if name is None:
         name = '%d' % item
-    print 'dest: prob for %s (top %d)' % (name, options.topn)
+    print 'nghbr: dist for %s (top %d)' % (name, options.topn)
     for i in range(len(neighbors[0])):
         neighbor = int(neighbors[0][i])
         distance = distances[0][i]
