@@ -5,12 +5,14 @@ import numpy as np
 
 class KNNSearchEngine:
     """
-    k nearest neighbor search engine. Essentially a wrapper for
+    k nearest neighbor search engine. Essentially a wrapper of
     sklearn.neighbors.NearestNeighbors class.
     """
 
     def __init__(self, data, dictionary, algorithm='ball_tree', leaf_size=30):
         self.dictionary = dictionary
+        self._makeReverseDictionary()
+        self.data = data
         self.nbrs = NearestNeighbors(algorithm=algorithm, leaf_size=leaf_size)
         self.nbrs.fit(data)
 
@@ -19,6 +21,16 @@ class KNNSearchEngine:
             self.nbrs.kneighbors(query, n_neighbors=n_neighbors)
         neighbors = [[self.dictionary[i] for i in index] for index in indexes]
         return distances, neighbors
+
+    def kneighborsByName(self, items, n_neighbors=10):
+        query = [self.data[self.reverseDictionary[item]] for item in items]
+        return self.kneighbors(query, n_neighbors=n_neighbors)
+
+    def _makeReverseDictionary(self):
+        self.reverseDictionary = {}
+        for i in range(len(self.dictionary)):
+            self.reverseDictionary[self.dictionary[i]] = i
+
 
 ##########################
 # ROUGH UNIT TEST
@@ -44,13 +56,24 @@ def main():
 
     data = lda.getTopicGivenItemProbs(model).transpose()
     dictionary = model.id2word
-    engine = KNNSearchEngine(data, dictionary)
+    searchEngine = KNNSearchEngine(data, dictionary)
     index = 0
     item = dictionary[index]
     description = translator.sessionToDesc([item])
+
     print 'Finding neighbors of: (%s) %s' % (item, description)
     query = [data[index]]
-    distances, neighbors = engine.kneighbors(query)
+    distances, neighbors = searchEngine.kneighbors(query)
+    neighbor_descs = translator.sessionToDesc(neighbors[0])
+    print 'Neighbors:'
+    for i in range(len(neighbor_descs)):
+        print '(%s) %s (dist: %f)' %\
+              (neighbors[0][i], neighbor_descs[i], distances[0][i])
+
+    print ''
+    print 'Finding same neighbors by name. . .'
+    items = [item]
+    distances, neighbors = searchEngine.kneighborsByName(items)
     neighbor_descs = translator.sessionToDesc(neighbors[0])
     print 'Neighbors:'
     for i in range(len(neighbor_descs)):
