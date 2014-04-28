@@ -1,7 +1,7 @@
 from MagicWardrobe import MagicWardrobe
 import web
 
-db = web.database(dbn='sqlite', db='macys.db')
+db = web.database(dbn='sqlite', db='data/macys.db')
 sessionId = 1
 wardrobe = MagicWardrobe()
 wardrobe.initSession(sessionId)
@@ -42,7 +42,7 @@ def getProduct(productId):
 def getNextProduct(productId, liked):
     productId = int(productId)
     if productId == 0:
-        productId = 803678 # Magic productId for testing
+        productId = 1184526 # Magic productId for testing
     likes = []
     dislikes = []
     if liked == 'disliked':
