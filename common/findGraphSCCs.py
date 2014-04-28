@@ -35,6 +35,7 @@ from optparse import OptionParser
 import pickle
 import sys
 import os
+from collections import defaultdict
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -102,6 +103,15 @@ def main():
     if options.display:
         for c in components:
             print c
+
+    # compile stats
+    sizeCnt = defaultdict(int)
+    for c in components:
+        sizeCnt[len(c)] += 1
+    for cnt, cntCnt in sorted(sizeCnt.items()):
+        print '%d SCCs with %d nodes' % (cntCnt, cnt)
+    print '%d SCCs in total (%d nodes and %d edges in graph)' %\
+        (len(components), len(graph), sum([len(graph[n][0]) for n in graph]))
 
     # save components
     if options.savefile is not None:
