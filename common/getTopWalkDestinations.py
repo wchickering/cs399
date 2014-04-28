@@ -77,15 +77,15 @@ def main():
         name = '%d' % item
     print 'dest: prob for %s (top %d)' % (name, options.topn)
     for i in range(options.topn):
-        item = destinations[i][0]
+        neighbor = destinations[i][0]
         distance = destinations[i][1]
         name = None
         if translator is not None:
-            description = translator.sessionToDesc([item])[0]
-            name = '(%d) %s' % (item, description)
+            description = translator.sessionToDesc([neighbor])[0]
+            name = '(%d) %s' % (neighbor, description)
         if name is None:
-            name = '%d' % item
-        print '%s: %f' % (name, distance)
+            name = '%d' % neighbor
+        print '%s: %.2e' % (name, distance)
 
 if __name__ == '__main__':
     main()
