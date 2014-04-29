@@ -2,12 +2,12 @@
 
 from optparse import OptionParser
 import numpy as np
-import csv
 import math
 import pickle
 import os
 import sys
 
+# local modules
 import LSI_util as lsi
 from SessionTranslator import SessionTranslator
 
@@ -20,8 +20,6 @@ def getParser(usage=None):
     parser.add_option('-d', '--database', dest='dbname',
         default='data/macys.db',
         help='Name of Sqlite3 product database.', metavar='DBNAME')
-    parser.add_option('-k', type='int', dest='k', default=10,
-        help='Number of concepts in LSI model.', metavar='NUM')
     parser.add_option('-n', '--topn', type='int', dest='topn', default=10,
         help='Number of items per concept to print.', metavar='NUM')
     parser.add_option('--tfidf', dest='tfidf', default=None,
@@ -66,9 +64,9 @@ def sampleCorrelation(listA, listB):
         varB += (listB[i] - avgB)**2
     return numerator/math.sqrt(varA*varB)
 
-def displayConceptImages(u, k, concept, topn, reverse, dictionary, translator,
+def displayConceptImages(u, concept, topn, reverse, dictionary, translator,
                          term_concepts):
-    item_dist = lsi.showConcept(u, k, concept, topn=topn, reverse=reverse)
+    item_dist = lsi.showConcept(u, concept, topn=topn, reverse=reverse)
     items = [str(dictionary[pair[1]]) for pair in item_dist]
     descriptions = translator.sessionToDesc(items)
     if reverse:
@@ -81,22 +79,22 @@ def displayConceptImages(u, k, concept, topn, reverse, dictionary, translator,
         print '<div><table><tr><td><img src="%s"></td>' % imgsrc
         mixture = term_concepts[:,item_dist[i][1]]
         print '<td><table>'
-        for c in range(k):
+        for c in range(u.shape[1]):
             print '<tr><td>%d, %+.2e</td></tr>' % (c, mixture[c])
         print '<tr><td>(%s) %s</td></tr>' % (items[i], descriptions[i])
         print '</table></td></tr></table></div>' 
     print '</div>'
 
-def genHtml(u, s, k, dictionary, translator, topn, tfidf=None, compare=False,
+def genHtml(u, s, dictionary, translator, topn, tfidf=None, compare=False,
             noimages=False):
     print >> sys.stderr, 'Compute term concepts. . .'
-    term_concepts = lsi.getTermConcepts(u, s, k)
+    term_concepts = lsi.getTermConcepts(u, s)
     print '<html lang="en" debug="true">'
     print '<head><title>Display LSI Concepts</title></head>'
     print '<body>'
     # print top N items from each concept
     print >> sys.stderr, 'Display concept info. . .'
-    for concept in range(k):
+    for concept in range(u.shape[1]):
         print '<hr><div><h3>Concept: %d</h3>' % concept
         if tfidf is not None:
             print '<p>Top words for concept %d</p>' % concept
@@ -107,21 +105,21 @@ def genHtml(u, s, k, dictionary, translator, topn, tfidf=None, compare=False,
             print '</ul>'
         if not noimages:
             # top N
-            displayConceptImages(u, k, concept, topn, True, dictionary,
+            displayConceptImages(u, concept, topn, True, dictionary,
                                  translator, term_concepts)
             # bottom N
-            displayConceptImages(u, k, concept, topn, False, dictionary,
+            displayConceptImages(u, concept, topn, False, dictionary,
                                  translator, term_concepts)
         print '</div>'
-    if compare and k > 1:
+    if compare and u.shape[1] > 1:
         print >> sys.stderr, 'Compare concepts. . .'
         prod_sims = []
         tfidf_sims = []
-        for conceptA in range(k-1):
+        for conceptA in range(u.shape[1]-1):
             if tfidf:
                 tfidfA = [(x[1], x[0]) for x in tfidf[conceptA]]
                 tfidfA.sort(key=lambda x: x[1])
-            for conceptB in range(conceptA+1, k):
+            for conceptB in range(conceptA+1, u.shape[1]):
                 # compare conceptA and conceptB
                 print '<hr><div><b>Compare Concepts %d and %d</b>' %\
                       (conceptA, conceptB)
@@ -176,7 +174,7 @@ def main():
         tfidf = None
 
     # generate html document
-    genHtml(u, s, options.k, dictionary, translator, options.topn, tfidf=tfidf,
+    genHtml(u, s, dictionary, translator, options.topn, tfidf=tfidf,
             compare=options.compare, noimages=options.noimages)
 
 if __name__ == '__main__':

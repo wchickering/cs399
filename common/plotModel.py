@@ -25,8 +25,6 @@ def getParser(usage=None):
         help='Pickled LDA model.', metavar='FILE')
     parser.add_option('--svdfile', dest='svdfile', default=None,
         help='NPZ file of SVD products.', metavar='FILE')
-    parser.add_option('-k', type='int', dest='k', default=10,
-        help='Number of concepts in LSI model.', metavar='NUM')
     parser.add_option('--graph', dest='graphfile', default=None,
         help='Pickled recommendation graph.', metavar='FILE')
     parser.add_option('--bins', type='int', dest='bins', default=100,
@@ -132,7 +130,7 @@ def main():
         dictionary = {}
         for i in range(len(items)):
             dictionary[i] = int(items[i])
-        data = lsi.getTermConcepts(u, s, options.k)
+        data = lsi.getTermConcepts(u, s)
         xlim = None
 
     # build search engine

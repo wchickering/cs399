@@ -24,8 +24,6 @@ def getParser(usage=None):
         help='Pickled LDA model.', metavar='FILE')
     parser.add_option('--svdfile', dest='svdfile', default=None,
         help='NPZ file of SVD products.', metavar='FILE')
-    parser.add_option('-k', type='int', dest='k', default=10,
-        help='Number of concepts in LSI model.', metavar='NUM')
     parser.add_option('-n', '--topn', type='int', dest='topn', default=10,
         help='Number of nearest neighbors to display.', metavar='NUM')
     return parser
@@ -70,7 +68,7 @@ def main():
         dictionary = {}
         for i in range(len(items)):
             dictionary[i] = int(items[i])
-        data = lsi.getTermConcepts(u, s, options.k).transpose()
+        data = lsi.getTermConcepts(u, s).transpose()
 
     # build search engine
     searchEngine = KNNSearchEngine(data, dictionary)

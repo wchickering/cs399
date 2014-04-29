@@ -5,26 +5,14 @@ import math
 
 """
 Helper functions for use with Latent Semantic Indexing  via
-numpy.linalg.svd() products.
+rank-reduced numpy.linalg.svd() products.
 """
 
-def getU_k(u, k):
-    return u[:,0:k]
+def getTermConcepts(u, s):
+    return np.transpose(u.dot(np.linalg.inv(np.diag(s))))
 
-def getS_k(s, k):
-    return np.diag(s)[0:k,0:k]
-
-def getV_k(v, k):
-    return v[:,0,k]
-
-def getTermConcepts(u, s, k):
-    u_k = getU_k(u, k)
-    s_k = getS_k(s, k)
-    return np.transpose(u_k.dot(np.linalg.inv(s_k)))
-
-def showConcept(u, k, concept, topn=10, reverse=True):
-    u_k = getU_k(u, k)
-    termValues = u_k[:,concept]
+def showConcept(u, concept, topn=10, reverse=True):
+    termValues = u[:,concept]
     return sorted([(value, term) for term, value in enumerate(termValues)],
                   key=lambda x: x[0], reverse=reverse)[0:topn]
 
