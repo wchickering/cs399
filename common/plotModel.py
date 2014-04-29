@@ -131,7 +131,7 @@ def main():
 
     # generate plots
     print 'Plotting topic distributions. . .'
-    #plotModelTopics(data, options.bins, savedir, xlim=xlim, show=options.show)
+    plotModelTopics(data, options.bins, savedir, xlim=xlim, show=options.show)
 
     # analyze relation to original graph
     if options.graphfile is not None:
