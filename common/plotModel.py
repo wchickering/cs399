@@ -35,6 +35,8 @@ def getParser(usage=None):
         help='Directory to save figures in.', metavar='DIR')
     parser.add_option('--show', action='store_true', dest='show', default=False,
         help='Show plots.')
+    parser.add_option('--notopicplots', action='store_true',
+        dest='notopicplots', default=False, help='Do not produce topic plots.')
     return parser
 
 def loadGraph(fname):
@@ -51,6 +53,9 @@ def plotModelTopics(data, numBins, savedir, xlim=None, show=False):
             plt.figure()
         values = data[topic,:]
         n, bins, patches = plt.hist(values, numBins)
+        plt.title('Topic %d Distribution' % topic)
+        plt.ylabel('Number of Items (out of %d)' % data.shape[1])
+        plt.xlabel('Topic Amount')
         if xlim is not None:
             plt.xlim(xlim)
         plt.savefig(os.path.join(savedir, 'topic%d.%s' % (topic, saveFormat)))
@@ -60,6 +65,7 @@ def plotModelTopics(data, numBins, savedir, xlim=None, show=False):
 # TODO: Make this efficient
 def plotGraphAnalysis(graph, searchEngine, savedir, numBins=100, show=False):
     items = [item for item in searchEngine.dictionary.values() if item in graph]
+    numEdges = sum([len(graph[item][0]) for item in items])
     graphNeighbors = [graph[item][0] for item in items]
     distances, topicNeighbors =\
         searchEngine.kneighborsByName(items, n_neighbors=numBins)
@@ -70,9 +76,12 @@ def plotGraphAnalysis(graph, searchEngine, savedir, numBins=100, show=False):
         ranks = np.where(topicNbrs==graphNbrs)[1]
         neighborRanks += ranks.tolist()
         # place all missing ranks in extra overflow bin
-        neighborRanks += [numBins]*(graphNbrs.shape[0] - ranks.shape[0])
+        #neighborRanks += [numBins]*(graphNbrs.shape[0] - ranks.shape[0])
     plt.figure()
-    n, bins, patches = plt.hist(neighborRanks, numBins+1)
+    n, bins, patches = plt.hist(neighborRanks, numBins)
+    plt.title('Rank of graph NN measured in topic space')
+    plt.ylabel('Number of Edges (out of %d)' % numEdges)
+    plt.xlabel('NN Rank in Topic Space')
     plt.xlim([0,numBins])
     plt.savefig(os.path.join(savedir, 'graphAnalysis.%s' % saveFormat))
     if show:
@@ -130,8 +139,10 @@ def main():
     searchEngine = KNNSearchEngine(data.transpose(), dictionary)
 
     # generate plots
-    print 'Plotting topic distributions. . .'
-    plotModelTopics(data, options.bins, savedir, xlim=xlim, show=options.show)
+    if not options.notopicplots:
+        print 'Plotting topic distributions. . .'
+        plotModelTopics(data, options.bins, savedir, xlim=xlim,
+                        show=options.show)
 
     # analyze relation to original graph
     if options.graphfile is not None:
