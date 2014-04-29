@@ -52,7 +52,9 @@ def main():
         print >> sys.stderr, 'Load LDA model from %s. . .' % options.ldafile
         with open(options.ldafile, 'r') as f:
             ldamodel = pickle.load(f)
-        dictionary = ldamodel.id2word
+        dictionary = {}
+        for i, item in ldamodel.id2word.items():
+            dictionary[i] = int(item)
         data = lda.getTopicGivenItemProbs(ldamodel).transpose()
     else:
         # process LSI model
@@ -64,7 +66,10 @@ def main():
         u = npzfile['u']
         s = npzfile['s']
         v = npzfile['v']
-        dictionary = npzfile['dictionary']
+        items = npzfile['dictionary']
+        dictionary = {}
+        for i in range(len(items)):
+            dictionary[i] = int(items[i])
         data = lsi.getTermConcepts(u, s, options.k).transpose()
 
     # build search engine

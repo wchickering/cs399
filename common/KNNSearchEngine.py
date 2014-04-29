@@ -23,13 +23,13 @@ class KNNSearchEngine:
         return distances, neighbors
 
     def kneighborsByName(self, items, n_neighbors=10):
-        query = [self.data[self.reverseDictionary[str(item)]] for item in items]
+        query = [self.data[self.reverseDictionary[int(item)]] for item in items]
         return self.kneighbors(query, n_neighbors=n_neighbors)
 
     def _makeReverseDictionary(self):
         self.reverseDictionary = {}
         for i in range(len(self.dictionary)):
-            self.reverseDictionary[str(self.dictionary[i])] = i
+            self.reverseDictionary[self.dictionary[i]] = i
 
 
 ##########################
