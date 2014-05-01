@@ -14,7 +14,7 @@ import os
 import sys
 
 # params
-displayInterval = 100
+displayInterval = 1000
 
 def getParser():
     parser = OptionParser()
@@ -42,39 +42,39 @@ def loadGraph(fname):
 def partitionGraph(graph):
     graph1 = {}
     graph2 = {}
+    itemMap = {}
     # partition nodes, keeping all edges
     count = 0
-    print 'Shuffling graph'
     random.shuffle(graph.keys())
-    print 'Partitioning nodes'
     nodes_per_graph = len(graph.keys())/2
     for item in graph.keys():
         count += 1
         if count < nodes_per_graph:
-            graph1[item] = graph[item]
+            itemMap[item] = 1
         else:
-            graph2[item] = graph[item]
+            itemMap[item] = 2
     # remove edges across graphs and save them
-    print 'Removing edges from paritioned graphs'
     lost_edges = []
-    items = 0
-    for item in graph1.keys():
-        if items % displayInterval == 0:
-            print 'Proceseed %d items' % items
-        items += 1
-        (outbound, inbound) = graph1[item]
-        # remove graph2 nodes from outbound and add to lost_edges
-        for node in outbound:
-            if node in graph2.keys():
-                lost_edges.append((item, node))
-                graph1[item][0].remove(node)
-                graph2[node][1].remove(item)
-        # remove graph2 nodes from inbound and add to lost_edges
-        for node in inbound:
-            if node in graph2.keys():
-                lost_edges.append((node, item))
-                graph1[item][1].remove(node)
-                graph2[node][0].remove(item)
+    for item in graph.keys():
+        (outbounds, inbounds) = graph[item]
+        newOutbounds = []
+        newInbounds = []
+        # only add inbound/outbound edges if nodes are in same the graph
+        for outbound in outbounds:
+            if itemMap[outbound] == itemMap[item]:
+                newOutbounds.append(outbound)
+            else:
+                lost_edges.append((item, outbound))
+        for inbound in inbounds:
+            if itemMap[inbound] == itemMap[item]:
+                newInbounds.append(inbound)
+            else:
+                lost_edges.append((item, inbound))
+        # add to appropriate graph
+        if itemMap[item] == 1:
+            graph1[item] = (newOutbounds, newInbounds)
+        else:
+            graph2[item] = (newOutbounds, newInbounds)
     return (graph1, graph2, lost_edges)
 
 def main():
@@ -85,15 +85,18 @@ def main():
     # seed rng
     random.seed(options.seed)
 
+    print 'Load graph. .'
     # load recommendation graph
     graph = loadGraph(options.graphfilename)
 
+    print 'Partition graph. .'
     # partition graph
     results = partitionGraph(graph)
     graph1 = results[0]
     graph2 = results[1]
     lost_edges = results[2]
     
+    print 'Dump results. .'
     # dump results
     pickle.dump(graph1, open(options.graph1filename, 'w'))
     pickle.dump(graph2, open(options.graph2filename, 'w'))
