@@ -119,7 +119,7 @@ def main():
     else:
         # process LSI model
         if not os.path.isfile(options.svdfile):
-            print >> sys.stderr, 'ERROR: Cannot finf %s' % options.svdfile
+            print >> sys.stderr, 'ERROR: Cannot find %s' % options.svdfile
             return
         print >> sys.stderr, 'Load LSI model. . .'
         npzfile = np.load(options.svdfile)
