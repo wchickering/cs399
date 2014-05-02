@@ -64,11 +64,12 @@ def main():
     
     # print evaluation results
     print '==================='
-    print 'Items with predicted outbound edges = %d' % len(predicted_nodes)
-    print 'Correct predictions = %d / %d' % (overlap, len(predicted_edges))
-    print 'Recalled lost edges = %d / %d' % (overlap, len(relevant_lost_edges))
-    print 'Precision = %f' % (float(overlap) / len(predicted_edges))
-    print 'Recall = %f' % (float(overlap) / len(relevant_lost_edges))
+    print 'Correct predictions \t : %d' % overlap
+    print 'Total predictions \t : %d' % len(predicted_edges)
+    print 'Items predicted \t : %d' % len(predicted_nodes)
+    print 'Guesses per item \t : %d' % (len(predicted_edges)/len(predicted_nodes))
+    print 'Precision \t\t : %f' % (float(overlap) / len(predicted_edges))
+    print 'Recall \t\t\t : %f' % (float(overlap) / len(relevant_lost_edges))
 
 if __name__ == '__main__':
     main()
