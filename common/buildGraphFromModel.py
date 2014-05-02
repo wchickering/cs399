@@ -26,8 +26,12 @@ def getParser(usage=None):
         help='NPZ file of SVD products.', metavar='FILE')
     parser.add_option('--popmatrix', dest='popmatrix', default=None,
         help='NPZ file of "popularity" random walk.', metavar='FILE')
+    parser.add_option('--popgraph', dest='popgraph', default=None,
+        help='Picked graph representing item "popularity".', metavar='FILE')
     parser.add_option('-n', '--numedges', type='int', dest='numedges',
         default=4, help='Number of outgoing edges per node.', metavar='NUM')
+    parser.add_option('--alpha', type='float', dest='alpha', default=1.0,
+        help='Exponent applied to "popularity".', metavar='FLOAT')
     parser.add_option('-o', '--output', dest='outfilename',
         default='graphFromLDA.pickle',
         help='Output pickle file containing recommendation graph.',
@@ -40,7 +44,8 @@ def loadGraph(fname):
     return graph
 
 # TODO: Clean up this function!
-def getNeighbors(data, dictionary, numEdges, searchEngine, popDictionary=None):
+def getNeighbors(data, dictionary, numEdges, searchEngine, popDictionary=None,
+                 basePop=0.1, alpha=1.0):
     if popDictionary is None:
         distances, neighbors =\
             searchEngine.kneighbors(data, n_neighbors=numEdges+1)
@@ -52,8 +57,8 @@ def getNeighbors(data, dictionary, numEdges, searchEngine, popDictionary=None):
         newDistances = np.zeros(distances.shape)
         for i in range(distances.shape[0]):
             for j in range(distances.shape[1]):
-                newDistances[i][j] =\
-                    distances[i][j]/popDictionary[origNeighbors[i][j]]
+                newDistances[i][j] = distances[i][j]/\
+                    (basePop + popDictionary[origNeighbors[i][j]]**alpha)
 
         # re-sort neighbors by weighted distance
         neighborDistances = np.dstack((newDistances, origNeighbors))
@@ -120,7 +125,7 @@ def main():
     else:
         # process LSI model
         if not os.path.isfile(options.svdfile):
-            print >> sys.stderr, 'ERROR: Cannot finf %s' % options.svdfile
+            print >> sys.stderr, 'ERROR: Cannot find %s' % options.svdfile
             return
         print >> sys.stderr, 'Load LSI model. . .'
         npzfile = np.load(options.svdfile)
@@ -133,7 +138,14 @@ def main():
             dictionary[i] = int(items[i])
         data = lsi.getTermConcepts(u, s).transpose()
 
-    if options.popmatrix:
+    if options.popgraph:
+        print 'Loading "popularity" graph from %s. . .' % options.popgraph
+        popgraph = loadGraph(options.popgraph)
+        popDictionary = {}
+        for item in popgraph:
+            # set popularity equal to in-degree
+            popDictionary[item] = len(popgraph[item][1])
+    elif options.popmatrix:
         print 'Loading "popularity" matrix from %s. . .' % options.popmatrix
         npzfile = np.load(options.popmatrix)
         m = npzfile['matrix']
@@ -149,7 +161,7 @@ def main():
 
     # find neighbors
     neighbors = getNeighbors(data, dictionary, options.numedges, searchEngine,
-                             popDictionary=popDictionary)
+                             popDictionary=popDictionary, alpha=options.alpha)
 
     # make graph
     graph = makeGraph(dictionary, neighbors)
