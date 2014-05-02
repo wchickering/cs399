@@ -44,6 +44,29 @@ def loadGraph(fname):
         graph = pickle.load(f)
     return graph
 
+# Experimental transition matrix that decreases likelihood of transitioning to
+# nodes with many incoming edges.
+def buildTransitionMatrix2(graph, nodes, teleport=0.0, reverse=False):
+    node2id = {}
+    for i in range(len(nodes)):
+        node2id[nodes[i]] = i
+    tranMatrix = np.zeros((len(nodes), len(nodes)))
+    for node in nodes:
+        neighbors = [neighbor for neighbor in graph[node][1 if reverse else 0]\
+                     if neighbor in node2id]
+        weights = [0.0]*len(neighbors)
+        for i in range(len(neighbors)):
+            weights[i] = 1.0/len(graph[neighbor][0 if reverse else 1])
+        # self loop
+        neighbors.append(node)
+        weights.append(1.0)
+        normalization = sum(weights) + teleport
+        tranMatrix[:,node2id[node]] = teleport/(normalization*len(nodes))
+        for i in range(len(neighbors)):
+            tranMatrix[node2id[neighbors[i]], node2id[node]] +=\
+                weights[i]/normalization
+    return tranMatrix
+
 def buildTransitionMatrix(graph, nodes, teleport=0.0, reverse=False):
     node2id = {}
     for i in range(len(nodes)):
@@ -54,7 +77,7 @@ def buildTransitionMatrix(graph, nodes, teleport=0.0, reverse=False):
                      if neighbor in node2id]
         neighbors.append(node) # self loop
         normalization = len(neighbors) + teleport
-        tranMatrix[:,node2id[node]] = teleport/(normalization*len(nodes));
+        tranMatrix[:,node2id[node]] = teleport/(normalization*len(nodes))
         p = 1.0/normalization
         for neighbor in neighbors:
             tranMatrix[node2id[neighbor], node2id[node]] += p
