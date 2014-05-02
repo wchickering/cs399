@@ -13,6 +13,9 @@ import numpy as np
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
+    parser.add_option('-u', '--undirected', 
+        action='store_true', dest='undirected', default=False,
+        help='Consider predicted edges undirected')
     return parser
 
 def loadEdges(fname):
@@ -35,6 +38,15 @@ def getPredictedNodes(predicted_edges):
 def overlappingEdges(predicted_edges, lost_edges):
     return len(set(predicted_edges).intersection(set(lost_edges)))
 
+def makeUndirected(edges, predicted_nodes):
+    undirected_edges = []
+    for item1, item2 in edges:
+        if item1 in predicted_nodes:
+            undirected_edges.append((item1, item2))
+        else:
+            undirected_edges.append((item2, item1))
+    return list(set(undirected_edges))
+
 def main():
     # Parse options
     usage = 'Usage: %prog lost_edges.pickle predicted_edges.pickle'
@@ -53,10 +65,14 @@ def main():
     print 'Load edges. .'
     lost_edges = loadEdges(lost_edges_filename)
     predicted_edges = loadEdges(predicted_edges_filename)
-
-    print 'Evaluate. .'
     # ignore lost_edges frome nodes not predicted
     predicted_nodes = getPredictedNodes(predicted_edges)
+
+    if options.undirected:
+        print 'Make edges undirected. .'
+        lost_edges = makeUndirected(lost_edges, predicted_nodes)
+
+    print 'Evaluate. .'
     relevant_lost_edges = getRelevantEdges(lost_edges, predicted_nodes)
 
     # get number of overlapping edges in these lists
@@ -68,6 +84,7 @@ def main():
     print 'Total predictions \t : %d' % len(predicted_edges)
     print 'Items predicted \t : %d' % len(predicted_nodes)
     print 'Guesses per item \t : %d' % (len(predicted_edges)/len(predicted_nodes))
+    print 'Withheld edges \t\t : %d' % (len(relevant_lost_edges))
     print 'Precision \t\t : %f' % (float(overlap) / len(predicted_edges))
     print 'Recall \t\t\t : %f' % (float(overlap) / len(relevant_lost_edges))
 
