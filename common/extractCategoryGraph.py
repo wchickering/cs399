@@ -23,8 +23,6 @@ def getParser(usage=None):
     parser.add_option('-d', '--database', dest='dbname',
         default='data/macys.db',
         help='Name of Sqlite3 product database.', metavar='DBNAME')
-    parser.add_option('--category', dest='category', default=None,
-        help='Category to confine start of random walks.', metavar='CAT')
     parser.add_option('-o', '--output', dest='outfilename',
         default='categoryGraph.pickle',
         help='Output pickle file containing category graph.',
