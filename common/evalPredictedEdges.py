@@ -6,9 +6,7 @@ original recommender graph.
 """
 
 from optparse import OptionParser
-from collections import deque
 import pickle
-import random
 import os
 import sys
 import numpy as np
@@ -22,40 +20,20 @@ def loadEdges(fname):
         edges = pickle.load(f)
     return edges
 
-def overlappingEdges(edges1, edges2):
-    i = 0
-    j = 0
-    edges1_len = len(edges1)
-    edges2_len = len(edges2)
-    overlaps = 0
-    while i < edges1_len and j < edges2_len:
-        if edges1[i] == edges2[j]:
-            i += 1
-            j += 1
-            overlaps += 1
-        elif edges1[1] < edges2[j]:
-            i += 1
-        else:
-            j += 1
-    return overlaps
-
-def getRelevantLostEdges(lost_edges, predicted_nodes):
-    relevant_lost_edges = []
-    i = 0
-    j = 0
-    lost_edges_len = len(lost_edges)
-    predicted_nodes_len = len(predicted_nodes)
-    while i < lost_edges_len and j < predicted_nodes_len:
-        if lost_edges[i][0] < predicted_nodes[j]:
-            i += 1
-        else:
-            while i < lost_edges_len and lost_edges[i][0] == predicted_nodes[j]:
-                i += 1
-            j += 1
+def getRelevantEdges(lost_edges, predicted_nodes):
+    predicted_nodes = set(predicted_nodes)
+    relevant_edges = []
+    for (item1, item2) in lost_edges:
+        if item1 in predicted_nodes:
+            relevant_edges.append((item1, item2))
+    return relevant_edges
 
 def getPredictedNodes(predicted_edges):
     predicted_edges = np.array(predicted_edges)
     return np.unique(predicted_edges[:, 0:1])
+
+def overlappingEdges(predicted_edges, lost_edges):
+    return len(set(predicted_edges).intersection(set(lost_edges)))
 
 def main():
     # Parse options
@@ -72,25 +50,26 @@ def main():
         print >> sys.stderr, 'ERROR: Cannot find %s' % predicted_edges_filename
 
     # load edges
+    print 'Load edges. .'
     lost_edges = loadEdges(lost_edges_filename)
     predicted_edges = loadEdges(predicted_edges_filename)
 
-    # sort edges
-    lost_edges.sort()
-    predicted_edges.sort()
-
+    print 'Evaluate. .'
     # ignore lost_edges frome nodes not predicted
     predicted_nodes = getPredictedNodes(predicted_edges)
-    relevant_lost_edges = getRelevantLostEdges(lost_edges, predicted_nodes)
+    relevant_lost_edges = getRelevantEdges(lost_edges, predicted_nodes)
 
     # get number of overlapping edges in these lists
-    overlap = overlappingEdges(lost_edges, predicted_edges)
+    overlap = overlappingEdges(predicted_edges, relevant_lost_edges)
     
     # print evaluation results
-    print 'Correct predictions = %d / %d' % (overlap, len(predicted_edges))
-    print 'Recalled lost edges = %d / %d' % (overlap, len(lost_edges))
-    print 'Precision = %f' % (float(overlap) / len(predicted_edges))
-    print 'Recall = %f' % (float(overlap) / len(lost_edges))
+    print '==================='
+    print 'Correct predictions \t : %d' % overlap
+    print 'Total predictions \t : %d' % len(predicted_edges)
+    print 'Items predicted \t : %d' % len(predicted_nodes)
+    print 'Guesses per item \t : %d' % (len(predicted_edges)/len(predicted_nodes))
+    print 'Precision \t\t : %f' % (float(overlap) / len(predicted_edges))
+    print 'Recall \t\t\t : %f' % (float(overlap) / len(relevant_lost_edges))
 
 if __name__ == '__main__':
     main()
