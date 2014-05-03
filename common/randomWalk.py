@@ -128,6 +128,8 @@ def main():
 
     # create transition matrix
     print 'Building transition matrix. . .'
+    from random import shuffle
+    shuffle(dictionary)
     tranMatrix = buildTransitionMatrix(graph, dictionary,
                                        teleport=options.teleport,
                                        reverse=options.reverse)
