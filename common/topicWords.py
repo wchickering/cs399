@@ -27,6 +27,9 @@ def getParser(usage=None):
         help='Number of items per topic to print.', metavar='NUM')
     parser.add_option('-k', '--topnWords', type='int', dest='topnWords',
         default=10, help='Number of words per topic to print.', metavar='NUM')
+    parser.add_option('-v', '--verbose', 
+        action='store_true', dest='verbose', default=False,
+        help='Print top words')
     parser.add_option('-o', '--outputpickle', dest='outputpickle',
         default='data/tfidf.pickle',
         help='Name of pickle to save tfidfs per topic.', metavar='FILE')
@@ -115,12 +118,13 @@ def main():
     pickle.dump(tfidf, open(options.outputpickle, 'w'))
 
     # Print the topnWords
-    for topic in range(model.num_topics):
-        print ''
-        print 'Top words for topic %d' % topic
-        print '======================='
-        for i in range(options.topnWords):
-            print '%s : %.3f' % (tfidf[topic][i][0], tfidf[topic][i][1])
+    if options.verbose:
+        for topic in range(model.num_topics):
+            print ''
+            print 'Top words for topic %d' % topic
+            print '======================='
+            for i in range(options.topnWords):
+                print '%s : %.3f' % (tfidf[topic][i][0], tfidf[topic][i][1])
 
 if __name__ == '__main__':
     main()

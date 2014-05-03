@@ -3,8 +3,8 @@
 """
 Maps one topic space to another using TF-IDF vector representations of each
 topic and comparing each. The outup is a matrix with unit length columns by the
-L1 norm. Multiplying this matrix by a topic column vector of catalogue 2 gives a
-topic vector in catalogue 1's space.
+L1 norm. Multiplying this matrix by a topic column vector of catalogue 1 gives a
+topic vector in catalogue 2's space.
 """
 
 from stemming.porter2 import stem
@@ -20,11 +20,14 @@ import numpy as np
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-o', '--outputpickle', dest='outputpickle',
-        default='data/topic_map.db',
+        default='data/topic_map.pickle',
         help='Name of pickle to write topic map to.', metavar='FILE')
     parser.add_option('-n', '--topnwords', type=int, dest='topnwords', 
         default=1000, help='Number of top words in tfidf to compare.',
         metavar='NUM')
+    parser.add_option('-v', '--verbose', 
+        action='store_true', dest='verbose', default=False,
+        help='Print top words')
     return parser
 
 def topicTopicSim(topic1, topic2):
@@ -53,14 +56,15 @@ def transformMatrix(matrix):
     return matrix_t
 
 def getTopicMap(tfidf1, tfidf2):
-    topic_map = [] # Transform from space 2 to space 1
-    for topic2 in tfidf2:
-        # Represent topic in space 1
+    topic_map = [] # Transform from space 1 to space 2
+    for topic1 in tfidf1:
+        # Represent topic in space 2
         topic_vector = []
-        for topic1 in tfidf1:
-             topic_vector.append(topicTopicSim(topic2, topic1))
+        for topic2 in tfidf2:
+             topic_vector.append(topicTopicSim(topic1, topic2))
         # Normalize vector and add to topic map
         topic_map.append(topic_vector/np.linalg.norm(topic_vector, 1))
+        # this gives the column of the transformation matrix
     return transformMatrix(topic_map)
 
 def main():
@@ -106,7 +110,7 @@ def main():
         ind = np.argsort(tfidf2[topic][:,0])
         tfidf2[topic] = tfidf2[topic][ind, :]
 
-    # get matrix mapping topics from space 2 to topics of space 1
+    # get matrix mapping topics from space 1 to topics of space 2
     print 'Map topics from first catalogue to topics of second catalogue. .'
     topic_map = getTopicMap(tfidf1, tfidf2)
 
@@ -114,8 +118,9 @@ def main():
     pickle.dump(topic_map, open(options.outputpickle, 'w'))
 
     # print results
-    for i in range(len(topic_map)):
-        print '  '.join('%.3f' % x for x in topic_map[i])
+    if options.verbose:
+        for i in range(len(topic_map)):
+            print '  '.join('%.3f' % x for x in topic_map[i])
 
 if __name__ == '__main__':
     main()
