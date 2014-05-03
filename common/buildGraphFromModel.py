@@ -24,6 +24,10 @@ def getParser(usage=None):
         help='Pickled LDA model.', metavar='FILE')
     parser.add_option('--svdfile', dest='svdfile', default=None,
         help='NPZ file of SVD products.', metavar='FILE')
+    parser.add_option('--walkfile', dest='walkfile', default=None,
+        help='NPZ file of Random Walk matrix.', metavar='FILE')
+    parser.add_option('--random', action='store_true', dest='random',
+        default=False, help='Replace walk data with random values.')
     parser.add_option('--popmatrix', dest='popmatrix', default=None,
         help='NPZ file of "popularity" random walk.', metavar='FILE')
     parser.add_option('--popgraph', dest='popgraph', default=None,
@@ -33,8 +37,8 @@ def getParser(usage=None):
     parser.add_option('--alpha', type='float', dest='alpha', default=1.0,
         help='Exponent applied to "popularity".', metavar='FLOAT')
     parser.add_option('-o', '--output', dest='outfilename',
-        default='graphFromLDA.pickle',
-        help='Output pickle file containing recommendation graph.',
+        default='graphFromModel.pickle',
+        help='Output pickle file containing re-constructed graph.',
         metavar='FILE')
     return parser
 
@@ -104,10 +108,6 @@ def main():
     usage = 'Usage: %prog [options]'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
-    if options.ldafile is None and options.svdfile is None:
-        print >> sys.stderr,\
-            'ERROR: Must provide either an LDA model or SVD products.'
-        return
 
     # load model
     if options.ldafile is not None:
@@ -115,19 +115,19 @@ def main():
         if not os.path.isfile(options.ldafile):
             print >> sys.stderr, 'ERROR: Cannot find %s' % options.ldafile
             return
-        print >> sys.stderr, 'Load LDA model. . .'
+        print 'Load LDA model from %s. . .' % options.ldafile
         with open(options.ldafile, 'r') as f:
             ldamodel = pickle.load(f)
         dictionary = {}
         for i, item in ldamodel.id2word.items():
             dictionary[i] = int(item)
         data = lda.getTopicGivenItemProbs(ldamodel).transpose()
-    else:
+    elif options.svdfile is not None:
         # process LSI model
         if not os.path.isfile(options.svdfile):
             print >> sys.stderr, 'ERROR: Cannot find %s' % options.svdfile
             return
-        print >> sys.stderr, 'Load LSI model. . .'
+        print 'Load LSI model from %s. . .' % options.svdfile
         npzfile = np.load(options.svdfile)
         u = npzfile['u']
         s = npzfile['s']
@@ -136,7 +136,29 @@ def main():
         dictionary = {}
         for i in range(len(items)):
             dictionary[i] = int(items[i])
-        data = lsi.getTermConcepts(u, s).transpose()
+        #data = lsi.getTermConcepts(u, s).transpose()
+        data = u.dot(np.diag(s))
+    elif options.walkfile is not None:
+        # process random walk matrix
+        if not os.path.isfile(options.walkfile):
+            print >> sys.stderr, 'ERROR: Cannot find %s' % options.walkfile
+            return
+        print >> sys.stderr,\
+            'Load random walk matrix from %s. . .' % options.walkfile
+        npzfile = np.load(options.walkfile)
+        data = npzfile['matrix']
+        d = npzfile['dictionary']
+        dictionary = {}
+        for i in range(len(d)):
+            dictionary[i] = int(d[i])
+        if options.random:
+            # generate random data
+            print 'Generating random data. . .'
+            data = np.random.rand(data.shape[0], data.shape[1])
+    else:
+        print >> sys.stderr,\
+            'ERROR: Must provide LDA model, SVD products, or Walk matrix.'
+        return
 
     if options.popgraph:
         print 'Loading "popularity" graph from %s. . .' % options.popgraph
@@ -157,16 +179,20 @@ def main():
         popDictionary = None
 
     # build search engine
+    print 'Building Search Engine. . .'
     searchEngine = KNNSearchEngine(data, dictionary)
 
     # find neighbors
+    print 'Determining neighbors. . .'
     neighbors = getNeighbors(data, dictionary, options.numedges, searchEngine,
                              popDictionary=popDictionary, alpha=options.alpha)
 
     # make graph
+    print 'Constructing graph. . .'
     graph = makeGraph(dictionary, neighbors)
 
     # save graph
+    print 'Saving graph to %s. . .' % options.outfilename
     pickle.dump(graph, open(options.outfilename, 'w'))
 
 if __name__ == '__main__':
