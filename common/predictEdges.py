@@ -16,20 +16,12 @@ from Queue import PriorityQueue
 #import KNNSearchEngine
 
 # params
-displayInterval = 1000
-
-# db_params
-selectCategories =\
-   ('SELECT Id, Category FROM Categories;')
+displayInterval = 1
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-k', '--kPredictions', dest='k', default='10',
         help='Number of predicted edges per node.', metavar='NUM')
-    parser.add_option('-d', '--database', dest='dbname', default='data/macys.db',
-        help='Name of Sqlite3 product database.', metavar='DBNAME')
-    parser.add_option('-c', '--category', dest='category', default=None,
-        help='Category to confine predictions to.', metavar='CAT')
     parser.add_option('--graph1', dest='graph1_filename', 
         default='data/graph1.pickle', 
         help='Pickle storing graph 1', metavar='FILE')
@@ -59,17 +51,11 @@ def loadPickle(fname):
         graph = pickle.load(f)
     return graph
 
-def genCategoryMap(db_curs):
-    categories = {}
-    product_ids = db_curs.execute(selectCategories)
-    for (product_id, category) in product_ids:
-        categories[product_id] = category
-    return categories
-
 def getTopicsFromModel(lda, node):
     return LDA_util.getTopicGivenItemProbs(lda)[:, lda.id2word.token2id[str(node)]]
 
 def getTopicsFromSpace(topic_space, lda, node):
+    lda.id2word.token2id[str(node)]
     return topic_space[:, lda.id2word.token2id[str(node)]]
 
 def transformTopics(topics, topic_map):
@@ -82,12 +68,10 @@ def getDistance(point1, point2):
     point2 = np.array(point2)
     return np.linalg.norm(point2 - point1)
 
-def getNeighbors(graph, lda, node_topics, k, category, categories):
+def getNeighbors(graph, lda, node_topics, k):
     # get top k nearest neighbors by L2 distance in topic space 2
     queue = PriorityQueue() # priority queue makes this nlogk
     for node2 in graph:
-        if categories[node2] != category:
-            continue
         node_topics2 = getTopicsFromModel(lda, node2) 
         distance = getDistance(node_topics, node_topics2)
         queue.put((-distance, node2))
@@ -107,45 +91,31 @@ def transformTopicSpace(lda1, topic_map):
     lda1_matrix = LDA_util.getTopicGivenItemProbs(lda1)
     return np.dot(topic_map, lda1_matrix)
 
-def predictEdges(graph1, graph2, k, category, categories, lda1, lda2, topic_map,
-        topic_space):
+def predictEdges(graph1, graph2, k, lda1, lda2, topic_map, topic_space):
         #topic_space, engine):
     predicted_edges = []
     count = 0
     for node in graph1:
         if count % displayInterval == 0:
-            print 'Predicted edges or skipped nodes for %d / %d nodes of graph1'\
+            print 'Predicted edges nodes for %d / %d nodes of graph1'\
                 % (count, len(graph1))
         count += 1
-        if categories[node] != category:
-            continue
         # get topic space 2 representation of node in graph1
         node_topics2 = getTopicsFromSpace(topic_space, lda1, node)
         # find the k nearest neighbors in graph2 to that topic space
-        neighbors = getNeighbors(graph2, lda2, node_topics2, k, category,
-                categories)
+        neighbors = getNeighbors(graph2, lda2, node_topics2, k)
         #neighbors = kNN(engine, node_topics2)
         for neighbor in neighbors:
             predicted_edges.append((node, neighbor))
     return predicted_edges
 
-def getItemsInCategory(category, categories, graph):
-    category_items = []
-    for item in graph:
-        if categories[item] == category:
-            category_items.append(item)
-    return category_items
-
-def predictRandomEdges(graph1, graph2, k, category, categories):
+def predictRandomEdges(graph1, graph2, k):
     predicted_edges = []
     # get the items in graph2 that are in the right category
-    category_items_in_graph2 = getItemsInCategory(category, categories, graph2)
     for item in graph1:
-        if categories[item] != category:
-            continue
         # pick k of them randomly and guess those edges
         for i in range(k):
-            item2 = random.choice(category_items_in_graph2)
+            item2 = random.choice(graph1.keys())
             predicted_edges.append((item, item2))
     return predicted_edges
 
@@ -173,12 +143,6 @@ def main():
         print >> sys.stderr, 'ERROR: Cannot find %s' % topic_map_filename
     topic_map = loadPickle(options.topic_map_filename)
 
-    print 'Generate category map from database. .'
-    # generate category map
-    db_conn = sqlite3.connect(options.dbname)
-    db_curs = db_conn.cursor()
-    categories = genCategoryMap(db_curs)
-
     print 'Transform topic space 1 to topic space 2. .'
     transformed_space = transformTopicSpace(lda1, topic_map)
 
@@ -190,12 +154,11 @@ def main():
     # predict edges
     if options.randomPredict:
         print 'Randomly predict edges. .'
-        predicted_edges = predictRandomEdges(graph1, graph2, int(options.k),
-                options.category, categories)
+        predicted_edges = predictRandomEdges(graph1, graph2, int(options.k))
     else:
         print 'Predict edges. .'
-        predicted_edges = predictEdges(graph1, graph2, int(options.k), options.category,
-                categories, lda1, lda2, topic_map, transformed_space)
+        predicted_edges = predictEdges(graph1, graph2, int(options.k), lda1,
+                lda2, topic_map, transformed_space)
     #           categories, lda1, lda2, topic_map, transformed_space, searchEngine)
     
     print 'Dump results. .'
