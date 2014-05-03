@@ -36,6 +36,8 @@ class GraphComparison:
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
+    parser.add_option('--directed', action='store_true', dest='directed',
+        default=False, help='Compare directed graphs.')
     return parser
 
 def loadGraph(fname):
@@ -43,7 +45,7 @@ def loadGraph(fname):
         graph = pickle.load(f)
     return graph
 
-def compareGraphs(target, source):
+def compareGraphs(target, source, directed=False):
     comparison = GraphComparison()
     for node in target:
         comparison.targetNodeCnt += 1
@@ -68,6 +70,13 @@ def compareGraphs(target, source):
         else:
             comparison.targetMissNodeCnt += 1
             comparison.targetMissEdgeCnt += len(source[node][0])
+    if not directed:
+       # we double counted in the case of an undirected graph
+       comparison.targetEdgeCnt /= 2
+       comparison.sourceEdgeCnt /= 2
+       comparison.commonEdgeCnt /= 2
+       comparison.targetMissEdgeCnt /= 2
+       comparison.sourceMissEdgeCnt /= 2
     return comparison
 
 def main():
@@ -91,7 +100,7 @@ def main():
     source = loadGraph(sourcefname)
 
     # compare graphs
-    comparison = compareGraphs(target, source)
+    comparison = compareGraphs(target, source, directed=options.directed)
 
     # display scores
     comparison.display()

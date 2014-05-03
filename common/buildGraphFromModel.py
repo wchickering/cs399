@@ -28,12 +28,14 @@ def getParser(usage=None):
         help='NPZ file of Random Walk matrix.', metavar='FILE')
     parser.add_option('--random', action='store_true', dest='random',
         default=False, help='Replace walk data with random values.')
+    parser.add_option('-n', '--numedges', type='int', dest='numedges',
+        default=4, help='Number of outgoing edges per node.', metavar='NUM')
+    parser.add_option('--directed', action='store_true', dest='directed',
+        default=False, help='Create a directed graph.')
     parser.add_option('--popmatrix', dest='popmatrix', default=None,
         help='NPZ file of "popularity" random walk.', metavar='FILE')
     parser.add_option('--popgraph', dest='popgraph', default=None,
         help='Picked graph representing item "popularity".', metavar='FILE')
-    parser.add_option('-n', '--numedges', type='int', dest='numedges',
-        default=4, help='Number of outgoing edges per node.', metavar='NUM')
     parser.add_option('--alpha', type='float', dest='alpha', default=1.0,
         help='Exponent applied to "popularity".', metavar='FLOAT')
     parser.add_option('-o', '--output', dest='outfilename',
@@ -85,7 +87,7 @@ def getNeighbors(data, dictionary, numEdges, searchEngine, popDictionary=None,
 
     return np.array(filteredNeighbors)
 
-def makeGraph(dictionary, neighbors):
+def makeGraph(dictionary, neighbors, directed=False):
     graph = {}
     node_cnt = 0
     edge_cnt = 0
@@ -94,11 +96,17 @@ def makeGraph(dictionary, neighbors):
             node_cnt += 1
             graph[source] = ([],[])
         for neighbor in neighbors[index]:
-            graph[source][0].append(neighbor)
+            if neighbor not in graph[source][0]:
+                graph[source][0].append(neighbor)
+            if not directed and neighbor not in graph[source][1]:
+                graph[source][1].append(neighbor)
             if neighbor not in graph:
                 node_cnt += 1
                 graph[neighbor] = ([],[])
-            graph[neighbor][1].append(source)
+            if source not in graph[neighbor][1]:
+                graph[neighbor][1].append(source)
+            if not directed and source not in graph[neighbor][0]:
+                graph[neighbor][0].append(source)
             edge_cnt += 1
     print '%d nodes, %d edges' % (node_cnt, edge_cnt)
     return graph
@@ -189,7 +197,7 @@ def main():
 
     # make graph
     print 'Constructing graph. . .'
-    graph = makeGraph(dictionary, neighbors)
+    graph = makeGraph(dictionary, neighbors, options.directed)
 
     # save graph
     print 'Saving graph to %s. . .' % options.outfilename
