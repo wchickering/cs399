@@ -11,22 +11,11 @@ import os
 import sys
 import numpy as np
 import math
-import sqlite3
 from collections import deque
 from random import shuffle
 
-# db params
-selectCategoryProductsStmt =\
-    ('SELECT Id '
-     'FROM Categories '
-     'WHERE Category = :Category')
-
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-d', '--database', dest='dbname', default=None,
-        help='Name of Sqlite3 product database.', metavar='DBNAME')
-    parser.add_option('--category', dest='category', default=None,
-        help='Category to confine walks to.', metavar='CAT')
     parser.add_option('--decay', type='float', dest='decay', default=1.0,
         help='Decay constant applied to proximity values.', metavar='FLOAT')
     parser.add_option('--savefile', dest='savefile', default='proxMatrix.npz',
@@ -38,12 +27,12 @@ def loadGraph(fname):
         graph = pickle.load(f)
     return graph
 
-def buildProximityMatrix(graph, nodes, decay=1.0):
-    assert(len(nodes) == len(set(nodes)))
+def buildProximityMatrix(graph, decay=1.0):
     node2id = {}
-    for i in range(len(nodes)):
-        node2id[nodes[i]] = i
-    proxMatrix = np.zeros((len(nodes), len(nodes)))
+    for i, node in enumerate(graph.keys()):
+        node2id[node] = i
+    proxMatrix = np.zeros((len(graph), len(graph)))
+    nodes = graph.keys()
     shuffle(nodes)
     for source in nodes:
         visited = set()
