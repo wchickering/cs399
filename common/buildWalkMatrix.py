@@ -98,17 +98,17 @@ def randomWalk(tranMatrix, steps, home=0.0):
         probMatrix += np.diag(homeMatrix.sum(axis=0))
     return probMatrix.transpose() # s.t. rows are distributions
 
-def buildAdjacencyMatrix(graph):
+def buildAdjacencyMatrix(graph, reverse=False):
     node2id = {}
     for i, node in enumerate(graph.keys()):
         node2id[node] = i
     adjacencyMatrix = np.zeros((len(graph), len(graph)))
     for source in graph:
-        for neighbor in graph[source][0]:
+        for neighbor in graph[source][1 if reverse else 0]:
             adjacencyMatrix[node2id[source],node2id[neighbor]] = 1
     return adjacencyMatrix
 
-def buildProximityMatrix(graph, decay=1.0):
+def buildProximityMatrix(graph, decay=1.0, reverse=False):
     """
     Performs a breadth-first-search starting from each node to construct a
     matrix of proximities/closeness from each node i to each node j.
@@ -129,24 +129,24 @@ def buildProximityMatrix(graph, decay=1.0):
             visited.add(n)
             assert(proxMatrix[node2id[source],node2id[n]] == 0.0)
             proxMatrix[node2id[source],node2id[n]] = math.exp(-decay*x)
-            shuffle(graph[n][0])
-            for neighbor in graph[n][0]:
+            shuffle(graph[n][1 if reverse else 0])
+            for neighbor in graph[n][1 if reverse else 0]:
                 if neighbor in visited: continue
                 q.appendleft((neighbor, x+1))
     return proxMatrix
 
-def buildNeighborMatrix(graph, epsilon=0.1):
+def buildNeighborMatrix(graph, epsilon=0.1, reverse=False):
     node2id = {}
     for i, node in enumerate(graph.keys()):
         node2id[node] = i
     neighborMatrix = np.identity(len(graph))
     for source in graph:
-        for neighbor in graph[source][0]:
+        for neighbor in graph[source][1 if reverse else 0]:
             neighborMatrix[node2id[source],node2id[neighbor]] =\
                 (1.0 - epsilon)/len(graph[source][0])
     return neighborMatrix
 
-def buildFluxMatrix(graph, epsilon=0.1):
+def buildFluxMatrix(graph, epsilon=0.1, reverse=False):
     """
     Performs a breadth-first-search starting from each node to construct a
     matrix of "flux" from each node i to each node j.
@@ -167,8 +167,8 @@ def buildFluxMatrix(graph, epsilon=0.1):
             visited.add(n)
             assert(fluxMatrix[node2id[source],node2id[n]] == 0.0)
             fluxMatrix[node2id[source],node2id[n]] = (1.0 - epsilon)*x
-            shuffle(graph[n][0])
-            for neighbor in graph[n][0]:
+            shuffle(graph[n][1 if reverse else 0])
+            for neighbor in graph[n][1 if reverse else 0]:
                 if neighbor in visited: continue
                 q.appendleft((neighbor, x/len(graph[n][0])))
     return fluxMatrix
@@ -205,19 +205,22 @@ def main():
     elif options.type == 'adjacency':
         # create adjacency matrix
         print 'Creating adjacency matrix. . .'
-        walkMatrix = buildAdjacencyMatrix(graph)
+        walkMatrix = buildAdjacencyMatrix(graph, reverse=options.reverse)
     elif options.type == 'proximity':
         # build proximity matrix
         print 'Building proximity matrix. . .'
-        walkMatrix = buildProximityMatrix(graph, decay=options.decay)
+        walkMatrix = buildProximityMatrix(graph, decay=options.decay,
+                                          reverse=options.reverse)
     elif options.type == 'neighbor':
         # build neighbor matrix
         print 'Building neighbor matrix. . .'
-        walkMatrix = buildNeighborMatrix(graph, epsilon=options.epsilon)
+        walkMatrix = buildNeighborMatrix(graph, epsilon=options.epsilon,
+                                         reverse=options.reverse)
     elif options.type == 'flux':
         # build flux matrix
         print 'Building flux matrix. . .'
-        walkMatrix = buildFluxMatrix(graph, epsilon=options.epsilon)
+        walkMatrix = buildFluxMatrix(graph, epsilon=options.epsilon,
+                                     reverse=options.reverse)
 
     if walkMatrix is not None:
         # save probMatrix
