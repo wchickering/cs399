@@ -118,7 +118,7 @@ def getDistances(graph, origin, destinations):
     return goalDists
 
 def plotDistanceDist(target, source, savedir, title=None, numBins=10,
-                     show=False, directed=False):
+                     basefile=None, directed=False, show=False):
     nbrDists = defaultdict(int)
     cnt = 0
     for node in target:
@@ -137,9 +137,12 @@ def plotDistanceDist(target, source, savedir, title=None, numBins=10,
         plt.title(title)
     plt.ylabel('Number of Neighbors')
     plt.xlabel('Distance')
-    savefile = os.path.join(savedir, 'distInSrc.%s' % saveFormat)
+    if basefile is None:
+        basefile = 'distIn'
+    savefile = os.path.join(savedir, '%s.%s' % (basefile, saveFormat))
     print 'Saving Distance Distribution to %s. . .' % savefile
     plt.savefig(savefile)
+    plt.figure()
     if show:
         plt.show()
 
@@ -158,6 +161,18 @@ def main():
     if not os.path.isfile(sourcefname):
         print >> sys.stderr, 'ERROR: Cannot find %s' % sourcefname
         return
+    if options.savedir is None:
+        savedir = os.getcwd()
+    elif os.path.isdir(options.savedir):
+        savedir = options.savedir
+    else:
+        if os.path.isdir(os.path.split(options.savedir)[0]):
+            print 'Creating directory %s. . .' % options.savedir
+            os.mkdir(options.savedir)
+            savedir = options.savedir
+        else:
+            print >> sys.stderr, 'ERROR: Cannot find dir: %s' % options.savedir
+            return
 
     # load graphs
     target = loadGraph(targetfname)
@@ -173,9 +188,11 @@ def main():
         # plot distance distributions
         plotDistanceDist(target, source, options.savedir,
                          title='Distances of Target Neighbors in Source',
+                         basefile='distInSrc', directed=options.directed,
                          show=options.show)
         plotDistanceDist(source, target, options.savedir,
                          title='Distances of Source Neighbors in Target',
+                         basefile='distInTgt', directed=options.directed,
                          show=options.show)
 
 if __name__ == '__main__':
