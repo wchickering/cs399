@@ -65,29 +65,13 @@ def main():
     # load graph
     graph = loadGraph(graphfname)
 
-    # get category items if category provided
-    if options.category is not None:
-        if options.dbname is None:
-            print >> sys.stderr,\
-                'ERROR: Must provide --database if --category provided'
-            return
-        print 'Connecting to %s. . .' % options.dbname
-        db_conn = sqlite3.connect(options.dbname)
-        db_curs = db_conn.cursor()
-        print 'Reading category products. . .'
-        db_curs.execute(selectCategoryProductsStmt, (options.category,))
-        dictionary = [row[0] for row in db_curs.fetchall() if row[0] in graph]
-        print 'Retrieved %d category products.' % len(dictionary)
-    else:
-        dictionary = graph.keys()
-
     # build proximity matrix
     print 'Building proximity matrix. . .'
-    proxMatrix = buildProximityMatrix(graph, dictionary, decay=options.decay)
+    proxMatrix = buildProximityMatrix(graph, decay=options.decay)
 
     # save proximity Matrix
     print 'Saving proximity matrix to %s. . .' % options.savefile
-    np.savez(options.savefile, matrix=proxMatrix, dictionary=dictionary)
+    np.savez(options.savefile, matrix=proxMatrix, dictionary=graph.keys())
 
 if __name__ == '__main__':
     main()
