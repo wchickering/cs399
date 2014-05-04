@@ -12,11 +12,9 @@ import sqlite3
 import LDA_util
 import random
 import numpy as np
+from KNNSearchEngine import KNNSearchEngine
 from Queue import PriorityQueue
 #import KNNSearchEngine
-
-# params
-displayInterval = 1
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -83,28 +81,20 @@ def getNeighbors(graph, lda, node_topics, k):
         neighbors.append(node2)
     return neighbors
 
-#def kNN(engine, node_topics, k):
-#    (distances, neighbors) = engine.kneighbors(node_topics, k)
-#    return neighbors
+def kNN(engine, node_topics, k):
+    (distances, neighbor_matrix) = engine.kneighbors(node_topics, k)
+    neighbors = [int(numeric_string) for numeric_string in neighbor_matrix[0]]
+    return neighbors
 
 def transformTopicSpace(lda1, topic_map):
     lda1_matrix = LDA_util.getTopicGivenItemProbs(lda1)
     return np.dot(topic_map, lda1_matrix)
 
-def predictEdges(graph1, graph2, k, lda1, lda2, topic_map, topic_space):
-        #topic_space, engine):
+def predictEdges(graph1, graph2, k, lda1, lda2, topic_map, topic_space, engine):
     predicted_edges = []
-    count = 0
     for node in graph1:
-        if count % displayInterval == 0:
-            print 'Predicted edges nodes for %d / %d nodes of graph1'\
-                % (count, len(graph1))
-        count += 1
-        # get topic space 2 representation of node in graph1
         node_topics2 = getTopicsFromSpace(topic_space, lda1, node)
-        # find the k nearest neighbors in graph2 to that topic space
-        neighbors = getNeighbors(graph2, lda2, node_topics2, k)
-        #neighbors = kNN(engine, node_topics2)
+        neighbors = kNN(engine, node_topics2, k)
         for neighbor in neighbors:
             predicted_edges.append((node, neighbor))
     return predicted_edges
@@ -146,10 +136,10 @@ def main():
     print 'Transform topic space 1 to topic space 2. .'
     transformed_space = transformTopicSpace(lda1, topic_map)
 
-    #print 'Create KNN search engine. .'
-    #data = LDA_util.getTopicGivenItemProbs(lda2).transpose()
-    #dictionary = lda2.id2word
-    #searchEngine = KNNSearchEngine(data, dictionary)
+    print 'Create KNN search engine. .'
+    data = LDA_util.getTopicGivenItemProbs(lda2).transpose()
+    dictionary = lda2.id2word
+    searchEngine = KNNSearchEngine(data, dictionary)
 
     # predict edges
     if options.randomPredict:
@@ -158,8 +148,7 @@ def main():
     else:
         print 'Predict edges. .'
         predicted_edges = predictEdges(graph1, graph2, int(options.k), lda1,
-                lda2, topic_map, transformed_space)
-    #           categories, lda1, lda2, topic_map, transformed_space, searchEngine)
+                lda2, topic_map, transformed_space, searchEngine)
     
     print 'Dump results. .'
     # dump results
