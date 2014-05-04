@@ -1,13 +1,19 @@
 #!/usr/bin/env python
 
 """
-Compares two directed graphs.
+Produce statistics and plots in order to compares two graphs.
 """
 
 from optparse import OptionParser
+import matplotlib.pyplot as plt
 import pickle
 import os
 import sys
+from collections import deque
+from collections import defaultdict
+
+# params
+saveFormat = 'jpg'
 
 class GraphComparison:
     def __init__(self):
@@ -38,6 +44,12 @@ def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('--directed', action='store_true', dest='directed',
         default=False, help='Compare directed graphs.')
+    parser.add_option('--savedir', dest='savedir', default=None,
+        help='Directory to save plots in.', metavar='DIR')
+    parser.add_option('--show', action='store_true', dest='show', default=False,
+        help='Show plots.')
+    parser.add_option('--distdists', action='store_true', dest='distdists',
+        default=False, help='Produce distance distributions.')
     return parser
 
 def loadGraph(fname):
@@ -79,6 +91,58 @@ def compareGraphs(target, source, directed=False):
        comparison.sourceMissEdgeCnt /= 2
     return comparison
 
+def getDistances(graph, origin, destinations):
+    assert(origin in graph)
+    assert(len(destinations) > 0)
+    for dest in destinations:
+       assert(dest in graph)
+    goals = set(destinations)
+    distances = {}
+    q = deque()
+    q.appendleft((origin, 0))
+    while q:
+        (n, x) = q.pop()
+        if n in distances: continue
+        distances[n] = x
+        if n in goals:
+            goals.remove(n)
+            if len(goals) == 0:
+                break
+        for neighbor in graph[n][0]:
+            if neighbor in distances: continue
+            q.appendleft((neighbor, x+1))
+    goalDists = {}
+    for g in destinations:
+        if g in distances:
+            goalDists[g] = distances[g]
+    return goalDists
+
+def plotDistanceDist(target, source, savedir, title=None, numBins=10,
+                     show=False, directed=False):
+    nbrDists = defaultdict(int)
+    cnt = 0
+    for node in target:
+        cnt += 1
+        distances = getDistances(source, node, target[node][0])
+        for neighbor in distances:
+            nbrDists[distances[neighbor]] += 1
+    data = []
+    for dist, cnt in nbrDists.items():
+        if directed:
+            data += [dist]*cnt
+        else:
+            data += [dist]*(cnt/2) # adjust for overcounting by 2
+    n, bins, patches = plt.hist(data, bins=numBins, range=(0, numBins-1))
+    if title is not None:
+        plt.title(title)
+    plt.ylabel('Number of Neighbors')
+    plt.xlabel('Distance')
+    savefile = os.path.join(savedir, 'distInSrc.%s' % saveFormat)
+    print 'Saving Distance Distribution to %s. . .' % savefile
+    plt.savefig(savefile)
+    if show:
+        plt.show()
+
 def main():
     # Parse options
     usage = 'Usage: %prog [options] <targetGraph.pickle> <sourceGraph.pickle'
@@ -104,6 +168,15 @@ def main():
 
     # display scores
     comparison.display()
+
+    if options.distdists:
+        # plot distance distributions
+        plotDistanceDist(target, source, options.savedir,
+                         title='Distances of Target Neighbors in Source',
+                         show=options.show)
+        plotDistanceDist(source, target, options.savedir,
+                         title='Distances of Source Neighbors in Target',
+                         show=options.show)
 
 if __name__ == '__main__':
     main()
