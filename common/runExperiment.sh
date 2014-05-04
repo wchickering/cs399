@@ -42,22 +42,24 @@ PREDICTED_EDGES=$DATA/predictedEdges${CAT}.pickle
 # Construct directed recomender graph from DB --> recGraph
 if [ $START_STAGE -le 1 -a $END_STAGE -ge 1 ]; then
     echo "=== 1. Build directed recommender graph for category from DB ==="
-    python $SRC/buildRecGraph.py --directed --savefile $CATGRAPH --parent-category $PARENTCAT \
-       --category $CAT $DB
+    python $SRC/buildRecGraph.py --directed --savefile=$CATGRAPH\
+        --parent-category=$PARENTCAT --category=$CAT $DB
 echo
 fi
 # Partition graph
 if [ $START_STAGE -le 3 -a $END_STAGE -ge 3 ]; then
     echo "=== 3. Partition category graph ==="
-    python $SRC/partitionGraph.py -g $CATGRAPH --graph1 $GRAPH1 --graph2 $GRAPH2 \
-    --lost_edges $LOST_EDGES
+    python $SRC/partitionGraph.py -g $CATGRAPH --graph1=$GRAPH1\
+        --graph2=$GRAPH2 --lost_edges=$LOST_EDGES
 echo
 fi
 # Random walk
 if [ $START_STAGE -le 4 -a $END_STAGE -ge 4 ]; then
     echo "=== 4. Randomly walk each graph ==="
-    python $SRC/buildWalkMatrix.py --savefile $RWALK1 $GRAPH1
-    python $SRC/buildWalkMatrix.py --savefile $RWALK2 $GRAPH2
+    python $SRC/buildWalkMatrix.py --home=0.05 --steps=50 --savefile=$RWALK1\
+        $GRAPH1
+    python $SRC/buildWalkMatrix.py --home=0.05 --steps=50 --savefile=$RWALK2\
+        $GRAPH2
 echo
 fi
 # Train model on each graph
@@ -89,8 +91,8 @@ fi
 # Predict edges
 if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     echo "=== 9. Predict edges ==="
-    python $SRC/predictEdges.py --graph1 $GRAPH1 --graph2 $GRAPH2 --lda1 $LDA1\
-            --lda2 $LDA2 --topicmap $MAP -o $PREDICTED_EDGES
+    python $SRC/predictEdges.py --graph1=$GRAPH1 --graph2=$GRAPH2 --lda1=$LDA1\
+            --lda2=$LDA2 --topicmap=$MAP -o $PREDICTED_EDGES
 echo
 fi
 # Predict edges
