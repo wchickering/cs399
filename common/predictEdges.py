@@ -115,7 +115,7 @@ def predictRandomEdges(graph1, graph2, k):
     for item in graph1:
         # pick k of them randomly and guess those edges
         for i in range(k):
-            item2 = random.choice(graph1.keys())
+            item2 = random.choice(graph2.keys())
             predicted_edges.append((item, item2))
     return predicted_edges
 

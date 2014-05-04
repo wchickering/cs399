@@ -13,31 +13,25 @@ else
 fi
 
 DB="data/macys.db"
-RECGRAPH="data/recDirectedGraph.pickle"
-CATGRAPH="data/graph$CAT.pickle"
-GRAPH1="data/graph$CAT1.pickle"
-GRAPH2="data/graph$CAT2.pickle"
-LOST_EDGES="data/lostEdges$CAT.pickle"
-RWALK1="data/randomWalk$CAT1.npz"
-RWALK2="data/randomWalk$CAT2.npz"
-LDA1="data/lda$CAT1.pickle"
-LDA2="data/lda$CAT2.pickle"
-IDFS="data/idfs$CAT.pickle"
-TFIDF1="data/tfidf$CAT1.pickle"
-TFIDF2="data/tfidf$CAT2.pickle"
-MAP="data/topicMap$CAT.pickle"
-PREDICTED_EDGES="data/predictedEdges$CAT.pickle"
+CATGRAPH="data/graph"$CAT".pickle"
+GRAPH1="data/graph"$CAT"1.pickle"
+GRAPH2="data/graph"$CAT"2.pickle"
+LOST_EDGES="data/lostEdges"$CAT".pickle"
+RWALK1="data/randomWalk"$CAT"1.npz"
+RWALK2="data/randomWalk"$CAT"2.npz"
+LDA1="data/lda"$CAT"1.pickle"
+LDA2="data/lda"$CAT"2.pickle"
+IDFS="data/idfs"$CAT".pickle"
+TFIDF1="data/tfidf"$CAT"1.pickle"
+TFIDF2="data/tfidf"$CAT"2.pickle"
+MAP="data/topicMap"$CAT".pickle"
+PREDICTED_EDGES="data/predictedEdges"$CAT".pickle"
 
 # Construct directed recomender graph from DB --> recGraph
 if [ $START_STAGE -le 1 -a $END_STAGE -ge 1 ]; then
-    echo "=== 1. Building directed recommender graph from DB ==="
-    python buildDirectedRecGraph.py -d $DB -o $RECGRAPH
-echo
-fi
-# Construct categroy graph from recomemender graph --> catGraph
-if [ $START_STAGE -le 2 -a $END_STAGE -ge 2 ]; then
-    echo "=== 2. Build category graph from recommender graph ==="
-    python extractCategoryGraph.py -d $DB -o $CATGRAPH $RECGRAPH $PARENTCAT $CAT
+    echo "=== 1. Build directed recommender graph for category from DB ==="
+    python buildRecGraph.py --directed --savefile $CATGRAPH --parent-category $PARENTCAT \
+       --category $CAT $DB
 echo
 fi
 # Partition graph
