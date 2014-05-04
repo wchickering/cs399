@@ -95,6 +95,7 @@ def main():
         return
 
     # load graph
+    print 'Loading graph from %s. . .' % graphfname
     graph = loadGraph(graphfname)
 
     # create transition matrix
