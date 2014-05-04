@@ -18,23 +18,7 @@ def getParser(usage=None):
         help='Save file for SVD products.', metavar='FILE')
     return parser
 
-def equalLists(listA, listB):
-    if len(listA) != len(listB):
-        return False
-    for i in range(len(listA)):
-        if listA[i] != listB[i]:
-            return False
-    return True
-
-def main():
-    # Parse options
-    usage = 'Usage: %prog [options] matrix1.npz matrix2.npz matrix3.npz ...'
-    parser = getParser(usage=usage)
-    (options, args) = parser.parse_args()
-    if len(args) < 1:
-        parser.error('ERROR: Must provide at least one matrix file.')
-
-    # load matrices
+def loadMatrices(args):
     matrix = None
     dictionary = None
     for i in range(len(args)):
@@ -61,12 +45,32 @@ def main():
             numRows = matrix.shape[0] + m.shape[0]
             numCols = matrix.shape[1]
             matrix = np.append(matrix, m).reshape([numRows, numCols])
+    return matrix, dictionary
+
+def equalLists(listA, listB):
+    if len(listA) != len(listB):
+        return False
+    for i in range(len(listA)):
+        if listA[i] != listB[i]:
+            return False
+    return True
+
+def main():
+    # Parse options
+    usage = 'Usage: %prog [options] matrix1.npz matrix2.npz matrix3.npz ...'
+    parser = getParser(usage=usage)
+    (options, args) = parser.parse_args()
+    if len(args) < 1:
+        parser.error('ERROR: Must provide at least one matrix file.')
+
+    # load matrices
+    matrix, dictionary = loadMatrices(args)
 
     # do svd
     print 'Performing SVD. . .'
     u, s, v = np.linalg.svd(matrix, full_matrices=False)
 
-    ## write SVD products to disk
+    # write SVD products to disk
     print 'Saving SVD products to %s. . .' % options.savefile
     k = options.k
     assert(k > 0 and k <= u.shape[1])

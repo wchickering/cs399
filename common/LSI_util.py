@@ -9,7 +9,7 @@ rank-reduced numpy.linalg.svd() products.
 """
 
 def getTermConcepts(u, s):
-    return np.transpose(u.dot(np.linalg.inv(np.diag(s))))
+    return np.transpose(u.dot(np.diag(s)))
 
 def showConcept(u, concept, topn=10, reverse=True):
     termValues = u[:,concept]

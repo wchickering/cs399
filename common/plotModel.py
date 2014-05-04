@@ -99,8 +99,13 @@ def main():
     elif os.path.isdir(options.savedir):
         savedir = options.savedir
     else:
-        print >> sys.stderr, 'ERROR: Cannot find dir: %s' % options.savedir
-        return
+        if os.path.isdir(os.path.split(options.savedir)[0]):
+            print 'Creating directory %s. . .' % options.savedir
+            os.mkdir(options.savedir)
+            savedir = options.savedir
+        else:
+            print >> sys.stderr, 'ERROR: Cannot find dir: %s' % options.savedir
+            return
 
     # load model
     if options.ldafile is not None:
