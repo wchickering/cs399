@@ -19,7 +19,8 @@ selectCategoryProductsStmt =\
     'FROM Products '
     'WHERE Id in '
     '(SELECT Id FROM Categories '
-    'WHERE Category = :Category)')
+     'WHERE parentCategory = :parentCategory '
+     'AND category = :category)')
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -35,10 +36,10 @@ def getParser(usage=None):
         metavar='FILE')
     return parser
 
-def calculateIDFs(db_conn, category, stopwords=None):
+def calculateIDFs(db_conn, parentCategory, category, stopwords=None):
     db_curs = db_conn.cursor()
     print 'Reading category products. . .'
-    db_curs.execute(selectCategoryProductsStmt, (category,))
+    db_curs.execute(selectCategoryProductsStmt, (parentCategory, category))
     numProducts = 0
     wordDocCounts = defaultdict(int)
     for row in db_curs:
@@ -62,12 +63,13 @@ def calculateIDFs(db_conn, category, stopwords=None):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] category'
+    usage = 'Usage: %prog [options] parent category'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
-    if len(args) != 1:
+    if len(args) != 2:
         parser.error('Wrong number of arguments')
-    category = args[0]
+    parent = args[0]
+    category = args[1]
 
     # Connect to db
     db_conn = sqlite3.connect(options.dbname)
@@ -86,7 +88,7 @@ def main():
         stopwords = None
 
     # Calculate idfs over all products
-    idf = calculateIDFs(db_conn, category, stopwords=stopwords)
+    idf = calculateIDFs(db_conn, parent, category, stopwords=stopwords)
     print 'Computed IDFs for %d terms.' % len(idf)
 
     # Dump results
