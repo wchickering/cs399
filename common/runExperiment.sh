@@ -56,8 +56,8 @@ fi
 # Random walk
 if [ $START_STAGE -le 4 -a $END_STAGE -ge 4 ]; then
     echo "=== 4. Randomly walk each graph ==="
-    python $SRC/randomWalk.py --savefile $RWALK1 $GRAPH1
-    python $SRC/randomWalk.py --savefile $RWALK2 $GRAPH2
+    python $SRC/buildWalkMatrix.py --savefile $RWALK1 $GRAPH1
+    python $SRC/buildWalkMatrix.py --savefile $RWALK2 $GRAPH2
 echo
 fi
 # Train model on each graph
