@@ -144,8 +144,7 @@ def main():
         dictionary = {}
         for i in range(len(items)):
             dictionary[i] = int(items[i])
-        #data = lsi.getTermConcepts(u, s).transpose()
-        data = u.dot(np.diag(s))
+        data = lsi.getTermConcepts(u, s).transpose()
     elif options.walkfile is not None:
         # process random walk matrix
         if not os.path.isfile(options.walkfile):
