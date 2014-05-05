@@ -27,7 +27,7 @@ def getParser(usage=None):
     parser.add_option('--walkfile', dest='walkfile', default=None,
         help='NPZ file of Random Walk matrix.', metavar='FILE')
     parser.add_option('--random', action='store_true', dest='random',
-        default=False, help='Replace walk data with random values.')
+        default=False, help='Replace data with random values.')
     parser.add_option('-n', '--numedges', type='int', dest='numedges',
         default=4, help='Number of outgoing edges per node.', metavar='NUM')
     parser.add_option('--directed', action='store_true', dest='directed',
@@ -123,7 +123,7 @@ def main():
         if not os.path.isfile(options.ldafile):
             print >> sys.stderr, 'ERROR: Cannot find %s' % options.ldafile
             return
-        print 'Load LDA model from %s. . .' % options.ldafile
+        print 'Loading LDA model from %s. . .' % options.ldafile
         with open(options.ldafile, 'r') as f:
             ldamodel = pickle.load(f)
         dictionary = {}
@@ -135,7 +135,7 @@ def main():
         if not os.path.isfile(options.svdfile):
             print >> sys.stderr, 'ERROR: Cannot find %s' % options.svdfile
             return
-        print 'Load LSI model from %s. . .' % options.svdfile
+        print 'Loading LSI model from %s. . .' % options.svdfile
         npzfile = np.load(options.svdfile)
         u = npzfile['u']
         s = npzfile['s']
@@ -151,21 +151,22 @@ def main():
             print >> sys.stderr, 'ERROR: Cannot find %s' % options.walkfile
             return
         print >> sys.stderr,\
-            'Load random walk matrix from %s. . .' % options.walkfile
+            'Loading walk matrix from %s. . .' % options.walkfile
         npzfile = np.load(options.walkfile)
         data = npzfile['matrix']
         d = npzfile['dictionary']
         dictionary = {}
         for i in range(len(d)):
             dictionary[i] = int(d[i])
-        if options.random:
-            # generate random data
-            print 'Generating random data. . .'
-            data = np.random.rand(data.shape[0], data.shape[1])
     else:
         print >> sys.stderr,\
             'ERROR: Must provide LDA model, SVD products, or Walk matrix.'
         return
+
+    if options.random:
+        # generate random data
+        print 'Generating random data. . .'
+        data = np.random.rand(data.shape[0], data.shape[1])
 
     if options.popgraph:
         print 'Loading "popularity" graph from %s. . .' % options.popgraph
