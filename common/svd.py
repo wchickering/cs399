@@ -61,7 +61,7 @@ def main():
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) < 1:
-        parser.error('ERROR: Must provide at least one matrix file.')
+        parser.error('Must provide at least one matrix file.')
 
     # load matrices
     matrix, dictionary = loadMatrices(args)

@@ -61,7 +61,7 @@ def main():
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 2:
-        parser.error('ERROR: Wrong number of arguments.')
+        parser.error('Wrong number of arguments.')
     sFilename = args[0]
     if not os.path.isfile(sFilename):
         print >> sys.stderr, 'ERROR: Cannot find %s' % sFilename
