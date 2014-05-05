@@ -22,7 +22,7 @@ def getParser(usage=None):
     parser.add_option('--directed', action='store_true', dest='directed',
         default=False, help='Treat as a directed graph.')
     parser.add_option('--savedir', dest='savedir', default=None,
-        help='Directory to save figures in.', metavar='DIR')
+        help='Directory to save plots in.', metavar='DIR')
     parser.add_option('--show', action='store_true', dest='show', default=False,
         help='Show plots.')
     return parser
@@ -93,7 +93,7 @@ def stronglyConnectedComponents(graph):
             for scc in dfs(v):
                 yield scc
 
-def plotSCCHist(graph, numBins, savedir, show=False):
+def plotSCCHist(graph, savedir, numBins=100, show=False):
     components = [c for c in stronglyConnectedComponents(graph)]
     sizes = [len(c) for c in components]
     data = []
@@ -134,7 +134,7 @@ def componentSizes(graph):
         sizes[comps[node]] += 1
     return sizes
 
-def plotCompHist(graph, numBins, savedir, show=False):
+def plotCompHist(graph, savedir, numBins=100, show=False):
     sizes = componentSizes(graph)
     data = []
     for c in sizes:
@@ -146,20 +146,22 @@ def plotCompHist(graph, numBins, savedir, show=False):
     savefile = os.path.join(savedir, 'comphist.%s' % saveFormat)
     print 'Saving Component Histogram to %s. . .' % savefile
     plt.savefig(savefile)
+    plt.figure()
     if show:
         plt.show()
 
-def plotInDegreeDist(graph, numBins, savedir, show=False):
+def plotInDegreeDist(graph, savedir, numBins=30, show=False):
     data = []
     for node in graph:
         data.append(len(graph[node][1]))
-    n, bins, patches = plt.hist(data, bins=numBins, range=(0, numBins-1))
+    n, bins, patches = plt.hist(data, bins=numBins, range=(0, numBins))
     plt.title('In-Degree Distribution')
     plt.ylabel('Number of Nodes')
     plt.xlabel('In-Degree')
     savefile = os.path.join(savedir, 'indegree.%s' % saveFormat)
     print 'Saving In-Degree Distribution to %s. . .' % savefile
     plt.savefig(savefile)
+    plt.figure()
     if show:
         plt.show()
 
@@ -194,15 +196,17 @@ def main():
     if options.directed:
         # strongly connected components histogram
         print 'Plotting SCC histogram. . .'
-        plotSCCHist(graph, options.bins, options.savedir, show=options.show)
+        plotSCCHist(graph, options.savedir, numBins=options.bins,
+                    show=options.show)
     else:
         # components histogram
         print 'Plotting Components histogram. . .'
-        plotCompHist(graph, options.bins, options.savedir, show=options.show)
+        plotCompHist(graph, options.savedir, numBins=options.bins,
+                     show=options.show)
 
     # in-degree distribution
     print 'Plotting in-degree distribution. . .'
-    plotInDegreeDist(graph, options.bins, options.savedir, show=options.show)
+    plotInDegreeDist(graph, options.savedir, show=options.show)
 
 if __name__ == '__main__':
     main()
