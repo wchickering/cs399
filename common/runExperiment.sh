@@ -5,23 +5,79 @@ die () {
     exit 1
 }
 
+verify_number () {
+    re='^[0-9]+$'
+    if ! [[ $1 =~ $re ]] ; then
+        die "error: Not a number: $1"
+    fi
+}
+
+while test $# -gt 0; do
+    case "$1" in
+        -h|--help)
+            echo "$package - run experiment"
+            echo " "
+            echo "$package [options] application [arguments]"
+            echo " "
+            echo "options:"
+            echo "-h, --help                show brief help"
+            echo "-s, --start-stage=NUM     specify the starting stage"
+            echo "-e, --end-stage=NUM       specify the ending stage"
+            exit 0
+            ;;
+        -s)
+            shift
+            if test $# -gt 0; then
+                export START_STAGE=$1
+                verify_number $START_STAGE
+            else
+                die "no starting stage specified"
+            fi
+            shift
+            ;;
+        --start-stage*)
+            export START_STAGE=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_number $START_STAGE
+            shift
+            ;;
+        -e)
+            shift
+            if test $# -gt 0; then
+                export END_STAGE=$1
+                verify_number $END_STAGE
+            else
+                die "no ending stage specified"
+            fi
+            shift
+            ;;
+        --end-stage*)
+            export END_STAGE=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_number $END_STAGE
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
 if [ $# -lt 2 ]; then
-    die "Usage: $0 ParentCategory Category [StartStage [EndStage]]"
+    die "Usage: $0 [options] ParentCategory Category"
 fi
 
 PARENTCAT=$1
 CAT=$2
-if [ $# -eq 3 ]; then
-    START_STAGE=$3
-    END_STAGE=1000
-elif [ $# -eq 4 ]; then
-    START_STAGE=$3
-    END_STAGE=$4
-else
+
+# Assign default values
+if [[ -z "$START_STAGE" ]]; then
     START_STAGE=1
+fi
+
+if [[ -z "$END_STAGE" ]]; then
     END_STAGE=1000
 fi
 
+# Setup environment
 SRC=../common
 DATA=data
 DB=$DATA/macys.db
