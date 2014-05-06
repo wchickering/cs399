@@ -78,8 +78,7 @@ def main():
         parser.error('Wrong number of arguments')
     dbname = args[0]
     if not os.path.isfile(dbname):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % dbname
-        return
+        parser.error('Cannot find %s' % dbname)
 
     print 'Connecting to %s. . .' % dbname
     db_conn = sqlite3.connect(dbname)

@@ -59,8 +59,7 @@ def main():
         parser.error('Wrong number of arguments')
     graphfname = args[0]
     if not os.path.isfile(graphfname):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % graphfname
-        return
+        parser.error('Cannot find %s' % graphfname)
 
     # load graph
     graph = loadGraph(graphfname)
@@ -68,9 +67,7 @@ def main():
     # get category items if category provided
     if options.category is not None:
         if options.dbname is None:
-            print >> sys.stderr,\
-                'ERROR: Must provide --database if --category provided'
-            return
+            parser.error('Must provide --database if --category provided')
         print 'Connecting to %s. . .' % options.dbname
         db_conn = sqlite3.connect(options.dbname)
         db_curs = db_conn.cursor()

@@ -37,16 +37,13 @@ def main():
         parser.error('Wrong number of arguments')
     item = int(args[0])
     if options.ldafile is None and options.svdfile is None:
-        print >> sys.stderr,\
-            'ERROR: Must provide either an LDA model or SVD products.'
-        return
+        parser.error('Must provide either an LDA model or SVD products.')
 
     # load model
     if options.ldafile is not None:
         # process LDA model
         if not os.path.isfile(options.ldafile):
-            print >> sys.stderr, 'ERROR: Cannot find %s' % options.ldafile
-            return
+            parser.error('Cannot find %s' % options.ldafile)
         print >> sys.stderr, 'Load LDA model from %s. . .' % options.ldafile
         with open(options.ldafile, 'r') as f:
             ldamodel = pickle.load(f)
@@ -57,8 +54,7 @@ def main():
     else:
         # process LSI model
         if not os.path.isfile(options.svdfile):
-            print >> sys.stderr, 'ERROR: Cannot find %s' % options.svdfile
-            return
+            parser.error('Cannot find %s' % options.svdfile)
         print >> sys.stderr, 'Load LSI model from %s. . .' % options.svdfile
         npzfile = np.load(options.svdfile)
         u = npzfile['u']

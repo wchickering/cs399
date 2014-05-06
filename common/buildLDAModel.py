@@ -86,9 +86,8 @@ def main():
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if options.docfile is None and options.matrixfile is None:
-        print >> sys.stderr, ('ERROR: Must provide either document file '
-                              '(--docfile) or matrix file (--matrixfile).')
-        return
+        parser.error(('Must provide either document file (--docfile) or matrix '
+                      'file (--matrixfile).'))
 
     # Load LDA model
     model = None
@@ -96,8 +95,7 @@ def main():
     if len(args) == 1:
         modelfname = args[0]
         if not os.path.isfile(modelfname):
-            print >> sys.stderr, 'ERROR: Cannot find %s' % modelfname
-            return
+            parser.error('Cannot find %s' % modelfname)
         print 'Loading model from %s. . .' % modelfname
         with open(modelfname, 'r') as f:
             model = pickle.load(f)

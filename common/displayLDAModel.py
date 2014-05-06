@@ -160,8 +160,7 @@ def main():
         parser.error('Wrong number of arguments')
     modelfname = args[0]
     if not os.path.isfile(modelfname):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % modelfname
-        return
+        parser.error('Cannot find %s' % modelfname)
 
     # load lda model
     print >> sys.stderr, 'Load LDA model. . .'
@@ -189,7 +188,7 @@ def main():
             try:
                 tfidf = pickle.load(f)
             except:
-                print >> sys.stderr, 'ERROR: Failed to parse tfidf file.'
+                print >> sys.stderr, 'error: Failed to parse tfidf file.'
                 return
     else:
         tfidf = None

@@ -182,8 +182,7 @@ def main():
         parser.error('Wrong number of arguments')
     graphfname = args[0]
     if not os.path.isfile(graphfname):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % graphfname
-        return
+        parser.error('Cannot find %s' % graphfname)
 
     # load graph
     print 'Loading graph from %s. . .' % graphfname

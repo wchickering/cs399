@@ -121,8 +121,7 @@ def main():
     if options.ldafile is not None:
         # process LDA model
         if not os.path.isfile(options.ldafile):
-            print >> sys.stderr, 'ERROR: Cannot find %s' % options.ldafile
-            return
+            parser.error('Cannot find %s' % options.ldafile)
         print 'Loading LDA model from %s. . .' % options.ldafile
         with open(options.ldafile, 'r') as f:
             ldamodel = pickle.load(f)
@@ -133,8 +132,7 @@ def main():
     elif options.svdfile is not None:
         # process LSI model
         if not os.path.isfile(options.svdfile):
-            print >> sys.stderr, 'ERROR: Cannot find %s' % options.svdfile
-            return
+            parser.error('Cannot find %s' % options.svdfile)
         print 'Loading LSI model from %s. . .' % options.svdfile
         npzfile = np.load(options.svdfile)
         u = npzfile['u']
@@ -148,10 +146,8 @@ def main():
     elif options.walkfile is not None:
         # process random walk matrix
         if not os.path.isfile(options.walkfile):
-            print >> sys.stderr, 'ERROR: Cannot find %s' % options.walkfile
-            return
-        print >> sys.stderr,\
-            'Loading walk matrix from %s. . .' % options.walkfile
+            parser.error('Cannot find %s' % options.walkfile)
+        print 'Loading walk matrix from %s. . .' % options.walkfile
         npzfile = np.load(options.walkfile)
         data = npzfile['matrix']
         d = npzfile['dictionary']
@@ -159,9 +155,7 @@ def main():
         for i in range(len(d)):
             dictionary[i] = int(d[i])
     else:
-        print >> sys.stderr,\
-            'ERROR: Must provide LDA model, SVD products, or Walk matrix.'
-        return
+        parser.error('Must provide LDA model, SVD products, or Walk matrix.')
 
     if options.random:
         # generate random data

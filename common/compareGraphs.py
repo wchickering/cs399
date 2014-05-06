@@ -155,12 +155,10 @@ def main():
         parser.error('Wrong number of arguments')
     targetfname = args[0]
     if not os.path.isfile(targetfname):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % targetfname
-        return
+        parser.error('Cannot find %s' % targetfname)
     sourcefname = args[1]
     if not os.path.isfile(sourcefname):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % sourcefname
-        return
+        parser.error('Cannot find %s' % sourcefname)
     if options.savedir is None:
         savedir = os.getcwd()
     elif os.path.isdir(options.savedir):
@@ -171,8 +169,7 @@ def main():
             os.mkdir(options.savedir)
             savedir = options.savedir
         else:
-            print >> sys.stderr, 'ERROR: Cannot find dir: %s' % options.savedir
-            return
+            parser.error('Cannot find dir: %s' % options.savedir)
 
     # load graphs
     target = loadGraph(targetfname)

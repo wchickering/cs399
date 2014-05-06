@@ -24,7 +24,7 @@ def loadMatrices(args):
     for i in range(len(args)):
         filename = args[i]
         if not os.path.isfile(filename):
-            print >> sys.stderr, 'ERROR: Cannot find %s' % filename
+            print >> sys.stderr, 'error: Cannot find %s' % filename
             return
         print 'Loading matrix from %s. . .' % filename
         npzfile = np.load(filename)
@@ -36,11 +36,11 @@ def loadMatrices(args):
         else:
             if m.shape[1] != matrix.shape[1]:
                 print >> sys.stderr,\
-                    'ERROR: All matrices must have same number of columns.'
+                    'error: All matrices must have same number of columns.'
                 return
             if not equalLists(d, dictionary):
                 print >> sys.stderr,\
-                    'ERROR: All matrix dictionaries must be equal.'
+                    'error: All matrix dictionaries must be equal.'
                 return
             numRows = matrix.shape[0] + m.shape[0]
             numCols = matrix.shape[1]

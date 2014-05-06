@@ -57,9 +57,9 @@ def main():
     lost_edges_filename = args[0]
     predicted_edges_filename = args[1]
     if not os.path.isfile(lost_edges_filename):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % lost_edges_filename
+        parser.error('Cannot find %s' % lost_edges_filename)
     if not os.path.isfile(predicted_edges_filename):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % predicted_edges_filename
+        parser.error('Cannot find %s' % predicted_edges_filename)
 
     # load edges
     print 'Load edges. .'

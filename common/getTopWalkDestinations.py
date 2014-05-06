@@ -34,7 +34,7 @@ def getDestinations(item, matrix, dictionary):
             itemId = i
             break
     if itemId == -1:
-        print >> sys.stderr, 'ERROR: Failed to find item in dictionary.'
+        print >> sys.stderr, 'error: Failed to find item in dictionary.'
         return None
     destinations =\
         [(dictionary[ind], prob) for ind, prob in enumerate(matrix[itemId,:])]
@@ -49,8 +49,7 @@ def main():
         parser.error('Wrong number of arguments')
     matrixfname = args[0]
     if not os.path.isfile(matrixfname):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % matrixfname
-        return
+        parser.error('Cannot find %s' % matrixfname)
     item = int(args[1])
 
     # load matrix

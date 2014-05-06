@@ -64,12 +64,10 @@ def main():
         parser.error('Wrong number of arguments.')
     sFilename = args[0]
     if not os.path.isfile(sFilename):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % sFilename
-        return
+        parser.erro('Cannot find %s' % sFilename)
     tFilename = args[1]
     if not os.path.isfile(tFilename):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % tFilename
-        return
+        parser.error('Cannot find %s' % tFilename)
 
     # load matrices
     print 'Loading matrix from %s. . .' % sFilename
@@ -88,10 +86,10 @@ def main():
         tDictionary[i] = int(d[i])
     if sMatrix.shape[0] != sMatrix.shape[1] or\
        tMatrix.shape[0] != tMatrix.shape[1]:
-        print >> sys.stderr, 'ERROR: Matrices must be square.'
+        print >> sys.stderr, 'error: Matrices must be square.'
         return
     if sMatrix.shape[0] != tMatrix.shape[0]:
-        print >> sys.stderr, 'ERROR: Matrices must be of equal rank.'
+        print >> sys.stderr, 'error: Matrices must be of equal rank.'
         return
 
     if options.nodiag:

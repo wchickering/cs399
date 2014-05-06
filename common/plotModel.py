@@ -91,9 +91,7 @@ def main():
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if options.ldafile is None and options.svdfile is None:
-        print >> sys.stderr,\
-            'ERROR: Must provide either an LDA model or SVD products.'
-        return
+        parser.error('Must provide either an LDA model or SVD products.')
     if options.savedir is None:
         savedir = os.getcwd()
     elif os.path.isdir(options.savedir):
@@ -104,16 +102,14 @@ def main():
             os.mkdir(options.savedir)
             savedir = options.savedir
         else:
-            print >> sys.stderr, 'ERROR: Cannot find dir: %s' % options.savedir
-            return
+            parser.error('Cannot find dir: %s' % options.savedir)
 
     # load model
     if options.ldafile is not None:
         # process LDA model
         if not os.path.isfile(options.ldafile):
-            print >> sys.stderr, 'ERROR: Cannot find %s' % options.ldafile
-            return
-        print >> sys.stderr, 'Load LDA model. . .'
+            parser.error('Cannot find %s' % options.ldafile)
+        print >> sys.stderr, 'Loading LDA model from %s. . .' % options.ldafile
         with open(options.ldafile, 'r') as f:
             ldamodel = pickle.load(f)
         dictionary = {}
@@ -124,9 +120,8 @@ def main():
     else:
         # process LSI model
         if not os.path.isfile(options.svdfile):
-            print >> sys.stderr, 'ERROR: Cannot find %s' % options.svdfile
-            return
-        print >> sys.stderr, 'Load LSI model. . .'
+            parser.error('Cannot find %s' % options.svdfile)
+        print >> sys.stderr, 'Loading LSI model from %s. . .' % options.svdfile
         npzfile = np.load(options.svdfile)
         u = npzfile['u']
         s = npzfile['s']
