@@ -7,14 +7,10 @@ L1 norm. Multiplying this matrix by a topic column vector of catalogue 1 gives a
 topic vector in catalogue 2's space.
 """
 
-from stemming.porter2 import stem
 from optparse import OptionParser
-from collections import defaultdict
 import pickle
 import os
 import sys
-import sqlite3
-import string
 import numpy as np
 
 def getParser(usage=None):
@@ -25,9 +21,8 @@ def getParser(usage=None):
     parser.add_option('-n', '--topnwords', type=int, dest='topnwords', 
         default=1000, help='Number of top words in tfidf to compare.',
         metavar='NUM')
-    parser.add_option('-v', '--verbose', 
-        action='store_true', dest='verbose', default=False,
-        help='Print top words')
+    parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
+        default=False, help='Print top words')
     return parser
 
 def topicTopicSim(topic1, topic2):
@@ -77,19 +72,19 @@ def main():
     tfidfname1 = args[0]
     tfidfname2 = args[1]
     if not os.path.isfile(tfidfname1):
-        print >> sys.stderr, 'Cannot find %s' % tfidfname1
+        print >> sys.stderr, 'error: Cannot find %s' % tfidfname1
         return
     if not os.path.isfile(tfidfname2):
-        print >> sys.stderr, 'Cannot find %s' % tfidfname2
+        print >> sys.stderr, 'error: Cannot find %s' % tfidfname2
         return
 
     # load tfidf1 pickle
-    print 'Load tfidf pickle of first catalogue. .'
+    print 'Loading tfidf of first catalogue from %s. . .' % tfidfname1
     with open(tfidfname1, 'r') as f:
         tfidf1 = pickle.load(f)
 
     # load tfidf2 pickle
-    print 'Load tfidf pickle of second catalogue. .'
+    print 'Loading tfidf of second catalogue from %s. . .' % tfidfname2
     with open(tfidfname2, 'r') as f:
         tfidf2 = pickle.load(f)
 
@@ -102,7 +97,7 @@ def main():
         tfidf2[topic] = tfidf2[topic][0:options.topnwords, :]
         
     # sort each topic of tfidfs by word alphabetically
-    print 'Sort tfidf topics by word. .'
+    print 'Sorting tfidf topics by word. . .'
     for topic in range(len(tfidf1)):
         ind = np.argsort(tfidf1[topic][:,0])
         tfidf1[topic] = tfidf1[topic][ind, :]
@@ -111,10 +106,11 @@ def main():
         tfidf2[topic] = tfidf2[topic][ind, :]
 
     # get matrix mapping topics from space 1 to topics of space 2
-    print 'Map topics from first catalogue to topics of second catalogue. .'
+    print 'Mapping topics between catalogues. . .'
     topic_map = getTopicMap(tfidf1, tfidf2)
 
     # dump tf-idfs
+    print 'Saving topic map to %s. . .' % options.outputpickle
     pickle.dump(topic_map, open(options.outputpickle, 'w'))
 
     # print results

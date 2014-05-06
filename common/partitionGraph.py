@@ -7,29 +7,22 @@ partition.
 """
 
 from optparse import OptionParser
-from collections import deque
 import pickle
 import random
 import os
 import sys
 
-# params
-displayInterval = 1000
-
-def getParser():
-    parser = OptionParser()
-    parser.add_option('-g', '--graph', dest='graphfilename',
-        default='data/recDirectedGraph.pickle',
-        help='Name of picked directed graph.', metavar='FILE')
+def getParser(usage=None):
+    parser = OptionParser(usage=usage)
     parser.add_option('--graph1', dest='graph1filename',
-        default='data/partitionedGraph1.pickle',
+        default='partitionedGraph1.pickle',
         help='Name of partitioned graph1 pickle.', metavar='FILE')
     parser.add_option('--graph2', dest='graph2filename',
-        default='data/partitionedGraph2.pickle',
+        default='partitionedGraph2.pickle',
         help='Name of partitioned graph2 pickle.', metavar='FILE')
     parser.add_option('--lost_edges', dest='lostedgesfilename',
-        default='data/lostEdges.pickle',
-        help='Name of lost edges pickle.', metavar='FILE')
+        default='lostEdges.pickle', help='Name of lost edges pickle.',
+        metavar='FILE')
     parser.add_option('--seed', type='int', dest='seed', default=0,
         help='Seed for random number generator.', metavar='NUM')
     return parser
@@ -79,27 +72,35 @@ def partitionGraph(graph):
 
 def main():
     # Parse options
-    parser = getParser()
+    usage = 'Usage: %prog [options] graph.pickle'
+    parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
+    if len(args) != 1:
+        parser.error('Wrong number of arguments')
+    graphfname = args[0]
+    if not os.path.isfile(graphfname):
+        parser.error('Cannot find %s' % graphfname)
+
+    # load graph
+    print 'Loading graph from %s. . .' % graphfname
+    graph = loadGraph(graphfname)
 
     # seed rng
     random.seed(options.seed)
 
-    print 'Load graph. .'
-    # load recommendation graph
-    graph = loadGraph(options.graphfilename)
-
-    print 'Partition graph. .'
     # partition graph
+    print 'Partitioning graph. . .'
     results = partitionGraph(graph)
     graph1 = results[0]
     graph2 = results[1]
     lost_edges = results[2]
     
-    print 'Dump results. .'
     # dump results
+    print 'Saving graph1 to %s. . .' % options.graph1filename
     pickle.dump(graph1, open(options.graph1filename, 'w'))
+    print 'Saving graph2 to %s. . .' % options.graph2filename
     pickle.dump(graph2, open(options.graph2filename, 'w'))
+    print 'Saving lost edges to %s. . .' % options.lostedgesfilename
     pickle.dump(lost_edges, open(options.lostedgesfilename, 'w'))
 
 if __name__ == '__main__':

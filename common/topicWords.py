@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Compute a sparse TF-IDF vectors for each topic of an LDA model.
+Compute a sparse TF-IDF vectors for each topic/concept of an LDA/LSI model.
 """
 
 from stemming.porter2 import stem
@@ -12,6 +12,10 @@ import os
 import sys
 import sqlite3
 import string
+import numpy as np
+
+# local modules
+import LSI_util as lsi
 
 # db params
 selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
@@ -39,16 +43,15 @@ def getParser(usage=None):
         metavar='FILE')
     return parser
 
-def getTopWordsByTopic(db_conn, model, idf, topn, stopwords=None):
+def getTopWordsByTopic(db_conn, topicDists, idf, stopwords=None):
     db_curs = db_conn.cursor()
     tfidfPerTopic = []
-    for topic in range(model.num_topics):
-        item_dist = model.show_topic(topic, topn=topn)
+    for topic in range(len(topicDists)):
         tf = defaultdict(float)
         # Count terms over descriptions of all topn products to determine tf
-        for i in range(topn):
-            topicStrength = item_dist[i][0]
-            item = item_dist[i][1]
+        for i in range(len(topicDists[topic])):
+            topicStrength = topicDists[topic][i][0]
+            item = topicDists[topic][i][1]
             db_curs.execute(selectDescriptionStmt, (item,))
             description = db_curs.fetchone()[0]
             # strip out punctuation
@@ -73,14 +76,37 @@ def getTopWordsByTopic(db_conn, model, idf, topn, stopwords=None):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <lda.pickle>'
+    usage = 'Usage: %prog [options] modelfile'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 1:
         parser.error('Wrong number of arguments')
-    modelfname = args[0]
-    if not os.path.isfile(modelfname):
-        print >> sys.stderr, 'Cannot find %s' % modelfname
+    filename = args[0]
+    if not os.path.isfile(filename):
+        print >> sys.stderr, 'error: Cannot find %s' % filename
+        return
+
+    if filename.endswith('.pickle'):
+        # load LDA model
+        print 'Loading LDA model. . .'
+        with open(filename, 'r') as f:
+            model = pickle.load(f)
+        topicDists = [model.show_topic(topic, topn=options.topn)\
+                      for topic in range(model.num_topics)]
+    elif filename.endswith('.npz'):
+        # load LSI model
+        print 'Loading LSI model. . .'
+        npzfile = np.load(filename)
+        u = npzfile['u']
+        s = npzfile['s']
+        v = npzfile['v']
+        dictionary = npzfile['dictionary']
+        topicDists = [lsi.showConcept(u, concept, topn=options.topn,
+                                      dictionary=dictionary)\
+                      for concept in range(len(s))]
+    else:
+        print >> sys.stderr,\
+            'error: Input must be either a .pickle or .npz file.'
         return
 
     # connect to db
@@ -92,17 +118,12 @@ def main():
             try:
                 stopwords = f.readline().split(',')
             except:
-                print >> sys.stderr, 'Failed to parse stop words.'
+                print >> sys.stderr, 'error: Failed to parse stop words.'
                 return
     else:
         print >> sys.stderr,\
-            'WARNING: stop words file not found: %s' % options.stopwords
+            'warning: stop words file not found: %s' % options.stopwords
         stopwords = None
-
-    # load lda model
-    print 'Load LDA model. . .'
-    with open(modelfname, 'r') as f:
-        model = pickle.load(f)
 
     # get IDFs
     print 'Load IDFs. . .'
@@ -111,15 +132,14 @@ def main():
 
     # get top words for each topic 
     print 'Get top words. . .'
-    tfidf = getTopWordsByTopic(db_conn, model, idf, options.topn,
-                               stopwords=stopwords)
+    tfidf = getTopWordsByTopic(db_conn, topicDists, idf, stopwords=stopwords)
 
     # dump tf-idfs
     pickle.dump(tfidf, open(options.outputpickle, 'w'))
 
     # Print the topnWords
     if options.verbose:
-        for topic in range(model.num_topics):
+        for topic in range(len(topicDists)):
             print ''
             print 'Top words for topic %d' % topic
             print '======================='

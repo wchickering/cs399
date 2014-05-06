@@ -1,158 +1,127 @@
 #!/usr/bin/env python
 
 """
-Predicts the edges between graph 1 and graph 2 based on LDA model.
+Predicts the edges across two LDA/LSI model.
 """
 
 from optparse import OptionParser
 import pickle
 import os
 import sys
-import sqlite3
-import LDA_util
 import random
 import numpy as np
+
+# local modules
+import LDA_util as lda
+import LSI_util as lsi
 from KNNSearchEngine import KNNSearchEngine
-from Queue import PriorityQueue
-#import KNNSearchEngine
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-k', '--kPredictions', dest='k', default='10',
+    parser.add_option('-k', type='int', dest='k', default=10,
         help='Number of predicted edges per node.', metavar='NUM')
-    parser.add_option('--graph1', dest='graph1_filename', 
-        default='data/graph1.pickle', 
-        help='Pickle storing graph 1', metavar='FILE')
-    parser.add_option('--graph2', dest='graph2_filename', 
-        default='data/graph2.pickle', 
-        help='Pickle storing graph 2', metavar='FILE')
-    parser.add_option('--lda1', dest='lda1_filename', 
-        default='data/lda1.pickle', 
-        help='Pickle storing lda model for graph 1', metavar='FILE')
-    parser.add_option('--lda2', dest='lda2_filename', 
-        default='data/lda2.pickle', 
-        help='Pickle storing lda model for graph 2', metavar='FILE')
-    parser.add_option('--topicmap', dest='topic_map_filename', 
-        default='data/topicMap.pickle', 
-        help='Pickle storing topic map from topci in graph1 to topics in graph 2',
+    parser.add_option('-s', '--savefile', dest='savefile',
+        default='predictEdges.pickle', help='Pickle to dump predicted edges.',
         metavar='FILE')
-    parser.add_option('-o', '--output', dest='predicted_edges_filename',
-        default='data/predicted_edges.pickle',
-        help='Pickle to dump predicted edges', metavar='OUT_FILE')
-    parser.add_option('-r', '--random', 
-        action='store_true', dest='randomPredict', default=False,
-        help='make random predictions')
+    parser.add_option('-r', '--random', action='store_true', dest='random',
+        default=False, help='Make random predictions.')
     return parser
 
 def loadPickle(fname):
     with open(fname, 'r') as f:
-        graph = pickle.load(f)
-    return graph
+        obj = pickle.load(f)
+    return obj
 
-def getTopicsFromModel(lda, node):
-    return LDA_util.getTopicGivenItemProbs(lda)[:, lda.id2word.token2id[str(node)]]
+def loadModel(filename):
+    if filename.endswith('.pickle'):
+        # load LDA model
+        model = loadPickle(filename)
+        dictionary = {}
+        for i, node in model.id2word.items():
+            dictionary[i] = int(node)
+        data = lda.getTopicGivenItemProbs(model)
+    elif filename.endswith('.npz'):
+        # load LSI model
+        npzfile = np.load(filename)
+        u = npzfile['u']
+        s = npzfile['s']
+        v = npzfile['v']
+        nodes = npzfile['dictionary']
+        dictionary = {}
+        for i in range(len(nodes)):
+            dictionary[i] = int(nodes[i])
+        data = lsi.getTermConcepts(u, s)
+    else:
+        print >> sys.stderr,\
+            'error: Model file must be either a .pickle or .npz file.'
+        return None
+    return data, dictionary
 
-def getTopicsFromSpace(topic_space, lda, node):
-    lda.id2word.token2id[str(node)]
-    return topic_space[:, lda.id2word.token2id[str(node)]]
-
-def transformTopics(topics, topic_map):
-    topic_map = np.array(topic_map)
-    topics = np.array(topics)
-    return np.dot(topic_map, topics)
-
-def getDistance(point1, point2):
-    point1 = np.array(point1)
-    point2 = np.array(point2)
-    return np.linalg.norm(point2 - point1)
-
-def getNeighbors(graph, lda, node_topics, k):
-    # get top k nearest neighbors by L2 distance in topic space 2
-    queue = PriorityQueue() # priority queue makes this nlogk
-    for node2 in graph:
-        node_topics2 = getTopicsFromModel(lda, node2) 
-        distance = getDistance(node_topics, node_topics2)
-        queue.put((-distance, node2))
-        if queue.qsize() > k:
-            queue.get()
-    neighbors = []
-    while not queue.empty():
-        (distance, node2) = queue.get()
-        neighbors.append(node2)
-    return neighbors
-
-def kNN(engine, node_topics, k):
-    (distances, neighbor_matrix) = engine.kneighbors(node_topics, k)
-    neighbors = [int(numeric_string) for numeric_string in neighbor_matrix[0]]
-    return neighbors
-
-def transformTopicSpace(lda1, topic_map):
-    lda1_matrix = LDA_util.getTopicGivenItemProbs(lda1)
-    return np.dot(topic_map, lda1_matrix)
-
-def predictEdges(graph1, graph2, k, lda1, lda2, topic_map, topic_space, engine):
+def predictEdges(topic_space, dictionary, k, searchEngine):
     predicted_edges = []
-    for node in graph1:
-        node_topics2 = getTopicsFromSpace(topic_space, lda1, node)
-        neighbors = kNN(engine, node_topics2, k)
-        for neighbor in neighbors:
-            predicted_edges.append((node, neighbor))
+    for index, node in dictionary.items():
+        distances, neighbors = searchEngine.kneighbors(topic_space[:, index], k)
+        predicted_edges += [(int(node), int(neighbor))\
+                            for neighbor in neighbors[0]]
     return predicted_edges
 
-def predictRandomEdges(graph1, graph2, k):
+def predictRandomEdges(dictionary1, dictionary2, k):
     predicted_edges = []
-    # get the items in graph2 that are in the right category
-    for item in graph1:
-        # pick k of them randomly and guess those edges
+    for node1 in dictionary1:
+        # pick k items randomly and guess those edges
         for i in range(k):
-            item2 = random.choice(graph2.keys())
-            predicted_edges.append((item, item2))
+            node2 = random.choice(dictionary2.keys())
+            predicted_edges.append((node1, node2))
     return predicted_edges
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options]'
+    usage = 'Usage: %prog [options] topicMap.pickle modelfile1 modelfile2'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
+    if len(args) != 3:
+        parser.error('Wrong number of arguments') 
+    topic_map_filename = args[0]
+    if not os.path.isfile(topic_map_filename):
+        parser.error('Cannot find %s' % topic_map_filename)
+    model1_filename = args[1]
+    if not os.path.isfile(model1_filename):
+        parser.error('Cannot find %s' % model1_filename)
+    model2_filename = args[2]
+    if not os.path.isfile(model2_filename):
+        parser.error('Cannot find %s' % model2_filename)
 
-    # load graphs, models, and map
-    print 'Load pickles. .'
-    if not os.path.isfile(options.graph1_filename):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % graph1_filename
-    graph1 = loadPickle(options.graph1_filename)
-    if not os.path.isfile(options.graph2_filename):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % graph2_filename
-    graph2 = loadPickle(options.graph2_filename)
-    if not os.path.isfile(options.lda1_filename):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % lda1_filename
-    lda1 = loadPickle(options.lda1_filename)
-    if not os.path.isfile(options.lda2_filename):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % lda2_filename
-    lda2 = loadPickle(options.lda2_filename)
-    if not os.path.isfile(options.topic_map_filename):
-        print >> sys.stderr, 'ERROR: Cannot find %s' % topic_map_filename
-    topic_map = loadPickle(options.topic_map_filename)
+    # load topic map
+    print 'Loading topic map from %s. . .' % topic_map_filename
+    topic_map = loadPickle(topic_map_filename)
 
-    print 'Transform topic space 1 to topic space 2. .'
-    transformed_space = transformTopicSpace(lda1, topic_map)
+    # load models
+    print 'Loading model1 from %s. . .' % model1_filename
+    data1, dictionary1 = loadModel(model1_filename)
+    print 'Loading model2 from %s. . .' % model2_filename
+    data2, dictionary2 = loadModel(model2_filename)
 
-    print 'Create KNN search engine. .'
-    data = LDA_util.getTopicGivenItemProbs(lda2).transpose()
-    dictionary = lda2.id2word
-    searchEngine = KNNSearchEngine(data, dictionary)
+    # transform to common topic space
+    print 'Transforming topic space 1 to topic space 2. . .'
+    transformed_space = np.dot(topic_map, data1)
+
+    # create search engine
+    print 'Creating KNN search engine from model2. . .'
+    searchEngine = KNNSearchEngine(data2.transpose(), dictionary2)
 
     # predict edges
-    if options.randomPredict:
-        print 'Randomly predict edges. .'
-        predicted_edges = predictRandomEdges(graph1, graph2, int(options.k))
+    if options.random:
+        print 'Randomly predicting edges. . .'
+        predicted_edges = predictRandomEdges(dictionary1, dictionary2,
+                                             options.k)
     else:
-        print 'Predict edges. .'
-        predicted_edges = predictEdges(graph1, graph2, int(options.k), lda1,
-                lda2, topic_map, transformed_space, searchEngine)
+        print 'Predicting edges. . .'
+        predicted_edges = predictEdges(transformed_space, dictionary1,
+                                       options.k, searchEngine)
     
-    print 'Dump results. .'
-    # dump results
-    pickle.dump(predicted_edges, open(options.predicted_edges_filename, 'w'))
+    # save results
+    print 'Saving results to %s. . .' % options.savefile
+    pickle.dump(predicted_edges, open(options.savefile, 'w'))
 
 if __name__ == '__main__':
     main()
