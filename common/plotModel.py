@@ -63,7 +63,6 @@ def plotModelTopics(data, numBins, savedir, xlim=None, show=False):
 # TODO: Make this efficient
 def plotGraphAnalysis(graph, searchEngine, savedir, numBins=100, show=False):
     items = [item for item in searchEngine.dictionary.values() if item in graph]
-    numEdges = sum([len(graph[item][0]) for item in items])
     graphNeighbors = [graph[item][0] for item in items]
     distances, topicNeighbors =\
         searchEngine.kneighborsByName(items, n_neighbors=numBins)
@@ -76,9 +75,9 @@ def plotGraphAnalysis(graph, searchEngine, savedir, numBins=100, show=False):
         # place all missing ranks in extra overflow bin
         #neighborRanks += [numBins]*(graphNbrs.shape[0] - ranks.shape[0])
     plt.figure()
-    n, bins, patches = plt.hist(neighborRanks, numBins)
+    n, bins, patches = plt.hist(neighborRanks, numBins, normed=1)
     plt.title('Rank of graph NN measured in topic space')
-    plt.ylabel('Number of Edges (out of %d)' % numEdges)
+    plt.ylabel('Fraction of Edges')
     plt.xlabel('NN Rank in Topic Space')
     plt.xlim([0,numBins])
     plt.savefig(os.path.join(savedir, 'graphAnalysis.%s' % saveFormat))
@@ -145,7 +144,7 @@ def main():
     # analyze relation to original graph
     if options.graphfile is not None:
         if not os.path.isfile(options.graphfile):
-            print >> sys.stdeerr, 'WARNING: Cannot find %s' % options.graphfile
+            print >> sys.stdeerr, 'warning: Cannot find %s' % options.graphfile
         else:
             print 'Loading graph from %s. . .' % options.graphfile
             graph = loadGraph(options.graphfile)
