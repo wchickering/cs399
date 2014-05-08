@@ -102,6 +102,8 @@ SRC=../common
 DATA=data
 DB=$DATA/macys.db
 CATGRAPH=$DATA/graph${CAT}.pickle
+UNDIRECTED_GRAPH=$DATA/graph${CAT}Undirected.pickle
+PROX_MAT=$DATA/proxMat${CAT}.npz
 GRAPH1=$DATA/graph${CAT}1.pickle
 GRAPH2=$DATA/graph${CAT}2.pickle
 LOST_EDGES=$DATA/lostEdges${CAT}.pickle
@@ -122,6 +124,16 @@ if [ $START_STAGE -le 1 -a $END_STAGE -ge 1 ]; then
     echo "=== 1. Build directed recommender graph for category from DB ==="
     python $SRC/buildRecGraph.py --directed --savefile=$CATGRAPH\
         --parent-category=$PARENTCAT --category=$CAT $DB
+echo
+fi
+
+# Construct proximity matrix for k-precision/recall evaluation
+if [ $START_STAGE -le 2 -a $END_STAGE -ge 2 ]; then
+    echo "=== 2. Build proximity matrix from graph ==="
+    python $SRC/buildRecGraph.py --savefile=$UNDIRECTED_GRAPH\
+        --parent-category=$PARENTCAT --category=$CAT $DB
+    python $SRC/buildWalkMatrix.py --type=proximity --savefile=$PROX_MAT\
+        $UNDIRECTED_GRAPH
 echo
 fi
 
@@ -207,5 +219,5 @@ fi
 # Predict edges
 if [ $START_STAGE -le 10 -a $END_STAGE -ge 10 ]; then
     echo "=== 10. Evaluate predictions ==="
-    python $SRC/evalPredictedEdges.py $LOST_EDGES $PREDICTED_EDGES
+    python $SRC/evalPredictedEdges.py -k 1 $PROX_MAT $PREDICTED_EDGES
 fi
