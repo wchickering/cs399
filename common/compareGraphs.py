@@ -22,11 +22,13 @@ class GraphComparison:
         self.targetEdgeCnt = 0
         self.sourceEdgeCnt = 0
         self.commonNodeCnt = 0
-        self.commonEdgeCnt = 0
+        self.commonTargetEdgeCnt = 0
+        self.commonSourceEdgeCnt = 0
         self.targetMissNodeCnt = 0
         self.sourceMissNodeCnt = 0
         self.targetMissEdgeCnt = 0
         self.sourceMissEdgeCnt = 0
+        self.k = 1
 
     def display(self):
         print 'target node cnt: %d' % self.targetNodeCnt
@@ -34,7 +36,10 @@ class GraphComparison:
         print 'target edge cnt: %d' % self.targetEdgeCnt
         print 'source edge cnt: %d' % self.sourceEdgeCnt
         print 'nodes in common: %d' % self.commonNodeCnt
-        print 'edges in common: %d' % self.commonEdgeCnt
+        print 'target edges within %d in source graph: %d' % \
+            (int(self.k), self.commonTargetEdgeCnt)
+        print 'source edges within %d in target graph: %d' % \
+            (int(self.k), self.commonSourceEdgeCnt)
         print 'nodes missing from target: %d' % self.targetMissNodeCnt
         print 'nodes missing from source: %d' % self.sourceMissNodeCnt
         print 'edges missing from target: %d' % self.targetMissEdgeCnt
@@ -50,6 +55,8 @@ def getParser(usage=None):
         help='Show plots.')
     parser.add_option('--distdists', action='store_true', dest='distdists',
         default=False, help='Produce distance distributions.')
+    parser.add_option('-k', dest='k', default=1, metavar='NUM',
+        help='Distance away in original graph to consider correct')
     return parser
 
 def loadGraph(fname):
@@ -57,16 +64,18 @@ def loadGraph(fname):
         graph = pickle.load(f)
     return graph
 
-def compareGraphs(target, source, directed=False):
+def compareGraphs(target, source, k, directed=False):
     comparison = GraphComparison()
+    comparison.k = k
     for node in target:
         comparison.targetNodeCnt += 1
         comparison.targetEdgeCnt += len(target[node][0])
         if node in source:
             comparison.commonNodeCnt += 1
-            for neighbor in target[node][0]:
-                if neighbor in source[node][0]:
-                    comparison.commonEdgeCnt += 1
+            distances = getDistances(source, node, target[node][0])
+            for neighbor in distances:
+                if distances[neighbor] <= k:
+                    comparison.commonTargetEdgeCnt += 1
                 else:
                     comparison.sourceMissEdgeCnt += 1
         else:
@@ -76,8 +85,11 @@ def compareGraphs(target, source, directed=False):
         comparison.sourceNodeCnt += 1
         comparison.sourceEdgeCnt += len(source[node][0])
         if node in target:
-            for neighbor in source[node][0]:
-                if neighbor not in target[node][0]:
+            distances = getDistances(source, node, target[node][0])
+            for neighbor in distances:
+                if distances[neighbor] <= k:
+                    comparison.commonSourceEdgeCnt += 1
+                else:
                     comparison.targetMissEdgeCnt += 1
         else:
             comparison.targetMissNodeCnt += 1
@@ -86,7 +98,8 @@ def compareGraphs(target, source, directed=False):
        # we double counted in the case of an undirected graph
        comparison.targetEdgeCnt /= 2
        comparison.sourceEdgeCnt /= 2
-       comparison.commonEdgeCnt /= 2
+       comparison.commonSourceEdgeCnt /= 2
+       comparison.commonTargetEdgeCnt /= 2
        comparison.targetMissEdgeCnt /= 2
        comparison.sourceMissEdgeCnt /= 2
     return comparison
@@ -176,7 +189,8 @@ def main():
     source = loadGraph(sourcefname)
 
     # compare graphs
-    comparison = compareGraphs(target, source, directed=options.directed)
+    comparison = compareGraphs(target, source, int(options.k),
+            directed=options.directed)
 
     # display scores
     comparison.display()

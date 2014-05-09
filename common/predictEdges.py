@@ -71,7 +71,8 @@ def predictRandomEdges(dictionary1, dictionary2, k):
         # pick k items randomly and guess those edges
         for i in range(k):
             node2 = random.choice(dictionary2.keys())
-            predicted_edges.append((node1, node2))
+            predicted_edges.append((dictionary1[node1], 
+                dictionary2[node2]))
     return predicted_edges
 
 def main():
