@@ -57,23 +57,28 @@ def correctPredictions(predicted_edges, proximity_mat, dictionary, k):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] proximity_mat.pickle predicted_edges.pickle'
+    usage = 'Usage: %prog [options] proximity_mat.pickle predicted_edges.pickle\
+            lost_edges.pickle'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
-    if len(args) != 2:
+    if len(args) != 3:
         parser.error('Wrong number of arguments')
     proximity_mat_fname = args[0]
     predicted_edges_filename = args[1]
+    lost_edges_filename = args[2]
     if not os.path.isfile(proximity_mat_fname):
         parser.error('Cannot find %s' % proximity_mat_fname)
     if not os.path.isfile(predicted_edges_filename):
         parser.error('Cannot find %s' % predicted_edges_filename)
+    if not os.path.isfile(lost_edges_filename):
+        parser.error('Cannot find %s' % lost_edges_filename)
 
     # Load edges
     print 'Load pickles. .'
     proximity_mat = getMatrix(proximity_mat_fname)
     dictionary = getDict(proximity_mat_fname)
     predicted_edges = loadPickle(predicted_edges_filename)
+    lost_edges = loadPickle(lost_edges_filename)
 
     # Evaluate
     print 'Evaluate predictions. .'
@@ -81,7 +86,8 @@ def main():
             int(options.k))
 
     predicted_nodes = getPredictedNodes(predicted_edges)
-
+    relevant_lost_edges = getRelevantEdges(lost_edges, predicted_nodes)
+ 
     # print evaluation results
     print '==================='
     print 'k \t\t\t : %s' % options.k
@@ -89,9 +95,9 @@ def main():
     print 'Total predictions \t : %d' % len(predicted_edges)
     print 'Items predicted \t : %d' % len(predicted_nodes)
     print 'Guesses per item \t : %d' % (len(predicted_edges)/len(predicted_nodes))
-    #print 'Withheld edges \t\t : %d' % (len(relevant_lost_edges))
+    print 'Withheld edges \t\t : %d' % (len(relevant_lost_edges))
     print 'Precision \t\t : %f' % (float(correct) / len(predicted_edges))
-    #print 'Recall \t\t\t : %f' % (float(correct) / len(relevant_lost_edges))
+    print 'Recall \t\t\t : %f' % (float(correct) / len(relevant_lost_edges))
 
 if __name__ == '__main__':
     main()
