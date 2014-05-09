@@ -18,32 +18,21 @@ saveFormat = 'jpg'
 class GraphComparison:
     def __init__(self):
         self.targetNodeCnt = 0
-        self.sourceNodeCnt = 0
         self.targetEdgeCnt = 0
-        self.sourceEdgeCnt = 0
         self.commonNodeCnt = 0
         self.commonTargetEdgeCnt = 0
-        self.commonSourceEdgeCnt = 0
-        self.targetMissNodeCnt = 0
         self.sourceMissNodeCnt = 0
-        self.targetMissEdgeCnt = 0
         self.sourceMissEdgeCnt = 0
         self.k = 1
 
-    def display(self):
-        print 'target node cnt: %d' % self.targetNodeCnt
-        print 'source node cnt: %d' % self.sourceNodeCnt
-        print 'target edge cnt: %d' % self.targetEdgeCnt
-        print 'source edge cnt: %d' % self.sourceEdgeCnt
+    def display(self, tName, sName):
+        print '%s node cnt: %d' % (tName, self.targetNodeCnt)
+        print '%s edge cnt: %d' % (tName, self.targetEdgeCnt)
         print 'nodes in common: %d' % self.commonNodeCnt
-        print 'target edges within %d in source graph: %d' % \
-            (int(self.k), self.commonTargetEdgeCnt)
-        print 'source edges within %d in target graph: %d' % \
-            (int(self.k), self.commonSourceEdgeCnt)
-        print 'nodes missing from target: %d' % self.targetMissNodeCnt
-        print 'nodes missing from source: %d' % self.sourceMissNodeCnt
-        print 'edges missing from target: %d' % self.targetMissEdgeCnt
-        print 'edges missing from source: %d' % self.sourceMissEdgeCnt
+        print '%s edges within %d in %s graph: %d' % \
+            (tName, int(self.k), sName, self.commonTargetEdgeCnt)
+        print 'nodes missing from %s: %d' % (sName, self.sourceMissNodeCnt)
+        print 'edges missing from %s: %d' % (sName, self.sourceMissEdgeCnt)
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -56,7 +45,7 @@ def getParser(usage=None):
     parser.add_option('--distdists', action='store_true', dest='distdists',
         default=False, help='Produce distance distributions.')
     parser.add_option('-k', dest='k', default=1, metavar='NUM',
-        help='Distance away in original graph to consider correct')
+        help='Distance away to consider correct.')
     return parser
 
 def loadGraph(fname):
@@ -81,26 +70,10 @@ def compareGraphs(target, source, k, directed=False):
         else:
             comparison.sourceMissNodeCnt += 1
             comparison.sourceMissEdgeCnt += len(target[node][0])
-    for node in source:
-        comparison.sourceNodeCnt += 1
-        comparison.sourceEdgeCnt += len(source[node][0])
-        if node in target:
-            distances = getDistances(source, node, target[node][0])
-            for neighbor in distances:
-                if distances[neighbor] <= k:
-                    comparison.commonSourceEdgeCnt += 1
-                else:
-                    comparison.targetMissEdgeCnt += 1
-        else:
-            comparison.targetMissNodeCnt += 1
-            comparison.targetMissEdgeCnt += len(source[node][0])
     if not directed:
        # we double counted in the case of an undirected graph
        comparison.targetEdgeCnt /= 2
-       comparison.sourceEdgeCnt /= 2
-       comparison.commonSourceEdgeCnt /= 2
        comparison.commonTargetEdgeCnt /= 2
-       comparison.targetMissEdgeCnt /= 2
        comparison.sourceMissEdgeCnt /= 2
     return comparison
 
@@ -161,7 +134,7 @@ def plotDistanceDist(target, source, savedir, title=None, numBins=10,
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <targetGraph.pickle> <sourceGraph.pickle'
+    usage = 'Usage: %prog [options] <targetGraph.pickle> <sourceGraph.pickle>'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 2:
@@ -189,11 +162,15 @@ def main():
     source = loadGraph(sourcefname)
 
     # compare graphs
-    comparison = compareGraphs(target, source, int(options.k),
+    comparison_TtoS = compareGraphs(target, source, int(options.k),
+            directed=options.directed)
+    comparison_StoT = compareGraphs(source, target, int(options.k),
             directed=options.directed)
 
     # display scores
-    comparison.display()
+    comparison_TtoS.display('target', 'source')
+    print '-------------------------'
+    comparison_StoT.display('source', 'target')
 
     if options.distdists:
         # plot distance distributions
