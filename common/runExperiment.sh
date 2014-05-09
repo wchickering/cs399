@@ -63,10 +63,6 @@ while test $# -gt 0; do
             export MODEL_TYPE="LSI"
             shift
             ;;
-        --new)
-            export NEW="True"
-            shift
-            ;;
         *)
             break
             ;;
@@ -81,10 +77,6 @@ PARENTCAT=$1
 CAT=$2
 
 # Assign default values
-if [[ -z "$NEW" ]]; then
-    NEW="False"
-fi
-
 if [[ -z "$START_STAGE" ]]; then
     START_STAGE=1
 fi
