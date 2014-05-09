@@ -11,9 +11,9 @@ from Queue import PriorityQueue
 import pickle
 import os
 import sys
-import random
 import sqlite3
 import string
+import math
 import numpy as np
 
 # local modules
@@ -31,8 +31,6 @@ def getParser(usage=None):
     parser.add_option('-s', '--savefile', dest='savefile',
         default='predictEdges.pickle', help='Pickle to dump predicted edges.',
         metavar='FILE')
-    parser.add_option('-r', '--random', action='store_true', dest='random',
-        default=False, help='Make random predictions.')
     parser.add_option('--tfidf', action='store_true', dest='tfidf_compare',
         default=False, help='Make predictions based on item-item tfidf similarity.')
     parser.add_option('-d', '--database', dest='dbname',
@@ -85,10 +83,17 @@ def predictEdges(topic_space, dictionary, k, searchEngine):
 
 def tfidfSimilarity(tfidf1, tfidf2):
     score = 0.0
+    weight1 = 0.0
+    weight2 = 0.0
+    for word2 in tfidf2:
+        weight2 += tfidf2[word2]*tfidf2[word2] 
     for word1 in tfidf1:
+        weight1 += tfidf1[word1]*tfidf1[word1]
         if word1 in tfidf2:
             score += tfidf1[word1]*tfidf2[word1]
     return score
+    # for cosine similarity:
+    #return (score / math.sqrt(weight1 * weight2))
 
 def tfidfNeighbors(tfidf1, tfidfs2, k):
     queue = PriorityQueue() # priority queue makes this nlogk
@@ -133,16 +138,6 @@ def predictTfidfEdges(db_conn, dictionary1, dictionary2, k, idf, stopwords=None)
         predicted_edges += [(node1, n) for n in neighbors]
     return predicted_edges
 
-def predictRandomEdges(dictionary1, dictionary2, k):
-    predicted_edges = []
-    for node1 in dictionary1:
-        # pick k items randomly and guess those edges
-        for i in range(k):
-            node2 = random.choice(dictionary2.keys())
-            predicted_edges.append((dictionary1[node1], 
-                dictionary2[node2]))
-    return predicted_edges
-
 def main():
     # Parse options
     usage = 'Usage: %prog [options] topicMap.pickle modelfile1 modelfile2'
@@ -178,12 +173,7 @@ def main():
     print 'Creating KNN search engine from model2. . .'
     searchEngine = KNNSearchEngine(data2.transpose(), dictionary2)
 
-    # predict edges
-    if options.random:
-        print 'Randomly predicting edges. . .'
-        predicted_edges = predictRandomEdges(dictionary1, dictionary2,
-                                             options.k)
-    elif options.tfidf_compare:
+    if options.tfidf_compare:
         print 'Predicting edges by item-item tfidf similarity. .'
         print 'Loading Stopwords and IDFs. . .'
         # get stop words
