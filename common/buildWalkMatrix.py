@@ -18,6 +18,11 @@ def getParser(usage=None):
     parser.add_option('--type', dest='type', default='random',
         help=('Type of walk: random (default), transition, adjacency, '
               'proximity, neighbor, or flux.'), metavar='TYPE')
+    parser.add_option('--tran2', action='store_true', dest='tran2',
+        default=False,
+        help=('Use transition style 2 for type=transition or type=random, '
+              'which decreases likelihood of transitioning to nodes with many '
+              'incoming edges.'))
     parser.add_option('--steps', type='int', dest='steps', default=10,
         help='Number of steps in random walk.', metavar='NUM')
     parser.add_option('--teleport', type='float', dest='teleport',
@@ -192,8 +197,12 @@ def main():
     if options.type == 'random' or options.type == 'transition':
         # create transition matrix
         print 'Building transition matrix. . .'
-        tranMatrix = buildTransitionMatrix(graph, teleport=options.teleport,
-                                           reverse=options.reverse)
+        if options.tran2:
+            tranMatrix = buildTransitionMatrix2(graph,
+                teleport=options.teleport, reverse=options.reverse)
+        else:
+            tranMatrix = buildTransitionMatrix(graph,
+                teleport=options.teleport, reverse=options.reverse)
         if options.type == 'transition':
             walkMatrix = tranMatrix
 
