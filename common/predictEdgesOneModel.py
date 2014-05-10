@@ -53,52 +53,62 @@ def loadModel(filename):
         return None
     return data, dictionary
 
-def predictEdges(topic_space, dictionary, k, searchEngine):
+def predictEdges(data1, dictionary1, k, searchEngine):
     predicted_edges = []
-    for index, node in dictionary.items():
-        distances, neighbors = searchEngine.kneighbors(topic_space[:, index], k)
-        predicted_edges += [(int(node), int(neighbor))\
-                            for neighbor in neighbors[0]]
+    for index, node in dictionary1.items():
+        distances, neighbors = searchEngine.kneighbors(data1[:, index], k)
+        predicted_edges += [(node, int(n)) for n in neighbors[0]]
     return predicted_edges
+
+def partitionModel(data, dictionary, graph_part):
+    idx_part = 0
+    data_part = []
+    dictionary_part = {}
+    for idx, node in dictionary.items():
+        if node in graph_part:
+            data_part.append(data[:,idx_part].transpose())
+            dictionary_part[idx_part] = node
+            idx_part += 1
+    return np.array(data_part).transpose(), dictionary_part
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] topicMap.pickle modelfile1 modelfile2'
+    usage = 'Usage: %prog [options] modelfile graph1 graph2'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 3:
         parser.error('Wrong number of arguments') 
-    topic_map_filename = args[0]
-    if not os.path.isfile(topic_map_filename):
-        parser.error('Cannot find %s' % topic_map_filename)
-    model1_filename = args[1]
-    if not os.path.isfile(model1_filename):
-        parser.error('Cannot find %s' % model1_filename)
-    model2_filename = args[2]
-    if not os.path.isfile(model2_filename):
-        parser.error('Cannot find %s' % model2_filename)
+    model_filename = args[0]
+    if not os.path.isfile(model_filename):
+        parser.error('Cannot find %s' % model_filename)
+    graph1_filename = args[1]
+    if not os.path.isfile(graph1_filename):
+        parser.error('Cannot find %s' % graph1_filename)
+    graph2_filename = args[2]
+    if not os.path.isfile(graph2_filename):
+        parser.error('Cannot find %s' % graph2_filename)
 
-    # load topic map
-    print 'Loading topic map from %s. . .' % topic_map_filename
-    topic_map = loadPickle(topic_map_filename)
+    # load model
+    print 'Loading model from %s. . .' % model_filename
+    data, dictionary = loadModel(model_filename)
 
-    # load models
-    print 'Loading model1 from %s. . .' % model1_filename
-    data1, dictionary1 = loadModel(model1_filename)
-    print 'Loading model2 from %s. . .' % model2_filename
-    data2, dictionary2 = loadModel(model2_filename)
+    # load graphs
+    print 'Loading graph1 from %s. . .' % graph1_filename
+    graph1 = loadPickle(graph1_filename)
+    print 'Loading graph2 from %s. . .' % graph2_filename
+    graph2 = loadPickle(graph2_filename)
 
-    # transform to common topic space
-    print 'Transforming topic space 1 to topic space 2. . .'
-    transformed_space = np.dot(topic_map, data1)
+    # partition data and dictionary
+    print 'Partitioning data and directory. . . '
+    data1, dictionary1 = partitionModel(data, dictionary, graph1)
+    data2, dictionary2 = partitionModel(data, dictionary, graph2)
 
     # create search engine
-    print 'Creating KNN search engine from model2. . .'
+    print 'Creating KNN search engine of graph2 from model. . .'
     searchEngine = KNNSearchEngine(data2.transpose(), dictionary2)
 
     print 'Predicting edges. . .'
-    predicted_edges = predictEdges(transformed_space, dictionary1,
-                                       options.k, searchEngine)
+    predicted_edges = predictEdges(data1, dictionary1, options.k, searchEngine)
     
     # save results
     print 'Saving results to %s. . .' % options.savefile
