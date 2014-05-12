@@ -57,8 +57,8 @@ def correctPredictions(predicted_edges, proximity_mat, dictionary, k):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] proximity_mat.pickle predicted_edges.pickle\
-            lost_edges.pickle'
+    usage = ('Usage: %prog [options] proximity_mat.npz predicted_edges.pickle '
+             'lost_edges.pickle')
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 3:

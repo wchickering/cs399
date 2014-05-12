@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 """
-Predicts the edges across two LDA/LSI model.
+Predicts the edges across two LDA/LSI models.
 """
+
 from optparse import OptionParser
 import pickle
 import os
@@ -35,7 +36,7 @@ def loadModel(filename):
         dictionary = {}
         for i, node in model.id2word.items():
             dictionary[i] = int(node)
-        data = lda.getTopicGivenItemProbs(model)
+        data = lda.getTopicGivenItemProbs(model).transpose()
     elif filename.endswith('.npz'):
         # load LSI model
         npzfile = np.load(filename)
@@ -46,30 +47,37 @@ def loadModel(filename):
         dictionary = {}
         for i in range(len(nodes)):
             dictionary[i] = int(nodes[i])
-        data = lsi.getTermConcepts(u, s)
+        data = lsi.getTermConcepts(u, s).transpose()
     else:
         print >> sys.stderr,\
             'error: Model file must be either a .pickle or .npz file.'
         return None
     return data, dictionary
 
-def predictEdges(data1, dictionary1, k, searchEngine):
+def predictEdges(data, dictionary, k, searchEngine):
+    distances, neighbors =\
+        searchEngine.kneighbors(data, n_neighbors=k);
     predicted_edges = []
-    for index, node in dictionary1.items():
-        distances, neighbors = searchEngine.kneighbors(data1[:, index], k)
-        predicted_edges += [(node, int(n)) for n in neighbors[0]]
+    for index, node in dictionary.items():
+        predicted_edges += [(node, int(n)) for n in neighbors[index]]
     return predicted_edges
 
 def partitionModel(data, dictionary, graph_part):
     idx_part = 0
-    data_part = []
+    data_part = None
     dictionary_part = {}
     for idx, node in dictionary.items():
         if node in graph_part:
-            data_part.append(data[:,idx_part].transpose())
+            if data_part is None:
+                data_part = data[idx,:].reshape([1, data.shape[1]])
+            else:
+                numRows = data_part.shape[0] + 1
+                numCols = data_part.shape[1]
+                data_part = np.append(data_part, data[idx,:])\
+                            .reshape([numRows, numCols])
             dictionary_part[idx_part] = node
             idx_part += 1
-    return np.array(data_part).transpose(), dictionary_part
+    return data_part, dictionary_part
 
 def main():
     # Parse options
@@ -105,7 +113,7 @@ def main():
 
     # create search engine
     print 'Creating KNN search engine of graph2 from model. . .'
-    searchEngine = KNNSearchEngine(data2.transpose(), dictionary2)
+    searchEngine = KNNSearchEngine(data2, dictionary2)
 
     print 'Predicting edges. . .'
     predicted_edges = predictEdges(data1, dictionary1, options.k, searchEngine)
