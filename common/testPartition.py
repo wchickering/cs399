@@ -10,33 +10,93 @@ import pickle
 import random
 import os
 import sys
+import sqlite3
 
-# params
-displayInterval = 1000000
+selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
 
 def getParser():
     parser = OptionParser()
     parser.add_option('-g', '--graph', dest='graphfilename',
-        default='data/recDirectedGraph.pickle',
         help='Name of picked directed graph.', metavar='FILE')
     parser.add_option('--graph1', dest='graph1filename',
-        default='data/partitionedGraph1.pickle',
         help='Name of partitioned graph1 pickle.', metavar='FILE')
     parser.add_option('--graph2', dest='graph2filename',
-        default='data/partitionedGraph2.pickle',
         help='Name of partitioned graph2 pickle.', metavar='FILE')
     parser.add_option('--lost_edges', dest='lostedgesfilename',
-        default='data/lostEdges.pickle',
         help='Name of lost edges pickle.', metavar='FILE')
     parser.add_option('-s', '--sample_percent', dest='sample_percent',
         default='1.0',
         help='Percent of nodes/edges to check', metavar='NUM')
+    parser.add_option('-d', '--database', dest='dbname',
+        default='data/macys.db', help='Database to pull descriptions from.')
     return parser
 
 def loadGraph(fname):
     with open(fname, 'r') as f:
         graph = pickle.load(f)
     return graph
+
+def constructItemMap(graph1, graph2):
+    print 'Check that no node is in both graphs. .'
+    itemMap = {}
+    for item in graph1:
+        if item in itemMap:
+            print 'Fail ==> item %s in partitioned graphs twice' % item
+        itemMap[item] = 1
+    for item in graph2:
+        if item in itemMap:
+            print 'Fail ==> item %s in partitioned graphs twice' % item
+        itemMap[item] = 2
+    return itemMap
+
+def testNodePartition(graph, graph1, graph2, itemMap):
+    print ' Graph size: %d' % len(graph)
+    print ' Graph1 size: %d' % len(graph1)
+    print ' Graph2 size: %d' % len(graph2)
+    if len(graph) != len(graph1) + len(graph2):
+        print 'FAIL ==> Graph size != graph1 size + graph2 size'
+    for item in graph:
+        if itemMap[item] == None:
+            print 'FAIL ==> node %s not in either graph' % node
+    return
+
+def testLostedges(db_conn, lost_edges, graph, itemMap):
+    print ' Numnber of lost edges: %d' % len(lost_edges)
+    db_curs = db_conn.cursor()
+    outOf1 = 0
+    for (item1, item2) in lost_edges:
+        if itemMap[item1] == 1:
+            outOf1 += 1
+        if itemMap[item1] == itemMap[item2]:
+            print 'FAIL ==> lost_edge (%s, %s) has both nodes in same graph' %\
+                (item1, item2)
+            return
+        # get brands
+        db_curs.execute(selectDescriptionStmt, (item1,))
+        brand1 = db_curs.fetchone()[0][0]
+        db_curs.execute(selectDescriptionStmt, (item2,))
+        brand2 = db_curs.fetchone()[0][0]
+        if brand1 == brand2:
+            print 'FAIL ==> same brand in both graphs'
+    print ' Number of edges out of graph1: %d' % outOf1
+    print ' Number of edges out of graph2: %d' % (len(lost_edges) - outOf1)
+    print ' Lost edges per node: %f' % (float(len(lost_edges)) / (len(graph)))
+    return
+
+def testGraph(graph, graphNum, itemMap):
+    for item in graph:
+        (outbound, inbound) = graph[item]
+        for out_item in outbound:
+            if itemMap[out_item] != graphNum:
+                print 'FAIL ==> outbound item %s not in graph %d' % (out_item,
+                    graphNum)
+                return
+        for in_item in outbound:
+            if itemMap[in_item] != graphNum:
+                print 'FAIL ==> inbound item %s not in graph %d' % (in_item,
+                    graphNum)
+                return
+    return
 
 def main():
     # Parse options
@@ -50,83 +110,24 @@ def main():
     graph2 = loadGraph(options.graph2filename)
     lost_edges = loadGraph(options.lostedgesfilename)
 
+    # connect to database
+    print 'Connecting to database. .'
+    db_conn = sqlite3.connect(options.dbname)
+
     # construct item map
-    print 'Check that no node is in both graphs. .'
-    itemMap = {}
-    count = 0
-    for item in graph1.keys():
-        count += 1
-        if count % displayInterval == 0:
-            print 'Processing node %d / %d' % (count, len(graph1.keys()))
-        if item in itemMap:
-            print 'Fail ==> item %s in partitioned graphs twice' % item
-        itemMap[item] = 1
-    count = 0
-    for item in graph2.keys():
-        count += 1
-        if count % displayInterval == 0:
-            print 'Processing node %d / %d' % (count, len(graph2.keys()))
-        if item in itemMap:
-            print 'Fail ==> item %s in partitioned graphs twice' % item
-        itemMap[item] = 2
+    print 'Constructing item map and checking nodes are only in one graph. . .'
+    itemMap = constructItemMap(graph1, graph2)
 
     # test graph
-    print 'Check that nodes in graph are partitioned. .'
-    if len(graph.keys()) != len(graph1.keys()) + len(graph2.keys()):
-        print 'FAIL ==> Graph size != graph1 size + graph2 size'
-    count = 0
-    for item in graph:
-        count += 1
-        if count % displayInterval == 0:
-            print 'Processing node %d / %d' % (count, len(graph.keys()))
-        if random.random() > float(options.sample_percent):
-            continue
-        if itemMap[item] == None:
-            print 'FAIL ==> node %s not in either graph' % node
+    print 'Check that nodes in graph are partitioned. . .'
+    testNodePartition(graph, graph1, graph2, itemMap)
 
-    print 'Check that lost_edges are between two graphs. .'
-    count = 0
-    for (item1, item2) in lost_edges:
-        count += 1
-        if count % displayInterval == 0:
-            print 'Processing edge %d / %d' % (count, len(lost_edges))
-        if random.random() > float(options.sample_percent):
-            continue
-        if itemMap[item1] == itemMap[item2]:
-            print 'FAIL ==> lost_edge (%s, %s) has both nodes in same graph' %\
-                (node1, node2)
+    print 'Check that lost_edges are between two graphs. . .'
+    testLostedges(db_conn, lost_edges, graph, itemMap)
 
-    print 'Check that edges of graph1 are within graph1. .'
-    count = 0
-    for item in graph1:
-        count += 1
-        if count % displayInterval == 0:
-            print 'Processing edge %d / %d' % (count, len(graph1))
-        if random.random() > float(options.sample_percent):
-            continue
-        (outbound, inbound) = graph1[item]
-        for out_item in outbound:
-            if itemMap[out_item] != 1:
-                print 'FAIL ==> outbound item %s not in graph 1' % out_item
-        for in_item in outbound:
-            if itemMap[in_item] != 1:
-                print 'FAIL ==> inbound item %s not in graph 1' % in_item
-
-    print 'Check that edges of graph2 are within graph2. .'
-    count = 0
-    for item in graph2:
-        count += 1
-        if count % displayInterval == 0:
-            print 'Processing edge %d / %d' % (count, len(graph2))
-        if random.random() > float(options.sample_percent):
-            continue
-        (outbound, inbound) = graph2[item]
-        for out_item in outbound:
-            if itemMap[out_item] != 2:
-                print 'FAIL ==> outbound item %s not in graph 2' % out_item
-        for in_item in outbound:
-            if itemMap[in_item] != 2:
-                print 'FAIL ==> inbound item %s not in graph 2' % in_item
+    print 'Check that edges of partitioned graphs are valid. . .'
+    testGraph(graph1, 1, itemMap)
+    testGraph(graph2, 2, itemMap)
 
 if __name__ == '__main__':
     main()
