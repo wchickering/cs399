@@ -4,12 +4,14 @@
 Test the partition from partitionGraph.py.
 """
 
+from stemming.porter2 import stem
 from optparse import OptionParser
 from collections import deque
 import pickle
 import random
 import os
 import sys
+import string
 import sqlite3
 
 selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
@@ -73,9 +75,17 @@ def testLostedges(db_conn, lost_edges, graph, itemMap):
             return
         # get brands
         db_curs.execute(selectDescriptionStmt, (item1,))
-        brand1 = db_curs.fetchone()[0][0]
+        description = db_curs.fetchone()[0]
+        description = ''.join(ch for ch in description\
+                              if ch not in string.punctuation)
+        words = [stem(w.lower()) for w in description.split()]
+        brand1 = words[0]
         db_curs.execute(selectDescriptionStmt, (item2,))
-        brand2 = db_curs.fetchone()[0][0]
+        description = db_curs.fetchone()[0]
+        description = ''.join(ch for ch in description\
+                              if ch not in string.punctuation)
+        words = [stem(w.lower()) for w in description.split()]
+        brand2 = words[0]
         if brand1 == brand2:
             print 'FAIL ==> same brand in both graphs'
     print ' Number of edges out of graph1: %d' % outOf1

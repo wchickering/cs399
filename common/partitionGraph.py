@@ -6,9 +6,11 @@ between them. Stores both partitioned graphs and the lost edges from the
 partition.
 """
 
+from stemming.porter2 import stem
 from optparse import OptionParser
 import pickle
 import random
+import string
 import os
 import sys
 import sqlite3
@@ -43,10 +45,19 @@ def partitionNodesByBrand(db_conn, graph):
     brandMap = {}
     for item in graph:
         db_curs.execute(selectDescriptionStmt, (item,))
-        brand = db_curs.fetchone()[0][0]
+        description = db_curs.fetchone()[0]
+        description = ''.join(ch for ch in description\
+                              if ch not in string.punctuation)
+        words = [stem(w.lower()) for w in description.split()]
+        brand = words[0]
         if brand not in brandMap:
             brandMap[brand] = random.choice([1,2])
         itemMap[item] = brandMap[brand]
+    count = 0 
+    for brand in brandMap:
+        count += 1
+        print brand
+    print 'Number of brands = %d' % count
     return itemMap
 
 def buildGraphs(itemMap, graph):
