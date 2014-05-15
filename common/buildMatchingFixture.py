@@ -86,7 +86,6 @@ def main():
     record['fields'] = fields
     data.append(record)
     db_curs = db_conn.cursor()
-    pk = 1
     for item_id in items:
         db_curs.execute(selectProductStmt, (item_id,))
         row = db_curs.fetchone()
@@ -96,7 +95,6 @@ def main():
         url = row[0]
         description = row[1]
         record = {}
-        record['pk'] = pk
         record['model'] = 'polls.product'
         fields = {}
         fields['company'] = options.company_id
@@ -105,7 +103,6 @@ def main():
         fields['description'] = description
         record['fields'] = fields
         data.append(record)
-        pk += 1
 
     # dump data
     print >> sys.stderr, 'Dumping data. . .'
