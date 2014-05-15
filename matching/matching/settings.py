@@ -58,7 +58,7 @@ WSGI_APPLICATION = 'matching.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'NAME': os.path.join(BASE_DIR, 'matching.db'),
     }
 }
 
@@ -67,7 +67,7 @@ DATABASES = {
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'US'
 
 USE_I18N = True
 
