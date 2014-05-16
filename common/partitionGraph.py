@@ -53,11 +53,7 @@ def partitionNodesByBrand(db_conn, graph):
         if brand not in brandMap:
             brandMap[brand] = random.choice([1,2])
         itemMap[item] = brandMap[brand]
-    count = 0 
-    for brand in brandMap:
-        count += 1
-        print brand
-    print 'Number of brands = %d' % count
+    print 'Number of brands = %d' % len(brandMap)
     return itemMap
 
 def buildGraphs(itemMap, graph):
