@@ -17,18 +17,52 @@ class Product(models.Model):
     def __unicode__(self):
         return self.description
 
-class Poll(models.Model):
+class Category(models.Model):
+    company = models.ForeignKey(Company)
+    description = models.CharField(max_length=200)
+    def __unicode__(self):
+        return self.description
+
+class ProductCategory(models.Model):
     product = models.ForeignKey(Product)
+    category = models.ForeignKey(Category)
+    def __unicode__(self):
+        return '%s : %s' % (unicode(self.product), unicode(self.category))
+
+class Concept(models.Model):
+    company = models.ForeignKey(Company)
+    name = models.CharField(max_length=100)
+    def __unicode__(self):
+        return self.name
+
+class ProductConcept(models.Model):
+    product = models.ForeignKey(Product)
+    concept = models.ForeignKey(Concept)
+    value = models.DecimalField(max_digits=23, decimal_places=20)
+    def __unicode__(self):
+        return '%s = %0.2e' % (unicode(self.concept), self.value)
+
+class Job(models.Model):
+    category = models.ForeignKey(Category)
     pub_date = models.DateTimeField('date published')
     def __unicode__(self):
-        return self.product
+        return unicode(self.category)
     def was_published_recently(self):
         return self.pub_date >= timezone.now() - datetime.timedelta(days=1)
+    was_published_recently.admin_order_field = 'pub_date'
+    was_published_recently.boolean = True
+    was_published_recently.short_description = 'Published recently?'
+
+class Poll(models.Model):
+    job = models.ForeignKey(Job)
+    product = models.ForeignKey(Product)
+    def __unicode__(self):
+        return unicode(self.product)
 
 class Choice(models.Model):
     poll = models.ForeignKey(Poll)
     product = models.ForeignKey(Product)
     votes = models.IntegerField(default=0)
     def __unicode__(self):
-        return self.product
+        return unicode(self.product)
     
