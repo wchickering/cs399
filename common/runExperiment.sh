@@ -99,16 +99,22 @@ PROX_MAT=$DATA/proxMat${CAT}.npz
 GRAPH1=$DATA/graph${CAT}1.pickle
 GRAPH2=$DATA/graph${CAT}2.pickle
 LOST_EDGES=$DATA/lostEdges${CAT}.pickle
+RWALK=$DATA/randomWalk${CAT}.npz
 RWALK1=$DATA/randomWalk${CAT}1.npz
 RWALK2=$DATA/randomWalk${CAT}2.npz
+LDA=$DATA/lda${CAT}.pickle
 LDA1=$DATA/lda${CAT}1.pickle
 LDA2=$DATA/lda${CAT}2.pickle
+LSI=$DATA/svd${CAT}.npz
 LSI1=$DATA/svd${CAT}1.npz
 LSI2=$DATA/svd${CAT}2.npz
 IDFS=$DATA/idfs${CAT}.pickle
 TFIDF1=$DATA/tfidf${CAT}1.pickle
 TFIDF2=$DATA/tfidf${CAT}2.pickle
 MAP=$DATA/topicMap${CAT}.pickle
+PREDICTED_RAND=$DATA/predictedEdgesRand${CAT}.pickle
+PREDICTED_TFIDF=$DATA/predictedEdgesTfidf${CAT}.pickle
+PREDICTED_ONE=$DATA/predictedEdgesOneModel${CAT}.pickle
 PREDICTED_EDGES=$DATA/predictedEdges${CAT}.pickle
 
 # Construct directed recomender graph from DB --> recGraph
@@ -144,6 +150,8 @@ if [ $START_STAGE -le 4 -a $END_STAGE -ge 4 ]; then
         $GRAPH1
     python $SRC/buildWalkMatrix.py --home=0.05 --steps=50 --savefile=$RWALK2\
         $GRAPH2
+    python $SRC/buildWalkMatrix.py --home=0.05 --steps=50 --savefile=$RWALK\
+        $UNDIRECTED_GRAPH
 echo
 fi
 
@@ -153,9 +161,17 @@ if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
     if [ "$MODEL_TYPE" = "LDA" ]; then
         python $SRC/buildLDAModel.py --matrixfile=$RWALK1 --lda-file=$LDA1
         python $SRC/buildLDAModel.py --matrixfile=$RWALK2 --lda-file=$LDA2
+        python $SRC/buildLDAModel.py --matrixfile=$RWALK --lda-file=$LDA
+        MODEL1=$LDA1
+        MODEL2=$LDA2
+        MODEL=$LDA
     elif [ "$MODEL_TYPE" = "LSI" ]; then
-        python $SRC/svd.py --savefile=$LSI1 $RWALK1
-        python $SRC/svd.py --savefile=$LSI2 $RWALK2
+        python $SRC/svd.py --savefile=$LSI1 -k 20 $RWALK1
+        python $SRC/svd.py --savefile=$LSI2 -k 20 $RWALK2
+        python $SRC/svd.py --savefile=$LSI -k 20 $RWALK
+        MODEL1=$LSI1
+        MODEL2=$LSI2
+        MODEL=$LSI
     else
         die "Invalid model type: $MODEL_TYPE"
     fi
@@ -172,19 +188,10 @@ fi
 # Get tfidfs for each graph
 if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
     echo "=== 7. Calculate tfidfs for each graph ==="
-    if [ "$MODEL_TYPE" = "LDA" ]; then
-        python $SRC/topicWords.py --database=$DB --idfname=$IDFS\
-            --outputpickle=$TFIDF1 $LDA1
-        python $SRC/topicWords.py --database=$DB --idfname=$IDFS\
-            --outputpickle=$TFIDF2 $LDA2
-    elif [ "$MODEL_TYPE" = "LSI" ]; then
-        python $SRC/topicWords.py --database=$DB --idfname=$IDFS\
-            --outputpickle=$TFIDF1 $LSI1
-        python $SRC/topicWords.py --database=$DB --idfname=$IDFS\
-            --outputpickle=$TFIDF2 $LSI2
-    else
-        die "Invalid model type: $MODEL_TYPE"
-    fi
+    python $SRC/topicWords.py --database=$DB --idfname=$IDFS\
+        --outputpickle=$TFIDF1 $MODEL1
+    python $SRC/topicWords.py --database=$DB --idfname=$IDFS\
+        --outputpickle=$TFIDF2 $MODEL2
 echo
 fi
 
@@ -198,19 +205,37 @@ fi
 # Predict edges
 if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     echo "=== 9. Predict edges ==="
-    if [ "$MODEL_TYPE" = "LDA" ]; then
-        python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $MAP $LDA1 $LDA2
-    elif [ "$MODEL_TYPE" = "LSI" ]; then
-        python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $MAP $LSI1 $LSI2
-    else
-        die "Invalid model type: $MODEL_TYPE"
-    fi
+    echo "Predicting randomly. . ."
+    python $SRC/predictEdgesRandomly.py --savefile=$PREDICTED_RAND\
+        $GRAPH1 $GRAPH2
+    echo "Predicting using item-item tfidf. . ."
+    python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF --database=$DB\
+        --idfname=$IDFS $GRAPH1 $GRAPH2
+    echo "Predicting using one model. . ."
+    python $SRC/predictEdgesOneModel.py --savefile=$PREDICTED_ONE $MODEL\
+        $GRAPH1 $GRAPH2
+    echo "Predicting with mapping between models. . ."
+    python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $MAP $MODEL1 $MODEL2
 echo
 fi
 
-# Predict edges
+# Evaluate predictions
 if [ $START_STAGE -le 10 -a $END_STAGE -ge 10 ]; then
     echo "=== 10. Evaluate predictions ==="
+    echo
+    echo "  RANDOM PREDICTIONS "
+    python $SRC/evalPredictedEdges.py -k 2 $PROX_MAT $PREDICTED_RAND\
+        $LOST_EDGES
+    echo
+    echo "  TFIDF PREDICTIONS "
+    python $SRC/evalPredictedEdges.py -k 2 $PROX_MAT $PREDICTED_TFIDF\
+        $LOST_EDGES
+    echo
+    echo "  ONE MODEL PREDICTIONS "
+    python $SRC/evalPredictedEdges.py -k 2 $PROX_MAT $PREDICTED_ONE\
+        $LOST_EDGES
+    echo
+    echo "  MAPPING MODEL PREDICTIONS "
     python $SRC/evalPredictedEdges.py -k 2 $PROX_MAT $PREDICTED_EDGES\
         $LOST_EDGES
 fi
