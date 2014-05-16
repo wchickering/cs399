@@ -55,12 +55,32 @@ while test $# -gt 0; do
             verify_number $END_STAGE
             shift
             ;;
+        -k)
+            shift
+            if test $# -gt 0; then
+                export NUM_TOPICS=$1
+                verify_number $NUM_TOPICS
+            else
+                die "number of topics not specified"
+            fi
+            shift
+            ;;
+        --numtopics*)
+            export NUM_TOPICS=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_number $NUM_TOPICS
+            shift
+            ;;
+        --directed)
+            # this should be left undefined by default
+            export DIRECTED='--directed'
+            shift
+            ;;
         --lda)
-            export MODEL_TYPE="LDA"
+            export MODEL_TYPE="lda"
             shift
             ;;
         --lsi)
-            export MODEL_TYPE="LSI"
+            export MODEL_TYPE="lsi"
             shift
             ;;
         *)
@@ -85,8 +105,12 @@ if [[ -z "$END_STAGE" ]]; then
     END_STAGE=1000
 fi
 
+if [[ -z "$NUM_TOPICS" ]]; then
+    NUM_TOPICS=16
+fi
+
 if [[ -z "$MODEL_TYPE" ]]; then
-    MODEL_TYPE="LDA"
+    MODEL_TYPE="lsi"
 fi
 
 # Setup environment
@@ -94,27 +118,26 @@ SRC=../common
 DATA=data
 DB=$DATA/macys.db
 CATGRAPH=$DATA/graph${CAT}.pickle
-UNDIRECTED_GRAPH=$DATA/graph${CAT}Undirected.pickle
 PROX_MAT=$DATA/proxMat${CAT}.npz
 GRAPH1=$DATA/graph${CAT}1.pickle
 GRAPH2=$DATA/graph${CAT}2.pickle
 LOST_EDGES=$DATA/lostEdges${CAT}.pickle
 RWALK1=$DATA/randomWalk${CAT}1.npz
 RWALK2=$DATA/randomWalk${CAT}2.npz
-LDA1=$DATA/lda${CAT}1.pickle
-LDA2=$DATA/lda${CAT}2.pickle
-LSI1=$DATA/svd${CAT}1.npz
-LSI2=$DATA/svd${CAT}2.npz
+LDA1=$DATA/lda_${NUM_TOPICS}_${CAT}1.pickle
+LDA2=$DATA/lda_${NUM_TOPICS}_${CAT}2.pickle
+LSI1=$DATA/svd_${NUM_TOPICS}_${CAT}1.npz
+LSI2=$DATA/svd_${NUM_TOPICS}_${CAT}2.npz
 IDFS=$DATA/idfs${CAT}.pickle
-TFIDF1=$DATA/tfidf${CAT}1.pickle
-TFIDF2=$DATA/tfidf${CAT}2.pickle
-MAP=$DATA/topicMap${CAT}.pickle
-PREDICTED_EDGES=$DATA/predictedEdges${CAT}.pickle
+TFIDF1=$DATA/tfidf_${MODEL_TYPE}_${NUM_TOPICS}_${CAT}1.pickle
+TFIDF2=$DATA/tfidf_${MODEL_TYPE}_${NUM_TOPICS}_${CAT}2.pickle
+MAP=$DATA/topicMap_${MODEL_TYPE}_${NUM_TOPICS}_${CAT}.pickle
+PREDICTED_EDGES=$DATA/predictedEdges_${MODEL_TYPE}_${NUM_TOPICS}_${CAT}.pickle
 
 # Construct directed recomender graph from DB --> recGraph
 if [ $START_STAGE -le 1 -a $END_STAGE -ge 1 ]; then
     echo "=== 1. Build directed recommender graph for category from DB ==="
-    python $SRC/buildRecGraph.py --directed --savefile=$CATGRAPH\
+    python $SRC/buildRecGraph.py $DIRECTED --savefile=$CATGRAPH\
         --parent-category=$PARENTCAT --category=$CAT $DB
 echo
 fi
@@ -122,10 +145,8 @@ fi
 # Construct proximity matrix for k-precision/recall evaluation
 if [ $START_STAGE -le 2 -a $END_STAGE -ge 2 ]; then
     echo "=== 2. Build proximity matrix from graph ==="
-    python $SRC/buildRecGraph.py --savefile=$UNDIRECTED_GRAPH\
-        --parent-category=$PARENTCAT --category=$CAT $DB
     python $SRC/buildWalkMatrix.py --type=proximity --savefile=$PROX_MAT\
-        $UNDIRECTED_GRAPH
+        $CATGRAPH
 echo
 fi
 
@@ -150,12 +171,14 @@ fi
 # Train model on each graph
 if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
     echo "=== 5. Train $MODEL_TYPE model for each graph ==="
-    if [ "$MODEL_TYPE" = "LDA" ]; then
-        python $SRC/buildLDAModel.py --matrixfile=$RWALK1 --lda-file=$LDA1
-        python $SRC/buildLDAModel.py --matrixfile=$RWALK2 --lda-file=$LDA2
-    elif [ "$MODEL_TYPE" = "LSI" ]; then
-        python $SRC/svd.py --savefile=$LSI1 $RWALK1
-        python $SRC/svd.py --savefile=$LSI2 $RWALK2
+    if [ "$MODEL_TYPE" = "lda" ]; then
+        python $SRC/buildLDAModel.py --num-topics=$NUM_TOPICS\
+            --matrixfile=$RWALK1 --lda-file=$LDA1
+        python $SRC/buildLDAModel.py --num-topics=$NUM_TOPICS\
+            --matrixfile=$RWALK2 --lda-file=$LDA2
+    elif [ "$MODEL_TYPE" = "lsi" ]; then
+        python $SRC/svd.py -k $NUM_TOPICS --savefile=$LSI1 $RWALK1
+        python $SRC/svd.py -k $NUM_TOPICS --savefile=$LSI2 $RWALK2
     else
         die "Invalid model type: $MODEL_TYPE"
     fi
@@ -172,12 +195,12 @@ fi
 # Get tfidfs for each graph
 if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
     echo "=== 7. Calculate tfidfs for each graph ==="
-    if [ "$MODEL_TYPE" = "LDA" ]; then
+    if [ "$MODEL_TYPE" = "lda" ]; then
         python $SRC/topicWords.py --database=$DB --idfname=$IDFS\
             --outputpickle=$TFIDF1 $LDA1
         python $SRC/topicWords.py --database=$DB --idfname=$IDFS\
             --outputpickle=$TFIDF2 $LDA2
-    elif [ "$MODEL_TYPE" = "LSI" ]; then
+    elif [ "$MODEL_TYPE" = "lsi" ]; then
         python $SRC/topicWords.py --database=$DB --idfname=$IDFS\
             --outputpickle=$TFIDF1 $LSI1
         python $SRC/topicWords.py --database=$DB --idfname=$IDFS\
@@ -198,9 +221,9 @@ fi
 # Predict edges
 if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     echo "=== 9. Predict edges ==="
-    if [ "$MODEL_TYPE" = "LDA" ]; then
+    if [ "$MODEL_TYPE" = "lda" ]; then
         python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $MAP $LDA1 $LDA2
-    elif [ "$MODEL_TYPE" = "LSI" ]; then
+    elif [ "$MODEL_TYPE" = "lsi" ]; then
         python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $MAP $LSI1 $LSI2
     else
         die "Invalid model type: $MODEL_TYPE"
@@ -211,5 +234,6 @@ fi
 # Predict edges
 if [ $START_STAGE -le 10 -a $END_STAGE -ge 10 ]; then
     echo "=== 10. Evaluate predictions ==="
-    python $SRC/evalPredictedEdges.py -k 1 $PROX_MAT $PREDICTED_EDGES
+    python $SRC/evalPredictedEdges.py -k 2 $PROX_MAT $PREDICTED_EDGES\
+        $LOST_EDGES
 fi
