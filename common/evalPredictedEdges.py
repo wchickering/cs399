@@ -74,14 +74,12 @@ def main():
         parser.error('Cannot find %s' % lost_edges_filename)
 
     # Load edges
-    print 'Load pickles. .'
     proximity_mat = getMatrix(proximity_mat_fname)
     dictionary = getDict(proximity_mat_fname)
     predicted_edges = loadPickle(predicted_edges_filename)
     lost_edges = loadPickle(lost_edges_filename)
 
     # Evaluate
-    print 'Evaluate predictions. .'
     correct = correctPredictions(predicted_edges, proximity_mat, dictionary,
             int(options.k))
 
