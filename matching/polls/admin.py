@@ -44,11 +44,12 @@ class PollInline(admin.TabularInline):
 
 class JobAdmin(admin.ModelAdmin):
     fieldsets = [
-        ('Category',         {'fields': ['category']}),
+        ('Category1',         {'fields': ['category1']}),
+        ('Category2',         {'fields': ['category2']}),
         ('Date information', {'fields': ['pub_date'], 'classes': ['collapse']}),
     ]
     inlines = [PollInline]
-    list_filter = ['pub_date', 'category']
+    list_filter = ['pub_date', 'category1', 'category2']
 
 class ChoiceInline(admin.TabularInline):
     model = Choice
@@ -60,7 +61,7 @@ class PollAdmin(admin.ModelAdmin):
         ('Product',          {'fields': ['product']}),
     ]
     inlines = [ChoiceInline]
-    list_filter = ['job', 'product']
+    list_filter = ['job']
 
 admin.site.register(Company, CompanyAdmin)
 admin.site.register(Category, CategoryAdmin)

@@ -43,10 +43,11 @@ class ProductConcept(models.Model):
         return '%s = %0.2e' % (unicode(self.concept), self.value)
 
 class Job(models.Model):
-    category = models.ForeignKey(Category)
+    category1 = models.ForeignKey(Category, related_name='category1')
+    category2 = models.ForeignKey(Category, related_name='category2')
     pub_date = models.DateTimeField('date published')
     def __unicode__(self):
-        return unicode(self.category)
+        return '%s : %s' % (unicode(self.category1), unicode(self.category2))
     def was_published_recently(self):
         return self.pub_date >= timezone.now() - datetime.timedelta(days=1)
     was_published_recently.admin_order_field = 'pub_date'
