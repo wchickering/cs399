@@ -211,5 +211,6 @@ fi
 # Predict edges
 if [ $START_STAGE -le 10 -a $END_STAGE -ge 10 ]; then
     echo "=== 10. Evaluate predictions ==="
-    python $SRC/evalPredictedEdges.py -k 1 $PROX_MAT $PREDICTED_EDGES
+    python $SRC/evalPredictedEdges.py -k 2 $PROX_MAT $PREDICTED_EDGES\
+        $LOST_EDGES
 fi
