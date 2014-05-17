@@ -14,7 +14,7 @@ import numpy as np
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-k', dest='k', default=1, metavar='NUM',
+    parser.add_option('-k', dest='k', default=2, metavar='NUM',
         help='Distance away in original graph to consider correct')
     return parser
 
@@ -88,14 +88,15 @@ def main():
  
     # print evaluation results
     print '==================='
-    print 'k \t\t\t : %s' % options.k
     print 'Correct predictions \t : %d' % correct
     print 'Total predictions \t : %d' % len(predicted_edges)
     print 'Items predicted \t : %d' % len(predicted_nodes)
     print 'Guesses per item \t : %d' % (len(predicted_edges)/len(predicted_nodes))
     print 'Withheld edges \t\t : %d' % (len(relevant_lost_edges))
-    print 'Precision \t\t : %f' % (float(correct) / len(predicted_edges))
-    print 'Recall \t\t\t : %f' % (float(correct) / len(relevant_lost_edges))
+    print '%s-Precision \t\t : %f' % (options.k, (float(correct) /
+        len(predicted_edges)))
+    print '%s-Recall \t\t : %f' % (options.k, (float(correct) /
+        len(relevant_lost_edges)))
 
 if __name__ == '__main__':
     main()
