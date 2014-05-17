@@ -38,7 +38,7 @@ class Concept(models.Model):
 class ProductConcept(models.Model):
     product = models.ForeignKey(Product)
     concept = models.ForeignKey(Concept)
-    value = models.DecimalField(max_digits=23, decimal_places=20)
+    value = models.FloatField()
     def __unicode__(self):
         return '%s = %0.2e' % (unicode(self.concept), self.value)
 
