@@ -117,6 +117,17 @@ PREDICTED_TFIDF=$DATA/predictedEdgesTfidf${CAT}.pickle
 PREDICTED_ONE=$DATA/predictedEdgesOneModel${CAT}.pickle
 PREDICTED_EDGES=$DATA/predictedEdges${CAT}.pickle
 
+if [ "$MODEL_TYPE" = "LDA" ]; then
+    MODEL1=$LDA1
+    MODEL2=$LDA2
+    MODEL=$LDA
+elif [ "$MODEL_TYPE" = "LSI" ]; then
+    MODEL1=$LSI1
+    MODEL2=$LSI2
+    MODEL=$LSI
+fi
+
+
 # Construct directed recomender graph from DB --> recGraph
 if [ $START_STAGE -le 1 -a $END_STAGE -ge 1 ]; then
     echo "=== 1. Build directed recommender graph for category from DB ==="
@@ -162,16 +173,10 @@ if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
         python $SRC/buildLDAModel.py --matrixfile=$RWALK1 --lda-file=$LDA1
         python $SRC/buildLDAModel.py --matrixfile=$RWALK2 --lda-file=$LDA2
         python $SRC/buildLDAModel.py --matrixfile=$RWALK --lda-file=$LDA
-        MODEL1=$LDA1
-        MODEL2=$LDA2
-        MODEL=$LDA
     elif [ "$MODEL_TYPE" = "LSI" ]; then
         python $SRC/svd.py --savefile=$LSI1 -k 20 $RWALK1
         python $SRC/svd.py --savefile=$LSI2 -k 20 $RWALK2
         python $SRC/svd.py --savefile=$LSI -k 20 $RWALK
-        MODEL1=$LSI1
-        MODEL2=$LSI2
-        MODEL=$LSI
     else
         die "Invalid model type: $MODEL_TYPE"
     fi
@@ -198,7 +203,7 @@ fi
 # Map tfidf topic spaces
 if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
     echo "=== 8. Construct topic map from graph1 to graph2 ==="
-    python $SRC/mapTopics.py --outputpickle=$MAP $TFIDF1 $TFIDF2
+    python $SRC/mapTopics.py --max_connections 1 --outputpickle=$MAP $TFIDF1 $TFIDF2
 echo
 fi
 
@@ -208,14 +213,15 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     echo "Predicting randomly. . ."
     python $SRC/predictEdgesRandomly.py --savefile=$PREDICTED_RAND\
         $GRAPH1 $GRAPH2
-    echo "Predicting using item-item tfidf. . ."
-    python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF --database=$DB\
-        --idfname=$IDFS $GRAPH1 $GRAPH2
+    #echo "Predicting using item-item tfidf. . ."
+    #python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF --database=$DB\
+    #    --idfname=$IDFS $GRAPH1 $GRAPH2
     echo "Predicting using one model. . ."
     python $SRC/predictEdgesOneModel.py --savefile=$PREDICTED_ONE $MODEL\
         $GRAPH1 $GRAPH2
     echo "Predicting with mapping between models. . ."
     python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $MAP $MODEL1 $MODEL2
+    echo python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $MAP $MODEL1 $MODEL2
 echo
 fi
 
