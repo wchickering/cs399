@@ -12,6 +12,7 @@ from Queue import PriorityQueue
 import pickle
 import os
 import sys
+import math
 import numpy as np
 
 def getParser(usage=None):
@@ -24,6 +25,8 @@ def getParser(usage=None):
         metavar='NUM')
     parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
         default=False, help='Print top words')
+    parser.add_option('-d', '--by_distance', action='store_true',
+        dest='by_distance', default=False, help='determine mapping by distance')
     parser.add_option('--max_connections', type='int', dest='max_connections',
         default=1000, help='Max number of topics a single topic can map to.', 
         metavar='NUM')
@@ -52,6 +55,21 @@ def topicSimilarity(topic1, topic2):
             j += 1
     return similarity
 
+def topicDistance(topic1, topic2):
+    sqr_distance = 0.0
+    for word in topic1:
+        p1 = float(topic1[word])
+        if word not in topic2:
+            sqr_distance += p1*p1
+        else:
+            p2 = float(topic2[word])
+            sqr_distance += (p1-p2) * (p1-p2)
+    for word in topic2:
+        if word not in topic1:
+            p2 = float(topic2[word])
+            sqr_distance += p2*p2
+    return math.sqrt(sqr_distance)
+
 def transformMatrix(matrix):
     matrix_t = [[0 for x in xrange(len(matrix))] for x in xrange(len(matrix[0]))]
     for i in range(len(matrix)):
@@ -59,12 +77,16 @@ def transformMatrix(matrix):
             matrix_t[j][i] = matrix[i][j]
     return matrix_t
 
-def getTopicMap(topics1, topics2, max_connections):
+def getTopicMap(topics1, topics2, max_connections, by_distance):
     topic_map = [] 
     for topic1 in topics1:
         topic_vector = []
         for topic2 in topics2:
-             topic_vector.append(topicSimilarity(topic1, topic2))
+            if by_distance:
+                similarity = 1.0/topicDistance(dict(topic1), dict(topic2))
+            else:
+                similarity = topicSimilarity(topic1, topic2)
+            topic_vector.append(similarity)
         # Limit number of connections
         queue = PriorityQueue() 
         for idx in range(len(topic_vector)):
@@ -121,7 +143,8 @@ def main():
         
     # get matrix mapping topics from space 1 to topics of space 2
     print 'Mapping topics between catalogues. . .'
-    topic_map = getTopicMap(topics1, topics2, options.max_connections)
+    topic_map = getTopicMap(topics1, topics2, options.max_connections,
+            options.by_distance)
 
     # assert that all columns add up to 1
     assert(np.array(topic_map).sum(axis=0).all() == 
