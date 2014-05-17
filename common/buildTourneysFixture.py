@@ -39,7 +39,7 @@ def getLSIModels(files):
         items = npzfile['dictionary']
         dictionary = {}
         for i in range(len(items)):
-            dictionary[int(items[i])] = i
+            dictionary[str(items[i])] = i
         matrices.append(lsi.getTermConcepts(u, s))
         dictionaries.append(dictionary)
     return matrices, dictionaries
@@ -51,7 +51,7 @@ def genRecord(pk, model, **kwargs):
     record['fields'] = kwargs
     return record
 
-def genData(item_lists, db_conn, matrices, dictionaries):
+def genData(mediadir, item_lists, db_conn, matrices, dictionaries):
     db_curs = db_conn.cursor()
     # initialize PKs
     league_id = 0
@@ -67,7 +67,7 @@ def genData(item_lists, db_conn, matrices, dictionaries):
         league_id += 1
         name = 'league%d' % league_id
         data.append(genRecord(league_id, 'tourneys.league', name=name,
-                              description=name))
+                              description=name, mediadir=mediadir))
         attribute_id_dict = {}
         for attribute in range(matrix.shape[0]):
             # generate attribute record
@@ -86,9 +86,10 @@ def genData(item_lists, db_conn, matrices, dictionaries):
             description = row[1]
             # generate player record
             player_id += 1
+            image = os.path.join(mediadir, '%s.jpg' % item_id)
             data.append(genRecord(player_id, 'tourneys.player',
                                   league=league_id, code=item_id,
-                                  description=description))
+                                  description=description, image=image))
             for attribute in range(matrix.shape[0]):
                 # generate playerattribute record
                 playerattribute_id += 1
@@ -111,13 +112,17 @@ def main():
     if not os.path.isfile(dbname):
         parser.error('Cannot find %s' % dbname)
 
-    # read LSI models
-    matrices, dictionaries = getLSIModels(args[1:])
- 
+    # derive mediadir from dbname
+    mediadir = os.path.splitext(os.path.basename(dbname))[0]
+    print >> sys.stderr, 'mediadir = %s' % mediadir
+
     # connect to db 
     print >> sys.stderr, 'Connecting to %s. . .' % dbname
     db_conn = sqlite3.connect(dbname)
 
+    # read LSI models
+    matrices, dictionaries = getLSIModels(args[1:])
+ 
     # get league items
     item_lists = []
     for dictionary in dictionaries:
@@ -125,7 +130,7 @@ def main():
 
     # generate data
     print >> sys.stderr, 'Generating data. . .'
-    data = genData(item_lists, db_conn, matrices, dictionaries)
+    data = genData(mediadir, item_lists, db_conn, matrices, dictionaries)
 
     # dump data
     print >> sys.stderr, 'Dumping data. . .'
