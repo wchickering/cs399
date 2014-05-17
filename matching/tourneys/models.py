@@ -3,8 +3,6 @@ import datetime
 from django.db import models
 from django.utils import timezone
 
-from smart_selects.db_fields import ChainedForeignKey
-
 class League(models.Model):
     name = models.CharField(max_length=20)
     description = models.TextField()
@@ -25,46 +23,31 @@ class Player(models.Model):
         return self.description
 
 class PlayerAttribute(models.Model):
-    league = models.ForeignKey(League)
-    player = ChainedForeignKey(
-        Player,
-        chained_field='league',
-        chained_model_field='league',
-        show_all=False
-    )
-    attribute = ChainedForeignKey(
-        Attribute,
-        chained_field='league',
-        chained_model_field='league',
-        show_all=False
-    )
+    player = models.ForeignKey(Player)
+    attribute = models.ForeignKey(Attribute)
     value = models.FloatField()
     def __unicode__(self):
         return '%s = %0.2e' % (unicode(self.attribute), self.value)
 
 class Tournament(models.Model):
-    source_league = models.ForeignKey(League, related_name='source_league')
-    target_league = models.ForeignKey(League, related_name='target_league')
-    attribute = ChainedForeignKey(
-        Attribute,
-        chained_field='target_league',
-        chained_model_field='league',
-        show_all=False
-    )
+    league = models.ForeignKey(League)
+    attribute = models.ForeignKey(Attribute)
     round = models.PositiveSmallIntegerField(default=1)
-    finished = models.BooleanField()
+    finished = models.BooleanField(default=False)
     def __unicode__(self):
-        return '%s : %s' % (unicode(self.source_league), unicode(self.attribute))
+        return '%s : %s' % (unicode(self.league), unicode(self.attribute))
 
 class Competition(models.Model):
     tournament = models.ForeignKey(Tournament)
     round = models.PositiveSmallIntegerField(default=1)
-    finished = models.BooleanField()
+    finished = models.BooleanField(default=False)
+    def __unicode__(self):
+        return 'Rnd %d : %s' % (self.round, unicode(self.tournament))
 
 class Competitor(models.Model):
     competition = models.ForeignKey(Competition)
     player = models.ForeignKey(Player)
-    score = models.FloatField(null=True)
+    score = models.FloatField(null=True, blank=True)
     def __unicode__(self):
         return unicode(self.player)
     

@@ -2,14 +2,8 @@ from django.contrib import admin
 from tourneys.models import League, Attribute, Player, PlayerAttribute,\
                             Tournament, Competition, Competitor
 
-class TournamentAsSourceInline(admin.TabularInline):
+class TournamentInline(admin.TabularInline):
     model = Tournament
-    fk_name = 'source_league'
-    extra = 0
-
-class TournamentAsTargetInline(admin.TabularInline):
-    model = Tournament
-    fk_name = 'target_league'
     extra = 0
 
 class LeagueAdmin(admin.ModelAdmin):
@@ -17,7 +11,7 @@ class LeagueAdmin(admin.ModelAdmin):
         ('Name',             {'fields': ['name']}),
         ('Description',      {'fields': ['description']}),
     ]
-    inlines = [TournamentAsSourceInline, TournamentAsTargetInline]
+    inlines = [TournamentInline]
 
 class PlayerAttributeInline(admin.TabularInline):
     model = PlayerAttribute
@@ -30,6 +24,9 @@ class PlayerAdmin(admin.ModelAdmin):
         ('Description',     {'fields': ['description']}),
     ]
     inlines = [PlayerAttributeInline]
+    list_display = ('league', 'code', 'description')
+    list_filter = ['league']
+    search_fields = ['code', 'description']
 
 class CompetitionInline(admin.TabularInline):
     model = Competition
@@ -37,18 +34,18 @@ class CompetitionInline(admin.TabularInline):
 
 class TournamentAdmin(admin.ModelAdmin):
     fieldsets = [
-        ('Source League',   {'fields': ['source_league']}),
-        ('Target League',   {'fields': ['target_league']}),
-        ('Attribute',       {'fields': ['attribute']}),
+        ('League',          {'fields': ['league']}),
+        ('Target Attribute',{'fields': ['attribute']}),
         ('Round',           {'fields': ['round']}),
         ('Finished?',       {'fields': ['finished']}),
     ]
     inlines = [CompetitionInline]
-    list_filter = ['source_league', 'target_league', 'finished']
+    list_display = ('league', 'attribute', 'round', 'finished')
+    list_filter = ['league', 'finished']
 
 class CompetitorInline(admin.TabularInline):
     model = Competitor
-    extra = 3
+    extra = 0
 
 class CompetitionAdmin(admin.ModelAdmin):
     fieldsets = [
@@ -57,7 +54,7 @@ class CompetitionAdmin(admin.ModelAdmin):
         ('Finished?',       {'fields': ['finished']}),
     ]
     inlines = [CompetitorInline]
-    list_filter = ['tournament']
+    list_filter = ['tournament', 'round', 'finished']
 
 admin.site.register(League, LeagueAdmin)
 admin.site.register(Player, PlayerAdmin)

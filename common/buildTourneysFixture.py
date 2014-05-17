@@ -95,7 +95,7 @@ def genData(item_lists, db_conn, matrices, dictionaries):
                 value = matrix[attribute][dictionary[item_id]]
                 data.append(genRecord(playerattribute_id,
                                       'tourneys.playerattribute',
-                                      league=league_id, player=player_id,
+                                      player=player_id,
                                       attribute=attribute_id_dict[attribute],
                                       value=value))
     return data
