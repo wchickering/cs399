@@ -69,7 +69,7 @@ class PlayerAdmin(admin.ModelAdmin):
     ]
     readonly_fields = ('image_tag',)
     inlines = [PlayerAttributeInline]
-    list_display = ('code', 'league', 'description')
+    list_display = ('code', 'league', 'description', 'image_tag')
     list_filter = ['league']
     search_fields = ['code', 'description']
 
