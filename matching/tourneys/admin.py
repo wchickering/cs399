@@ -121,10 +121,11 @@ class TeamAdmin(admin.ModelAdmin):
         ('',               {'fields': ['name']}),
         ('',               {'fields': ['attribute']}),
         ('',               {'fields': ['positive']}),
+        ('',               {'fields': ['playercount']}),
     ]
-    readonly_fields = ('league',)
+    readonly_fields = ('league', 'playercount')
     inlines = [TeamPlayerInline]
-    list_display = ('league', 'name', 'attribute', 'positive')
+    list_display = ('league', 'name', 'attribute', 'positive', 'playercount')
     list_display_links = ('name',)
     search_fields = ['attribute__league__name', 'name', 'attribute__name']
     # solution to FK filtering problem

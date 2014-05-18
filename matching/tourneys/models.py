@@ -4,6 +4,7 @@ import os
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.core.urlresolvers import reverse
 
 # analogous to a retailer
 class League(models.Model):
@@ -36,7 +37,11 @@ class Player(models.Model):
     def __unicode__(self):
         return self.description
     def image_tag(self):
-        return '<img src="%s"/>' % self.image.url
+        # TODO: Make this a bit less sketchy
+        url = reverse('admin:%s_%s_change' % (self._meta.app_label,
+                                              self._meta.module_name),
+                      args=(self.id,))
+        return '<a href="%s"><img src="%s"/></a>' % (url, self.image.url)
     image_tag.short_description = 'Image'
     image_tag.allow_tags = True
     class Meta:
@@ -73,6 +78,9 @@ class Team(models.Model):
         return self.name
     def league(self):
         return self.attribute.league
+    def playercount(self):
+        return self.teamplayer_set.count()
+    playercount.short_description = 'Player Count'
     class Meta:
         ordering = ['name', 'attribute']
 
