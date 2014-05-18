@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 
 # analogous to a retailer
 class League(models.Model):
-    name = models.CharField(max_length=20)
+    name = models.CharField(max_length=20, unique=True)
     description = models.TextField()
     mediadir = models.CharField(max_length=20)
     def __unicode__(self):
@@ -19,6 +19,8 @@ class Attribute(models.Model):
     name = models.CharField(max_length=100)
     def __unicode__(self):
         return self.name
+    class Meta:
+        unique_together = ('league', 'name')
 
 # analogous to a product
 class Player(models.Model):
@@ -34,6 +36,8 @@ class Player(models.Model):
         return '<img src="%s"/>' % self.image.url
     image_tag.short_description = 'Image'
     image_tag.allow_tags = True
+    class Meta:
+        unique_together = ('league', 'code')
 
 # analogous to a productconcept
 class PlayerAttribute(models.Model):
@@ -41,7 +45,7 @@ class PlayerAttribute(models.Model):
     attribute = models.ForeignKey(Attribute)
     value = models.FloatField()
     def __unicode__(self):
-        return '%s = %0.2e' % (unicode(self.attribute), self.value)
+        return '%s : %s' % (unicode(self.player), unicode(self.attribute))
     def league(self):
         return self.attribute.league
     def clean(self):
@@ -52,12 +56,14 @@ class PlayerAttribute(models.Model):
                 params={'playerleague': self.player.league,
                         'attributeleague': self.attribute.league}
             )
+    class Meta:
+        unique_together = ('player', 'attribute')
 
 # an attribute (i.e. concept) in the context of tournaments
 class Team(models.Model):
     attribute = models.ForeignKey(Attribute)
     positive = models.BooleanField(default=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
     def __unicode__(self):
         return self.name
     def league(self):
@@ -68,7 +74,7 @@ class TeamPlayer(models.Model):
     team = models.ForeignKey(Team)
     player = models.ForeignKey(Player)
     def __unicode__(self):
-        return unicode(self.player)
+        return '%s : %s' % (unicode(self.team), unicode(self.player))
     def league(self):
         return self.team.attribute.league
     def image_tag(self):
@@ -83,9 +89,12 @@ class TeamPlayer(models.Model):
                 params={'teamleague': self.team.attribute.league,
                         'playerleague': self.player.league}
             )
+    class Meta:
+        unique_together = ('team', 'player')
 
 # analogous to a MTurk job
 class Tournament(models.Model):
+    name = models.CharField(max_length=100, unique=True)
     # league within which teams will compete
     league = models.ForeignKey(League)
     # foreign team being matched to
@@ -93,7 +102,7 @@ class Tournament(models.Model):
     round = models.PositiveSmallIntegerField(default=1)
     finished = models.BooleanField(default=False)
     def __unicode__(self):
-        return '%s : %s' % (unicode(self.league), unicode(self.team))
+        return self.name
     def targetattribute(self):
         return self.team.attribute
     def targetleague(self):
@@ -110,16 +119,18 @@ class Tournament(models.Model):
 
 # a competition between multiple source concepts to match a target concept
 class Competition(models.Model):
-    next_competition = models.ForeignKey('self', null=True)
+    next_competition = models.ForeignKey('self', null=True, blank=True)
     tournament = models.ForeignKey(Tournament)
     round = models.PositiveSmallIntegerField(default=1)
     finished = models.BooleanField(default=False)
     def __unicode__(self):
-        return 'Rnd %d : %s' % (self.round, unicode(self.tournament))
+        return '%s (Rnd %d)' % (unicode(self.tournament), self.round)
     def league(self):
         return self.tournament.league
     def team(self):
         return self.tournament.team
+    def attribute(self):
+        return self.tournament.team.attribute
     def targetleague(self):
         return self.tournament.targetleague()
     def clean(self):
@@ -131,6 +142,13 @@ class Competition(models.Model):
                     params={'nexttourney': self.next_competition.tournament,
                             'thistourney': self.tournament}
                 )
+            if self.next_competition.round != self.round + 1:
+                raise ValidationError(
+                    ('Next competition round (%(nextround)u) not equal to '
+                     'this competition round (%(thisround)u) plus one'),
+                    params={'nextround': self.next_competition.round,
+                            'thisround': self.round}
+                )
 
 # a team (i.e. concept) in the context of a competition
 class CompetitionTeam(models.Model):
@@ -138,7 +156,7 @@ class CompetitionTeam(models.Model):
     team = models.ForeignKey(Team)
     score = models.FloatField(null=True, blank=True)
     def __unicode__(self):
-        return unicode(self.team)
+        return '%s : %s' % (unicode(self.competition), unicode(self.team))
     def clean(self):
         if self.competition.tournament.league != self.team.attribute.league:
             raise ValidationError(
@@ -147,6 +165,8 @@ class CompetitionTeam(models.Model):
                 params={'competitionleague': self.competition.tournament.league,
                         'teamleague': self.team.attribute.league}
             )
+    class Meta:
+        unique_together = ('competition', 'team')
 
 # analogous to a task in MTurk
 # a competition consists of several matches
@@ -154,7 +174,7 @@ class Match(models.Model):
     competition = models.ForeignKey(Competition)
     teamplayer = models.ForeignKey(TeamPlayer) # target team player
     def __unicode__(self):
-        return unicode(self.teamplayer)
+        return '%s : %s' % (unicode(self.competition), unicode(self.teamplayer))
     def clean(self):
         if self.competition.tournament.team != self.teamplayer.team:
             raise ValidationError(
@@ -163,6 +183,12 @@ class Match(models.Model):
                 params={'competitionteam': self.competition.tournament.team,
                         'playerteam': self.teamplayer.team}
             )
+        winner_count = 0
+        for competitor in self.competitor_set.all():
+            if competitor.winner:
+                winner_count += 1
+        if winner_count > 1:
+            raise ValidationError('Match has multiple winners')
 
 # a player (i.e. product) in the context of a match
 class Competitor(models.Model):
@@ -171,7 +197,8 @@ class Competitor(models.Model):
     teamplayer = models.ForeignKey(TeamPlayer)
     winner = models.NullBooleanField()
     def __unicode__(self):
-        return '%s (%s)' % (unicode(self.player), unicode(self.team))
+        return '%s : %s' % (unicode(self.competitionteam),
+                            unicode(self.teamplayer))
     def clean(self):
         if self.match.competition != self.competitionteam.competition:
             raise ValidationError(
@@ -187,4 +214,8 @@ class Competitor(models.Model):
                 params={'playerteam': self.teamplayer.team,
                         'teamteam': self.competitionteam.team}
             )
+    class Meta:
+        # no duplicate players or teams in match
+        unique_together = (('match', 'teamplayer'),
+                           ('match', 'competitionteam'))
     
