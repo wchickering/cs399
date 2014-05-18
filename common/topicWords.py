@@ -101,9 +101,19 @@ def main():
         s = npzfile['s']
         v = npzfile['v']
         dictionary = npzfile['dictionary']
-        topicDists = [lsi.showConcept(u, concept, topn=options.topn,
-                                      dictionary=dictionary)\
-                      for concept in range(len(s))]
+        topicDists_top = [
+            lsi.showConcept(u, concept, topn=options.topn,
+                            dictionary=dictionary)\
+            for concept in range(len(s))
+        ]
+        topicDists_bot = [
+            lsi.showConcept(u, concept, topn=options.topn,
+                            dictionary=dictionary, reverse=False)\
+            for concept in range(len(s))
+        ]
+        topicDists = []
+        for i in range(len(s)):
+            topicDists.append(topicDists_top[i] + topicDists_bot[i])
     else:
         print >> sys.stderr,\
             'error: Input must be either a .pickle or .npz file.'
