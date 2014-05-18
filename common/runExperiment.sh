@@ -106,7 +106,7 @@ if [[ -z "$END_STAGE" ]]; then
 fi
 
 if [[ -z "$NUM_TOPICS" ]]; then
-    NUM_TOPICS=16
+    NUM_TOPICS=8
 fi
 
 if [[ -z "$MODEL_TYPE" ]]; then
