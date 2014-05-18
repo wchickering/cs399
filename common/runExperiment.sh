@@ -147,6 +147,17 @@ PREDICTED_TFIDF=$DATA/predictedEdgesTfidf_${EXPMT}.pickle
 PREDICTED_ONE=$DATA/predictedEdgesOneModel_${EXPMT}.pickle
 PREDICTED_EDGES=$DATA/predictedEdges_${EXPMT}.pickle
 
+if [ "$MODEL_TYPE" = "LDA" ]; then
+    MODEL1=$LDA1
+    MODEL2=$LDA2
+    MODEL=$LDA
+elif [ "$MODEL_TYPE" = "LSI" ]; then
+    MODEL1=$LSI1
+    MODEL2=$LSI2
+    MODEL=$LSI
+fi
+
+
 # Construct directed recomender graph from DB --> recGraph
 if [ $START_STAGE -le 1 -a $END_STAGE -ge 1 ]; then
     echo "=== 1. Build directed recommender graph for category from DB ==="
@@ -229,7 +240,8 @@ fi
 # Map tfidf topic spaces
 if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
     echo "=== 8. Construct topic map from graph1 to graph2 ==="
-    python $SRC/mapTopics.py --outputpickle=$MAP $TFIDF1 $TFIDF2
+    python $SRC/mapTopics.py --max_connections 1 --outputpickle=$MAP $TFIDF1\
+        $TFIDF2
 echo
 fi
 
@@ -247,6 +259,8 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
         $GRAPH1 $GRAPH2
     echo "Predicting with mapping between models. . ."
     python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $MAP $MODEL1 $MODEL2
+    echo python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $MAP $MODEL1\
+        $MODEL2
 echo
 fi
 
