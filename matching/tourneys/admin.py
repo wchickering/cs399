@@ -30,6 +30,8 @@ class LeagueAdmin(admin.ModelAdmin):
         ('Description',      {'fields': ['description']}),
     ]
     inlines = [AttributeInline, TournamentInline]
+    list_display = ('name', 'description')
+    list_display_links = ('name',)
 
 admin.site.register(League, LeagueAdmin)
 
@@ -45,6 +47,8 @@ class AttributeAdmin(admin.ModelAdmin):
         ('Name',            {'fields': ['name']}),
     ]
     inlines = [TeamInline]
+    list_display = ('league', 'name')
+    list_display_links = ('name',)
     list_filter = ['league', 'name']
 
 admin.site.register(Attribute, AttributeAdmin)
@@ -69,7 +73,8 @@ class PlayerAdmin(admin.ModelAdmin):
     ]
     readonly_fields = ('image_tag',)
     inlines = [PlayerAttributeInline]
-    list_display = ('code', 'league', 'description', 'image_tag')
+    list_display = ('league', 'code', 'description', 'image_tag')
+    list_display_links = ('description',)
     list_filter = ['league']
     search_fields = ['code', 'description']
 
@@ -85,11 +90,14 @@ class TeamPlayerInline(admin.TabularInline):
 class TeamAdmin(admin.ModelAdmin):
     fieldsets = [
         ('League',         {'fields': ['league']}),
+        ('Name',           {'fields': ['name']}),
         ('Attribute',      {'fields': ['attribute']}),
+        ('Positive?',      {'fields': ['positive']}),
     ]
     readonly_fields = ('league',)
     inlines = [TeamPlayerInline]
-    list_display = ('attribute', 'league')
+    list_display = ('league', 'name', 'attribute', 'positive')
+    list_display_links = ('name',)
     list_filter = ['attribute']
 
 admin.site.register(Team, TeamAdmin)
@@ -111,7 +119,8 @@ class TournamentAdmin(admin.ModelAdmin):
     ]
     readonly_fields = ('targetattribute', 'targetleague')
     inlines = [CompetitionInline]
-    list_display = ('team', 'league', 'round', 'finished')
+    list_display = ('league', 'team', 'round', 'finished')
+    list_display_links = ('team',)
     list_filter = ['league', 'finished']
 
 admin.site.register(Tournament, TournamentAdmin)
@@ -137,24 +146,9 @@ class CompetitionAdmin(admin.ModelAdmin):
     ]
     readonly_fields = ('league','team')
     inlines = [CompetitionTeamInline, MatchInline]
+    list_display = ('league', 'team', 'tournament', 'round', 'finished')
+    list_display_links = ('team',)
     list_filter = ['tournament', 'round', 'finished']
 
 admin.site.register(Competition, CompetitionAdmin)
-
-### CompetitionTeam ###
-
-class CompetitorInline(admin.TabularInline):
-    model = Competitor
-    extra = 0
-
-class CompetitionTeamAdmin(admin.ModelAdmin):
-    fieldsets = [
-        ('Competition',    {'fields': ['competition']}),
-        ('Team',           {'fields': ['team']}),
-        ('Score',          {'fields': ['score']}),
-    ]
-    inlines = [CompetitorInline]
-    list_filter = ['team']
-
-admin.site.register(CompetitionTeam, CompetitionTeamAdmin)
 

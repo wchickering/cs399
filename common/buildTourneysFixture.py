@@ -75,7 +75,8 @@ def genData(mediadir, item_lists, db_conn, matrices, dictionaries):
             attribute_id_dict[attribute] = attribute_id
             data.append(genRecord(attribute_id, 'tourneys.attribute',
                                   league=league_id,
-                                  name='attribute%d' % attribute))
+                                  name='league%d_attribute%d' %\
+                                  (league_id, attribute)))
         for item_id in items:
             db_curs.execute(selectProductStmt, (item_id,))
             row = db_curs.fetchone()

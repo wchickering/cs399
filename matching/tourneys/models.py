@@ -56,6 +56,7 @@ class PlayerAttribute(models.Model):
 # an attribute (i.e. concept) in the context of tournaments
 class Team(models.Model):
     attribute = models.ForeignKey(Attribute)
+    positive = models.BooleanField(default=True)
     name = models.CharField(max_length=100)
     def __unicode__(self):
         return self.name
