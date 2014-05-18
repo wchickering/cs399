@@ -12,6 +12,8 @@ class League(models.Model):
     mediadir = models.CharField(max_length=20)
     def __unicode__(self):
         return self.name
+    class Meta:
+        ordering = ['name']
 
 # analogous to a concept
 class Attribute(models.Model):
@@ -20,6 +22,7 @@ class Attribute(models.Model):
     def __unicode__(self):
         return self.name
     class Meta:
+        ordering = ['league', 'name']
         unique_together = ('league', 'name')
 
 # analogous to a product
@@ -37,6 +40,7 @@ class Player(models.Model):
     image_tag.short_description = 'Image'
     image_tag.allow_tags = True
     class Meta:
+        ordering = ['league', 'code']
         unique_together = ('league', 'code')
 
 # analogous to a productconcept
@@ -57,17 +61,20 @@ class PlayerAttribute(models.Model):
                         'attributeleague': self.attribute.league}
             )
     class Meta:
+        ordering = ['player', 'attribute']
         unique_together = ('player', 'attribute')
 
 # an attribute (i.e. concept) in the context of tournaments
 class Team(models.Model):
+    name = models.CharField(max_length=100, unique=True)
     attribute = models.ForeignKey(Attribute)
     positive = models.BooleanField(default=True)
-    name = models.CharField(max_length=100, unique=True)
     def __unicode__(self):
         return self.name
     def league(self):
         return self.attribute.league
+    class Meta:
+        ordering = ['name', 'attribute']
 
 # a player (i.e. product) in the context of a team
 class TeamPlayer(models.Model):
@@ -90,6 +97,7 @@ class TeamPlayer(models.Model):
                         'playerleague': self.player.league}
             )
     class Meta:
+        ordering = ['team', 'player']
         unique_together = ('team', 'player')
 
 # analogous to a MTurk job
@@ -116,13 +124,15 @@ class Tournament(models.Model):
                  'League'),
                 params={'league': self.league}
             )
+    class Meta:
+        ordering = ['name']
 
 # a competition between multiple source concepts to match a target concept
 class Competition(models.Model):
-    next_competition = models.ForeignKey('self', null=True, blank=True)
     tournament = models.ForeignKey(Tournament)
     round = models.PositiveSmallIntegerField(default=1)
     finished = models.BooleanField(default=False)
+    next_competition = models.ForeignKey('self', null=True, blank=True)
     def __unicode__(self):
         return '%s (Rnd %d)' % (unicode(self.tournament), self.round)
     def league(self):
@@ -149,6 +159,8 @@ class Competition(models.Model):
                     params={'nextround': self.next_competition.round,
                             'thisround': self.round}
                 )
+    class Meta:
+        ordering = ['tournament', 'round']
 
 # a team (i.e. concept) in the context of a competition
 class CompetitionTeam(models.Model):
@@ -166,6 +178,7 @@ class CompetitionTeam(models.Model):
                         'teamleague': self.team.attribute.league}
             )
     class Meta:
+        ordering = ['competition', 'team']
         unique_together = ('competition', 'team')
 
 # analogous to a task in MTurk
@@ -175,6 +188,10 @@ class Match(models.Model):
     teamplayer = models.ForeignKey(TeamPlayer) # target team player
     def __unicode__(self):
         return '%s : %s' % (unicode(self.competition), unicode(self.teamplayer))
+    def image_tag(self):
+        return self.teamplayer.image_tag()
+    image_tag.short_description = 'Image'
+    image_tag.allow_tags = True
     def clean(self):
         if self.competition.tournament.team != self.teamplayer.team:
             raise ValidationError(
@@ -189,6 +206,8 @@ class Match(models.Model):
                 winner_count += 1
         if winner_count > 1:
             raise ValidationError('Match has multiple winners')
+    class Meta:
+        ordering = ['competition', 'teamplayer']
 
 # a player (i.e. product) in the context of a match
 class Competitor(models.Model):
@@ -199,6 +218,10 @@ class Competitor(models.Model):
     def __unicode__(self):
         return '%s : %s' % (unicode(self.competitionteam),
                             unicode(self.teamplayer))
+    def image_tag(self):
+        return self.teamplayer.image_tag()
+    image_tag.short_description = 'Image'
+    image_tag.allow_tags = True
     def clean(self):
         if self.match.competition != self.competitionteam.competition:
             raise ValidationError(
@@ -215,7 +238,8 @@ class Competitor(models.Model):
                         'teamteam': self.competitionteam.team}
             )
     class Meta:
+        ordering = ['match', 'competitionteam', 'teamplayer']
         # no duplicate players or teams in match
-        unique_together = (('match', 'teamplayer'),
-                           ('match', 'competitionteam'))
+        unique_together = (('match', 'competitionteam'),
+                           ('match', 'teamplayer'))
     

@@ -162,12 +162,15 @@ admin.site.register(Competition, CompetitionAdmin)
 class CompetitorInline(admin.TabularInline):
     model = Competitor
     extra = 0
+    readonly_fields = ('image_tag',)
 
 class MatchAdmin(admin.ModelAdmin):
     fieldsets = [
-        ('Competition',   {'fields': ['competition']}),
+        ('Competition',     {'fields': ['competition']}),
         ('Target Player',   {'fields': ['teamplayer']}),
+        ('Target Image',    {'fields': ['image_tag']}),
     ]
+    readonly_fields = ('image_tag',)
     inlines = [CompetitorInline]
     list_display = ('competition', 'teamplayer')
     list_display_links = ('teamplayer',)
