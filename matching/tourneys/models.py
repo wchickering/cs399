@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 class League(models.Model):
     name = models.CharField(max_length=20, unique=True)
     description = models.TextField()
-    mediadir = models.CharField(max_length=20)
+    mediadir = models.CharField(max_length=20, verbose_name='Media Directory')
     def __unicode__(self):
         return self.name
     class Meta:
@@ -68,7 +68,7 @@ class PlayerAttribute(models.Model):
 class Team(models.Model):
     name = models.CharField(max_length=100, unique=True)
     attribute = models.ForeignKey(Attribute)
-    positive = models.BooleanField(default=True)
+    positive = models.BooleanField(default=True, verbose_name='Positive?')
     def __unicode__(self):
         return self.name
     def league(self):
@@ -105,16 +105,18 @@ class Tournament(models.Model):
     name = models.CharField(max_length=100, unique=True)
     # league within which teams will compete
     league = models.ForeignKey(League)
-    # foreign team being matched to
-    team = models.ForeignKey(Team)
+    # target team being matched to
+    team = models.ForeignKey(Team, verbose_name='Target Team')
     round = models.PositiveSmallIntegerField(default=1)
     finished = models.BooleanField(default=False)
     def __unicode__(self):
         return self.name
     def targetattribute(self):
         return self.team.attribute
+    targetattribute.short_description = 'Target Attribute'
     def targetleague(self):
         return self.targetattribute().league
+    targetleague.short_description = 'Target League'
     def clean(self):
         if self.round == 0:
             raise ValidationError('Round must be finite.')
@@ -131,7 +133,7 @@ class Tournament(models.Model):
 class Competition(models.Model):
     tournament = models.ForeignKey(Tournament)
     round = models.PositiveSmallIntegerField(default=1)
-    finished = models.BooleanField(default=False)
+    finished = models.BooleanField(default=False, verbose_name='Finished?')
     next_competition = models.ForeignKey('self', null=True, blank=True)
     def __unicode__(self):
         return '%s (Rnd %d)' % (unicode(self.tournament), self.round)
@@ -139,10 +141,13 @@ class Competition(models.Model):
         return self.tournament.league
     def team(self):
         return self.tournament.team
+    team.short_description = 'Target Team'
     def attribute(self):
         return self.tournament.team.attribute
+    attribute.short_description = 'Team Attribute'
     def targetleague(self):
         return self.tournament.targetleague()
+    targetleague.short_description = 'Target League'
     def clean(self):
         if self.next_competition is not None:
             if self.next_competition.tournament.pk != self.tournament.pk:
@@ -186,8 +191,9 @@ class CompetitionTeam(models.Model):
 # a competition consists of several matches
 class Match(models.Model):
     competition = models.ForeignKey(Competition)
-    teamplayer = models.ForeignKey(TeamPlayer) # target team player
-    finished = models.BooleanField(default=False)
+    teamplayer = models.ForeignKey(TeamPlayer,
+                                   verbose_name='Target Team Player')
+    finished = models.BooleanField(default=False, verbose_name='Finished?')
     def __unicode__(self):
         return '%s : %s' % (unicode(self.competition), unicode(self.teamplayer))
     def image_tag(self):
@@ -214,9 +220,10 @@ class Match(models.Model):
 # a player (i.e. product) in the context of a match
 class Competitor(models.Model):
     match = models.ForeignKey(Match)
-    competitionteam = models.ForeignKey(CompetitionTeam)
-    teamplayer = models.ForeignKey(TeamPlayer)
-    winner = models.NullBooleanField()
+    competitionteam = models.ForeignKey(CompetitionTeam,
+                                        verbose_name='Competition Team')
+    teamplayer = models.ForeignKey(TeamPlayer, verbose_name='Team Player')
+    winner = models.NullBooleanField(verbose_name='Winner?')
     def __unicode__(self):
         return '%s : %s' % (unicode(self.competitionteam),
                             unicode(self.teamplayer))

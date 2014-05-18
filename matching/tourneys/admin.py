@@ -27,12 +27,13 @@ class TournamentInline(LinkedInline):
 
 class LeagueAdmin(admin.ModelAdmin):
     fieldsets = [
-        ('Name',             {'fields': ['name']}),
-        ('Description',      {'fields': ['description']}),
+        ('',                 {'fields': ['name']}),
+        ('',                 {'fields': ['description']}),
     ]
     inlines = [AttributeInline, TournamentInline]
     list_display = ('name', 'description')
     list_display_links = ('name',)
+    search_fields = ['name', 'description']
     # solution to FK filtering problem
     def change_view(self, request, object_id, extra_context=None):
         def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
@@ -57,13 +58,14 @@ class TeamInline(LinkedInline):
 
 class AttributeAdmin(admin.ModelAdmin):
     fieldsets = [
-        ('League',          {'fields': ['league']}),
-        ('Name',            {'fields': ['name']}),
+        ('',                {'fields': ['league']}),
+        ('',                {'fields': ['name']}),
     ]
     inlines = [TeamInline]
     list_display = ('league', 'name')
     list_display_links = ('name',)
-    list_filter = ['league', 'name']
+    list_filter = ['league']
+    search_fields = ['name']
 
 admin.site.register(Attribute, AttributeAdmin)
 
@@ -79,11 +81,10 @@ class PlayerAttributeInline(admin.TabularInline):
 
 class PlayerAdmin(admin.ModelAdmin):
     fieldsets = [
-        ('League',          {'fields': ['league']}),
-        ('Code',            {'fields': ['code']}),
-        ('Description',     {'fields': ['description']}),
-        ('Image',           {'fields': ['image']}),
-        ('',                {'fields': ['image_tag']}),
+        ('',                {'fields': ['league']}),
+        ('',                {'fields': ['code']}),
+        ('',                {'fields': ['description']}),
+        ('',                {'fields': ['image', 'image_tag']}),
     ]
     readonly_fields = ('image_tag',)
     inlines = [PlayerAttributeInline]
@@ -116,16 +117,16 @@ class TeamPlayerInline(admin.TabularInline):
 
 class TeamAdmin(admin.ModelAdmin):
     fieldsets = [
-        ('League',         {'fields': ['league']}),
-        ('Name',           {'fields': ['name']}),
-        ('Attribute',      {'fields': ['attribute']}),
-        ('Positive?',      {'fields': ['positive']}),
+        ('',               {'fields': ['league']}),
+        ('',               {'fields': ['name']}),
+        ('',               {'fields': ['attribute']}),
+        ('',               {'fields': ['positive']}),
     ]
     readonly_fields = ('league',)
     inlines = [TeamPlayerInline]
     list_display = ('league', 'name', 'attribute', 'positive')
     list_display_links = ('name',)
-    list_filter = ['attribute']
+    search_fields = ['attribute__league__name', 'name', 'attribute__name']
     # solution to FK filtering problem
     def change_view(self, request, object_id, extra_context=None):
         def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
@@ -151,20 +152,20 @@ class CompetitionInline(LinkedInline):
 
 class TournamentAdmin(admin.ModelAdmin):
     fieldsets = [
-        ('Name',            {'fields': ['name']}),
-        ('Source League',   {'fields': ['league']}),
-        ('Target Team',     {'fields': ['team']}),
-        ('Target Attribute',{'fields': ['targetattribute']}),
-        ('Target League',   {'fields': ['targetleague']}),
-        ('Round',           {'fields': ['round']}),
-        ('Finished?',       {'fields': ['finished']}),
+        ('',                {'fields': ['name']}),
+        ('',                {'fields': ['league']}),
+        ('Target',          {'fields': ['targetleague',
+                                        'targetattribute',
+                                        'team']}),
+        ('',                {'fields': ['round']}),
+        ('',                {'fields': ['finished']}),
     ]
     readonly_fields = ('targetattribute', 'targetleague')
     inlines = [CompetitionInline]
     list_display = ('league', 'name', 'team', 'round', 'finished')
     list_display_links = ('name',)
     list_filter = ['league', 'finished']
-    search_fields = ['name', 'team']
+    search_fields = ['league__name', 'name', 'team__name']
     # solution to FK filtering problem
     def change_view(self, request, object_id, extra_context=None):
         def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
@@ -193,18 +194,20 @@ class MatchInline(LinkedInline):
 
 class CompetitionAdmin(admin.ModelAdmin):
     fieldsets = [
-        ('Source League',   {'fields': ['league']}),
-        ('Target Team',     {'fields': ['team']}),
-        ('Tournament',      {'fields': ['tournament']}),
-        ('Round',           {'fields': ['round']}),
-        ('Finished?',       {'fields': ['finished']}),
-        ('Next Competition',{'fields': ['next_competition']}),
+        ('',                {'fields': ['league']}),
+        ('',                {'fields': ['team']}),
+        ('',                {'fields': ['tournament']}),
+        ('',                {'fields': ['round']}),
+        ('',                {'fields': ['finished']}),
+        ('',                {'fields': ['next_competition']}),
     ]
     readonly_fields = ('league','team')
     inlines = [CompetitionTeamInline, MatchInline]
     list_display = ('league', 'team', 'tournament', 'round', 'finished')
     list_display_links = ('team',)
     list_filter = ['tournament', 'round', 'finished']
+    search_fields = ['tournament__name', 'tournament__team__name',
+                     'tournament__league__name']
     # solution to FK filtering problem
     def change_view(self, request, object_id, extra_context=None):
         def ct_formfield_for_foreignkey(self, db_field, request=None, **kwargs):
@@ -238,15 +241,17 @@ class CompetitorInline(admin.TabularInline):
 
 class MatchAdmin(admin.ModelAdmin):
     fieldsets = [
-        ('Competition',     {'fields': ['competition']}),
-        ('Target Player',   {'fields': ['teamplayer']}),
-        ('Target Image',    {'fields': ['image_tag']}),
-        ('Finished?',       {'fields': ['finished']}),
+        ('',                {'fields': ['competition']}),
+        ('',                {'fields': ['teamplayer']}),
+        ('',                {'fields': ['image_tag']}),
+        ('',                {'fields': ['finished']}),
     ]
     readonly_fields = ('image_tag',)
     inlines = [CompetitorInline]
     list_display = ('competition', 'teamplayer', 'image_tag', 'finished')
     list_display_links = ('teamplayer',)
+    search_fields = ['competition__tournament__name', 'teamplayer__team__name',
+                     'teamplayer__player__description']
     # solution to FK filtering problem
     def change_view(self, request, object_id, extra_context=None):
         def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
