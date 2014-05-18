@@ -147,14 +147,14 @@ PREDICTED_TFIDF=$DATA/predictedEdgesTfidf_${EXPMT}.pickle
 PREDICTED_ONE=$DATA/predictedEdgesOneModel_${EXPMT}.pickle
 PREDICTED_EDGES=$DATA/predictedEdges_${EXPMT}.pickle
 
-if [ "$MODEL_TYPE" = "LDA" ]; then
+if [ "$MODEL_TYPE" = "lda" ]; then
+    MODEL=$LDA
     MODEL1=$LDA1
     MODEL2=$LDA2
-    MODEL=$LDA
-elif [ "$MODEL_TYPE" = "LSI" ]; then
+elif [ "$MODEL_TYPE" = "lsi" ]; then
+    MODEL=$LSI
     MODEL1=$LSI1
     MODEL2=$LSI2
-    MODEL=$LSI
 fi
 
 
@@ -198,9 +198,6 @@ fi
 if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
     echo "=== 5. Train $MODEL_TYPE model for each graph ==="
     if [ "$MODEL_TYPE" = "lda" ]; then
-        MODEL=$LDA
-        MODEL1=$LDA1
-        MODEL2=$LDA2
         python $SRC/buildLDAModel.py --num-topics=$NUM_TOPICS\
             --matrixfile=$RWALK --lda-file=$MODEL
         python $SRC/buildLDAModel.py --num-topics=$NUM_TOPICS\
@@ -208,9 +205,6 @@ if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
         python $SRC/buildLDAModel.py --num-topics=$NUM_TOPICS\
             --matrixfile=$RWALK2 --lda-file=$MODEL2
     elif [ "$MODEL_TYPE" = "lsi" ]; then
-        MODEL=$LSI
-        MODEL1=$LSI1
-        MODEL2=$LSI2
         python $SRC/svd.py -k $NUM_TOPICS --savefile=$MODEL $RWALK
         python $SRC/svd.py -k $NUM_TOPICS --savefile=$MODEL1 $RWALK1
         python $SRC/svd.py -k $NUM_TOPICS --savefile=$MODEL2 $RWALK2
