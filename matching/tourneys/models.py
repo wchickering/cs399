@@ -53,7 +53,7 @@ class PlayerAttribute(models.Model):
     def league(self):
         return self.attribute.league
     def clean(self):
-        if self.player.league != self.attribute.league:
+        if self.player.league.pk != self.attribute.league.pk:
             raise ValidationError(
                 ('Player League (%(playerleague)s) not equal to Attribute '
                  'League (%(attributeleague)s)'),
@@ -88,8 +88,8 @@ class TeamPlayer(models.Model):
         return self.player.image_tag()
     image_tag.short_description = 'Image'
     image_tag.allow_tags = True
-    def clearn(self):
-        if self.team.attribute.league != self.player.league:
+    def clean(self):
+        if self.team.attribute.league.pk != self.player.league.pk:
             raise ValidationError(
                 ('Team League (%(teamleague)s) not equal to Player '
                  'League (%(playerleague)s)'),
@@ -118,7 +118,7 @@ class Tournament(models.Model):
     def clean(self):
         if self.round == 0:
             raise ValidationError('Round must be finite.')
-        if self.league == self.team.attribute.league:
+        if self.league.pk == self.team.attribute.league.pk:
             raise ValidationError(
                 ('Source League (%(league)s) is equal to Target Team '
                  'League'),
@@ -145,7 +145,7 @@ class Competition(models.Model):
         return self.tournament.targetleague()
     def clean(self):
         if self.next_competition is not None:
-            if self.next_competition.tournament != self.tournament:
+            if self.next_competition.tournament.pk != self.tournament.pk:
                 raise ValidationError(
                     ('Next competition tournament (%(nexttournary)s) not equal '
                      'to this competition tournament (%(thistourney)s)'),
@@ -170,7 +170,8 @@ class CompetitionTeam(models.Model):
     def __unicode__(self):
         return '%s : %s' % (unicode(self.competition), unicode(self.team))
     def clean(self):
-        if self.competition.tournament.league != self.team.attribute.league:
+        if self.competition.tournament.league.pk !=\
+           self.team.attribute.league.pk:
             raise ValidationError(
                 ('Competition League (%(competitionleague)s) not equal to '
                  'Team League (%(teamleague)s)'),
@@ -186,6 +187,7 @@ class CompetitionTeam(models.Model):
 class Match(models.Model):
     competition = models.ForeignKey(Competition)
     teamplayer = models.ForeignKey(TeamPlayer) # target team player
+    finished = models.BooleanField(default=False)
     def __unicode__(self):
         return '%s : %s' % (unicode(self.competition), unicode(self.teamplayer))
     def image_tag(self):
@@ -193,7 +195,7 @@ class Match(models.Model):
     image_tag.short_description = 'Image'
     image_tag.allow_tags = True
     def clean(self):
-        if self.competition.tournament.team != self.teamplayer.team:
+        if self.competition.tournament.team.pk != self.teamplayer.team.pk:
             raise ValidationError(
                 ('Competition Team (%(competitionteam)s) not equal to '
                  'TeamPlayer Team (%(playerteam)s)'),
@@ -223,14 +225,14 @@ class Competitor(models.Model):
     image_tag.short_description = 'Image'
     image_tag.allow_tags = True
     def clean(self):
-        if self.match.competition != self.competitionteam.competition:
+        if self.match.competition.pk != self.competitionteam.competition.pk:
             raise ValidationError(
                 ('Match Competition (%(matchcompetition)s) not equal to '
                  'CompetitionTeam Competition (%(teamcompetition)s)'),
                 params={'matchcompetition': self.match.competition,
                         'teamcompetition': self.competitionteam.competition}
             )
-        if self.teamplayer.team != self.competitionteam.team:
+        if self.teamplayer.team.pk != self.competitionteam.team.pk:
             raise ValidationError(
                 ('TeamPlayer Team (%(playerteam)s) not equal to '
                  'CompetitionTeam Team (%(teamteam)s)'),
