@@ -20,7 +20,7 @@ displayInterval = 100
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-k', type='int', dest='k', default=10,
+    parser.add_option('-k', type='int', dest='k', default=2,
         help='Number of predicted edges per node.', metavar='NUM')
     parser.add_option('-s', '--savefile', dest='savefile',
         default='predictEdges.pickle', help='Pickle to dump predicted edges.',

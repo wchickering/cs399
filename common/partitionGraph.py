@@ -6,11 +6,16 @@ between them. Stores both partitioned graphs and the lost edges from the
 partition.
 """
 
+from stemming.porter2 import stem
 from optparse import OptionParser
 import pickle
 import random
+import string
 import os
 import sys
+import sqlite3
+
+selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -23,8 +28,10 @@ def getParser(usage=None):
     parser.add_option('--lost_edges', dest='lostedgesfilename',
         default='lostEdges.pickle', help='Name of lost edges pickle.',
         metavar='FILE')
-    parser.add_option('--seed', type='int', dest='seed', default=0,
+    parser.add_option('--seed', type='int', dest='seed', default=10,
         help='Seed for random number generator.', metavar='NUM')
+    parser.add_option('-d', '--database', dest='dbname',
+        default='data/macys.db', help='Database to pull descriptions from.')
     return parser
 
 def loadGraph(fname):
@@ -32,23 +39,28 @@ def loadGraph(fname):
         graph = pickle.load(f)
     return graph
 
-def partitionGraph(graph):
+def partitionNodesByBrand(db_conn, graph):
+    db_curs = db_conn.cursor()
+    itemMap = {}
+    brandMap = {}
+    for item in graph:
+        db_curs.execute(selectDescriptionStmt, (item,))
+        description = db_curs.fetchone()[0]
+        description = ''.join(ch for ch in description\
+                              if ch not in string.punctuation)
+        words = [stem(w.lower()) for w in description.split()]
+        brand = words[0]
+        if brand not in brandMap:
+            brandMap[brand] = random.choice([1,2])
+        itemMap[item] = brandMap[brand]
+    print 'Number of brands = %d' % len(brandMap)
+    return itemMap
+
+def buildGraphs(itemMap, graph):
+    lost_edges = []
     graph1 = {}
     graph2 = {}
-    itemMap = {}
-    # partition nodes, keeping all edges
-    count = 0
-    random.shuffle(graph.keys())
-    nodes_per_graph = len(graph.keys())/2
-    for item in graph.keys():
-        count += 1
-        if count < nodes_per_graph:
-            itemMap[item] = 1
-        else:
-            itemMap[item] = 2
-    # remove edges across graphs and save them
-    lost_edges = []
-    for item in graph.keys():
+    for item in graph:
         (outbounds, inbounds) = graph[item]
         newOutbounds = []
         newInbounds = []
@@ -88,9 +100,14 @@ def main():
     # seed rng
     random.seed(options.seed)
 
+    # connect to database
+    print 'Connecting to database. .'
+    db_conn = sqlite3.connect(options.dbname)
+
     # partition graph
     print 'Partitioning graph. . .'
-    results = partitionGraph(graph)
+    itemMap = partitionNodesByBrand(db_conn, graph)
+    results = buildGraphs(itemMap, graph)
     graph1 = results[0]
     graph2 = results[1]
     lost_edges = results[2]

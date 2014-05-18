@@ -8,6 +8,7 @@ topic vector in catalogue 2's space.
 """
 
 from optparse import OptionParser
+from Queue import PriorityQueue
 import pickle
 import os
 import sys
@@ -19,13 +20,21 @@ def getParser(usage=None):
         default='data/topic_map.pickle',
         help='Name of pickle to write topic map to.', metavar='FILE')
     parser.add_option('-n', '--topnwords', type=int, dest='topnwords', 
-        default=1000, help='Number of top words in tfidf to compare.',
+        default=1000, help='Number of top words per topic to compare.',
         metavar='NUM')
     parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
         default=False, help='Print top words')
+    parser.add_option('--max_connections', type='int', dest='max_connections',
+        default=1000, help='Max number of topics a single topic can map to.', 
+        metavar='NUM')
     return parser
 
-def topicTopicSim(topic1, topic2):
+def loadPickle(fname):
+    with open(fname, 'r') as f:
+        obj = pickle.load(f)
+    return obj
+
+def topicSimilarity(topic1, topic2):
     similarity = 0.0
     # Traverse ordered lists of words for matches
     i = 0
@@ -50,64 +59,73 @@ def transformMatrix(matrix):
             matrix_t[j][i] = matrix[i][j]
     return matrix_t
 
-def getTopicMap(tfidf1, tfidf2):
-    topic_map = [] # Transform from space 1 to space 2
-    for topic1 in tfidf1:
-        # Represent topic in space 2
+def getTopicMap(topics1, topics2, max_connections):
+    topic_map = [] 
+    for topic1 in topics1:
         topic_vector = []
-        for topic2 in tfidf2:
-             topic_vector.append(topicTopicSim(topic1, topic2))
-        # Normalize vector and add to topic map
+        for topic2 in topics2:
+             topic_vector.append(topicSimilarity(topic1, topic2))
+        # Limit number of connections
+        queue = PriorityQueue() 
+        for idx in range(len(topic_vector)):
+            similarity = topic_vector[idx]
+            queue.put((similarity, idx))
+            if queue.qsize() > max_connections:
+                (similarity, idx) = queue.get()
+                topic_vector[idx] = 0.0
         topic_map.append(topic_vector/np.linalg.norm(topic_vector, 1))
-        # this gives the column of the transformation matrix
     return transformMatrix(topic_map)
+
+def truncateTopics(topics, topnwords):
+    for topic in range(len(topics)):
+        topics[topic] = np.array(topics[topic])
+        topics[topic] = topics[topic][0:topnwords, :]
+    return topics
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <tfidf1.pickle> <tfidf2.pickle>'
+    usage = 'Usage: %prog [options] <topics1.pickle> <topics2.pickle>'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 2:
         parser.error('Wrong number of arguments')
-    tfidfname1 = args[0]
-    tfidfname2 = args[1]
-    if not os.path.isfile(tfidfname1):
-        print >> sys.stderr, 'error: Cannot find %s' % tfidfname1
+    topics1_fname = args[0]
+    topics2_fname = args[1]
+    if not os.path.isfile(topics1_fname):
+        print >> sys.stderr, 'error: Cannot find %s' % topics1_fname
         return
-    if not os.path.isfile(tfidfname2):
-        print >> sys.stderr, 'error: Cannot find %s' % tfidfname2
+    if not os.path.isfile(topics2_fname):
+        print >> sys.stderr, 'error: Cannot find %s' % topics2_fname
         return
 
-    # load tfidf1 pickle
-    print 'Loading tfidf of first catalogue from %s. . .' % tfidfname1
-    with open(tfidfname1, 'r') as f:
-        tfidf1 = pickle.load(f)
+        # load topics pickle
+    print 'Loading topics of first catalogue from %s. . .' % topics1_fname
+    topics1 = loadPickle(topics1_fname)
 
-    # load tfidf2 pickle
-    print 'Loading tfidf of second catalogue from %s. . .' % tfidfname2
-    with open(tfidfname2, 'r') as f:
-        tfidf2 = pickle.load(f)
+    # load topics pickle
+    print 'Loading topics of first catalogue from %s. . .' % topics2_fname
+    topics2 = loadPickle(topics2_fname)
 
-    # truncate to get top tfidfs in each topic
-    for topic in range(len(tfidf1)):
-        tfidf1[topic] = np.array(tfidf1[topic])
-        tfidf1[topic] = tfidf1[topic][0:options.topnwords, :]
-    for topic in range(len(tfidf2)):
-        tfidf2[topic] = np.array(tfidf2[topic])
-        tfidf2[topic] = tfidf2[topic][0:options.topnwords, :]
+    # truncate to get top words in each topic
+    topics1 = truncateTopics(topics1, options.topnwords)
+    topics2 = truncateTopics(topics2, options.topnwords)
+
+    # sort each topic by word alphabetically
+    print 'Sorting topics by word. . .'
+    for topic in range(len(topics1)):
+        ind = np.argsort(topics1[topic][:,0])
+        topics1[topic] = topics1[topic][ind, :]
+    for topic in range(len(topics2)):
+        ind = np.argsort(topics2[topic][:,0])
+        topics2[topic] = topics2[topic][ind, :]
         
-    # sort each topic of tfidfs by word alphabetically
-    print 'Sorting tfidf topics by word. . .'
-    for topic in range(len(tfidf1)):
-        ind = np.argsort(tfidf1[topic][:,0])
-        tfidf1[topic] = tfidf1[topic][ind, :]
-    for topic in range(len(tfidf2)):
-        ind = np.argsort(tfidf2[topic][:,0])
-        tfidf2[topic] = tfidf2[topic][ind, :]
-
     # get matrix mapping topics from space 1 to topics of space 2
     print 'Mapping topics between catalogues. . .'
-    topic_map = getTopicMap(tfidf1, tfidf2)
+    topic_map = getTopicMap(topics1, topics2, options.max_connections)
+
+    # assert that all columns add up to 1
+    assert(np.array(topic_map).sum(axis=0).all() == 
+            np.ones((len(topic_map), 1)).all())
 
     # dump tf-idfs
     print 'Saving topic map to %s. . .' % options.outputpickle
