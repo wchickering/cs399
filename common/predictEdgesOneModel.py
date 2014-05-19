@@ -15,6 +15,11 @@ import LDA_util as lda
 import LSI_util as lsi
 from KNNSearchEngine import KNNSearchEngine
 
+# params
+topn = 100
+basePop = 0.1
+alpha = 1.0
+
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-k', type='int', dest='k', default=2,
@@ -22,6 +27,8 @@ def getParser(usage=None):
     parser.add_option('-s', '--savefile', dest='savefile',
         default='predictEdges.pickle', help='Pickle to dump predicted edges.',
         metavar='FILE')
+    parser.add_option('--popgraph', dest='popgraph', default=None,
+        help='Picked graph representing item "popularity".', metavar='FILE')
     return parser
 
 def loadPickle(fname):
@@ -54,9 +61,17 @@ def loadModel(filename):
         return None
     return data, dictionary
 
-def predictEdges(data, dictionary, k, searchEngine):
-    distances, neighbors =\
-        searchEngine.kneighbors(data, n_neighbors=k);
+def getNeighbors(data, k, searchEngine, popDictionary):
+    if popDictionary is None:
+        distances, neighbors =\
+            searchEngine.kneighbors(data, n_neighbors=k)
+    else:
+        distances, neighbors =\
+            searchEngine.kneighborsWeighted(data, popDictionary,
+                  topn, alpha, basePop, n_neighbors=k)
+    return neighbors
+
+def predictEdges(neighbors, dictionary):
     predicted_edges = []
     for index, node in dictionary.items():
         predicted_edges += [(node, int(n)) for n in neighbors[index]]
@@ -100,6 +115,17 @@ def main():
     print 'Loading model from %s. . .' % model_filename
     data, dictionary = loadModel(model_filename)
 
+    # Get popularity
+    if options.popgraph:
+        print 'Loading "popularity" graph from %s. . .' % options.popgraph
+        popgraph = loadPickle(options.popgraph)
+        popDictionary = {}
+        for item in popgraph:
+            # set popularity equal to in-degree
+            popDictionary[item] = len(popgraph[item][1])
+    else:
+        popDictionary = None
+
     # load graphs
     print 'Loading graph1 from %s. . .' % graph1_filename
     graph1 = loadPickle(graph1_filename)
@@ -115,8 +141,12 @@ def main():
     print 'Creating KNN search engine of graph2 from model. . .'
     searchEngine = KNNSearchEngine(data2, dictionary2)
 
+    print 'Getting nearest neighbors. . .'
+    neighbors = getNeighbors(data1, options.k, searchEngine,
+                             popDictionary=popDictionary)
+
     print 'Predicting edges. . .'
-    predicted_edges = predictEdges(data1, dictionary1, options.k, searchEngine)
+    predicted_edges = predictEdges(neighbors, dictionary1)
     
     # save results
     print 'Saving results to %s. . .' % options.savefile

@@ -22,6 +22,32 @@ class KNNSearchEngine:
         neighbors = [[self.dictionary[i] for i in index] for index in indexes]
         return distances, neighbors
 
+    def kneighborsWeighted(self, query, weights, topn, alpha, baseWeight,
+                           n_neighbors=10):
+        origDistances, origNeighbors = self.kneighbors(query, topn)
+ 
+        # weight distances by "popularity"
+        newDistances = np.zeros(origDistances.shape)
+        for i in range(origDistances.shape[0]):
+            for j in range(origDistances.shape[1]):
+                newDistances[i][j] = origDistances[i][j]/\
+                    (baseWeight + weights[origNeighbors[i][j]]**alpha)
+
+        # re-sort neighbors by weighted distance
+        neighborDistances = np.dstack((newDistances, origNeighbors))
+        h, w = neighborDistances.shape[0], neighborDistances.shape[1]
+        mappedNeighborDistances = map(tuple, neighborDistances\
+                                             .reshape((h*w, 2)))
+        structMappedNeighborDistances =\
+            np.array(mappedNeighborDistances,
+                     dtype={'names':['distance', 'neighbor'],\
+                            'formats':['f4', 'i4']}).reshape((h, w))
+        sortedNeighborDistances = np.sort(structMappedNeighborDistances, axis=1,
+                                          order='distance')
+        distances = sortedNeighborDistances['distance'][:,0:n_neighbors]
+        neighbors = sortedNeighborDistances['neighbor'][:,0:n_neighbors]
+        return distances, neighbors
+
     def kneighborsByName(self, items, n_neighbors=10):
         query = [self.data[self.reverseDictionary[int(item)]] for item in items]
         return self.kneighbors(query, n_neighbors=n_neighbors)
@@ -30,6 +56,7 @@ class KNNSearchEngine:
         self.reverseDictionary = {}
         for i in range(len(self.dictionary)):
             self.reverseDictionary[self.dictionary[i]] = i
+
 
 
 ##########################

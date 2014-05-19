@@ -15,8 +15,11 @@ import sqlite3
 import string
 import math
 
+# params
 selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
 displayInterval = 100
+basePop = 0.1
+alpha = 1.0
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -35,6 +38,8 @@ def getParser(usage=None):
         default='data/stopwords.txt',
         help='File containing a comma separated list of stop words.',
         metavar='FILE')
+    parser.add_option('--popgraph', dest='popgraph', default=None,
+        help='Picked graph representing item "popularity".', metavar='FILE')
     return parser
 
 def loadPickle(fname):
@@ -54,10 +59,12 @@ def tfidfSimilarity(tfidf1, tfidf2, cosine):
     else:
         return score
 
-def tfidfNeighbors(tfidf1, tfidfs2, k, cosine):
-    queue = PriorityQueue() # priority queue makes this nlogk
+def tfidfNeighbors(tfidf1, tfidfs2, k, cosine, popDictionary):
+    queue = PriorityQueue() 
     for node2 in tfidfs2:
         similarity = tfidfSimilarity(tfidf1, tfidfs2[node2], cosine)
+        if popDictionary is not None:
+            similarity *= (basePop + popDictionary[node2]**alpha)
         queue.put((similarity, node2))
         if queue.qsize() > k:
             queue.get()
@@ -67,14 +74,15 @@ def tfidfNeighbors(tfidf1, tfidfs2, k, cosine):
         neighbors.append(node2)
     return neighbors
 
-def predictEdges(tfidfs1, tfidfs2, k, cosine):
+def predictEdges(tfidfs1, tfidfs2, k, cosine, popDictionary):
     predicted_edges = []
     count = 0
     for node1 in tfidfs1:
         if count % displayInterval == 0:
             print 'Getting neighbors of %d / %d nodes' % (count, len(tfidfs1.keys()))
         count += 1
-        neighbors = tfidfNeighbors(tfidfs1[node1], tfidfs2, k, cosine)
+        neighbors = tfidfNeighbors(tfidfs1[node1], tfidfs2, k, cosine,
+                popDictionary)
         predicted_edges += [(node1, n) for n in neighbors]
     return predicted_edges
 
@@ -126,6 +134,17 @@ def main():
             'WARNING: stop words file not found: %s' % options.stopwords
         stopwords = None
 
+    # Get popularity
+    if options.popgraph:
+        print 'Loading "popularity" graph from %s. . .' % options.popgraph
+        popgraph = loadPickle(options.popgraph)
+        popDictionary = {}
+        for item in popgraph:
+            # set popularity equal to in-degree
+            popDictionary[item] = len(popgraph[item][1])
+    else:
+        popDictionary = None
+
     # load graphs
     print 'Loading graph1 from %s. . .' % graph1_filename
     graph1 = loadPickle(graph1_filename)
@@ -146,7 +165,7 @@ def main():
     # predict edges
     print 'Predicting edges. .'
     predicted_edges = predictEdges(tfidfs1, tfidfs2, options.k,
-            options.cosine)
+            options.cosine, popDictionary=popDictionary)
 
     # save results
     print 'Saving results to %s. . .' % options.savefile
