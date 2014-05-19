@@ -1,5 +1,5 @@
 """
-Setup a new tournament or add a round to an existing one.
+Setup new tournaments or add a round to existing ones between two leagues.
 """
 
 from optparse import make_option
@@ -12,11 +12,10 @@ from django.core.management.base import BaseCommand, CommandError
 from tourneys.models import *
 
 class Command(BaseCommand):
-    args = '[options] [sourceleague targetteam]'
-    help = 'Setup a new tournament or add a round to an existing one'
+    args = '[options] <targetleague sourceleague>'
+    help = ('Setup new tournaments or add a round to existing ones between two '
+            'leagues')
     option_list = BaseCommand.option_list + (
-        make_option('--name', dest='name', default=None,
-                    help='Name of new or existing tournament.'),
         make_option('--newround', action='store_true', dest='newround',
                     default=False,
                     help='Add a new round to an existing tournament.'),
@@ -34,38 +33,58 @@ class Command(BaseCommand):
     def print_help(self):
         super(Command, self).print_help(self.get_command(), None)
 
-    def cleanTournament(self, name, sourceleague, targetteam, num_players,
-                        num_matches):
-        """Verify clean environment for tournament"""
-        # verify attributes
-        num_attributes = sourceleague.attribute_set.count()
-        num_rounds = math.log(2*num_attributes)/math.log(num_players)
-        if not num_rounds.is_integer():
-            raise CommandError('Nonintegral number of rounds computed. Number '
-                               'of attributes in league must equal (k^n)/2, '
-                               'where k > 2 is number of players per match and '
-                               'n > 2 is the number of rounds in the '
-                               'tournament.')
-        # verify teams
-        for attribute in sourceleague.attribute_set.all():
-            if attribute.team_set.count() != 2:
-                raise CommandError('Invalid number of teams per attribute '
-                                   '(must be one team per attribute per sign).')
-        for team in Team.objects\
-                        .filter(attribute__in=sourceleague.attribute_set.all()):
-            if team.teamplayer_set.count() < num_matches:
-                raise CommandError('num_matches=%d cannot be greater than '
-                                   'number of teamplayers on a team in the '
-                                   'sourceleague.' % num_matches)
-        # ensure tournament by name doesn't already exist
-        try:
-            tournament = Tournament.objects.get(name=name)
-            raise CommandError('Tournament `%s` already exists. Provide unique '
-                               'name or delete preexisting tournament.' % name)
-        except Tournament.DoesNotExist:
-            pass
+    def getTournamentName(self, targetteam, sourceleague):
+        return '%s_%s__%s_tourney' % (targetteam.attribute.name,
+                                      'pos' if targetteam.positive else 'neg',
+                                      sourceleague.name)
 
-    def createCompetitions(self, tournament, num_players):
+    def cleanTournaments(self, targetleague, sourceleague, num_players,
+                         num_matches):
+        """Verify clean environment for tournaments between leagues"""
+        for league in [targetleague, sourceleague]:
+            # verify attributes
+            num_attributes = league.attribute_set.count()
+            num_rounds = math.log(2*num_attributes)/math.log(num_players)
+            if not num_rounds.is_integer():
+                raise CommandError(
+                    ('Nonintegral number of rounds computed for league `%s`. '
+                     'Number of attributes in league must equal (k^n)/2, where '
+                     'k > 2 is number of players per match and n > 2 is the '
+                     'number of rounds in the tournament.' % league.name)
+                )
+            # verify teams
+            for attribute in league.attribute_set.all():
+                if attribute.team_set.count() != 2:
+                    raise CommandError(
+                        ('Invalid number of teams per attribute for league '
+                         '`%s` (must be one team per attribute per sign).') %\
+                        league.name
+                    )
+            for team in Team.objects\
+                            .filter(attribute__in=league.attribute_set.all()):
+                if team.teamplayer_set.count() < num_matches:
+                    raise CommandError(
+                        ('num_matches=%d cannot be greater than number of '
+                         'teamplayers on a team in the league `%s`.') %\
+                        (num_matches, league.name)
+                    )
+        # verify tournaments don't already exist
+        for targetteam in\
+            Team.objects.filter(attribute__in=targetleague.attribute_set.all()):
+            tournament_name = self.getTournamentName(targetteam, sourceleague)
+            try:
+                tournament = Tournament.objects.get(name=tournament_name)
+                raise CommandError(
+                    'Tournament `%s` already exists.' % tournament.name
+                )
+            except Tournament.DoesNotExist:
+                pass
+
+    def createCompetitions(self, tournament, round, num_players):
+        if round != 1:
+            raise CommandError(
+                'Creating competitions for rounds > 1 not implemented'
+            )
         # get all league teams
         teams = list(
             Team.objects\
@@ -76,7 +95,7 @@ class Command(BaseCommand):
         # create competition objects
         for i in range(len(teams)/num_players):
             # create competition object
-            competition = Competition(tournament=tournament)
+            competition = Competition(tournament=tournament, round=round)
             tournament.competition_set.add(competition)
             # create competitionteam objects
             for j in range(num_players):
@@ -85,7 +104,11 @@ class Command(BaseCommand):
                                                   team=team)
                 competition.competitionteam_set.add(competitionteam)
 
-    def createMatches(self, tournament, num_matches):
+    def createMatches(self, tournament, round, num_matches):
+        if round != 1:
+            raise CommandError(
+                'Creating matches for rounds > 1 not implemented'
+            )
         targetteamplayers = list(tournament.team.teamplayer_set.all())
         # randomize targetteamplayers
         random.shuffle(targetteamplayers)
@@ -111,74 +134,56 @@ class Command(BaseCommand):
                                             teamplayer=teamplayer)
                     match.competitor_set.add(competitor)
 
-    def createTournament(self, sourceleague_name, targetteam_name, num_players,
-                         num_matches, name=None):
+    def createTournaments(self, targetleague_name, sourceleague_name,
+                          num_players, num_matches):
+        # get targetleague
+        try:
+            targetleague = League.objects.get(name=targetleague_name)
+        except League.DoesNotExist:
+            raise CommandError('Cannot find targetleague: %s' %\
+                               targetleague_name)
         # get sourceleague
         try:
             sourceleague = League.objects.get(name=sourceleague_name)
         except League.DoesNotExist:
             raise CommandError('Cannot find sourceleague: %s' %\
                                sourceleague_name)
-        # get targetteam
-        try:
-            targetteam = Team.objects.get(name=targetteam_name)
-        except Team.DoesNotExist:
-            raise CommandError('Cannot find targetteam: %s' %\
-                               targetteam_name)
-        if name is None:
-            # assign default name
-            name = '%s__%s_tourney' %\
-                   (sourceleague.name, targetteam.attribute.name)
-        # verify proper setup
-        self.cleanTournament(name, sourceleague, targetteam, num_players,
-                             num_matches)
-        # create tournament
-        self.stdout.write('Creating a new tournament: %s' % name)
-        tournament = Tournament(name=name, league=sourceleague,
-                                team=targetteam, round=1, finished=False)
-        tournament.save()
-        # create competitions
-        self.createCompetitions(tournament, num_players)
-        # create matches
-        self.createMatches(tournament, num_matches)
+        # verify clean environment
+        self.cleanTournaments(targetleague, sourceleague, num_players,
+                              num_matches)
+        # create tournaments
+        for targetteam in\
+            Team.objects.filter(attribute__in=targetleague.attribute_set.all()):
+            name = self.getTournamentName(targetteam, sourceleague)
+            self.stdout.write('Creating tournament: %s' % name)
+            tournament = Tournament(name=name, league=sourceleague,
+                                    team=targetteam, round=1, finished=False)
+            tournament.save()
+            # create competitions
+            self.createCompetitions(tournament, 1, num_players)
+            # create matches
+            self.createMatches(tournament, 1, num_matches)
 
     def handle(self, *args, **options):
         # parse command line
-        sourceleague_name = None
-        targetteam_name = None
-        name = options['name']
+        if len(args) != 2:
+            raise CommandError('Must provide targetleague and sourceleague')
+        targetleague_name = args[0]
+        sourceleague_name = args[1]
         newround = options['newround']
         num_players = options['numplayers']
         num_matches = options['nummatches']
         seed = options['seed']
-        if len(args) == 0:
-            if name is None:
-                self.print_help()
-                return
-        elif len(args) == 1:
-            raise CommandError('Must provide both sourceleague and targetteam')
-        elif len(args) == 2:
-            sourceleague_name = args[0]
-            targetteam_name = args[1]
-        elif len(args) > 2:
-            raise CommandError('Too many arguments')
 
         # seed rng
         if seed is not None:
             random.seed(seed)
 
-        if name is not None and\
-           sourceleague_name is None and targetteam_name is None:
-            # augment an existing tournament
+        if newround:
+            # augment an existing tournaments
             raise CommandError('Modifying existing tournaments not yet '
                                'implemented.')
-        elif sourceleague_name is not None and targetteam_name is not None:
-            # create a new tournament
-            self.createTournament(sourceleague_name, targetteam_name,
-                                  num_players, num_matches, name=name)
-
-
-
-
-
-
+        else:
+            # create new tournaments
+            self.createTournaments(targetleague_name, sourceleague_name,
+                                   num_players, num_matches)
