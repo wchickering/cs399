@@ -9,7 +9,7 @@ from django.core.management.base import BaseCommand, CommandError
 from tourneys.models import *
 
 class Command(BaseCommand):
-    args = '<league1> [league2 league3 ...]'
+    args = '[options] <league1> [league2 league3 ...]'
     help = 'Form teams for one or more given leagues'
     option_list = BaseCommand.option_list + (
         make_option('--teamsize', type='int', dest='teamsize', default=10,

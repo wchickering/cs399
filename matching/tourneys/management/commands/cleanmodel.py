@@ -15,7 +15,7 @@ class Command(AppCommand):
             dest='exclude',
             default=None,
             help='Exclude model(s) from cleaning.'),
-        )
+    )
 
     def writeError(self, model, instance, error):
         self.stderr.write(
