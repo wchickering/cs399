@@ -37,13 +37,17 @@ class Player(models.Model):
     def __unicode__(self):
         return self.description
     def image_tag(self):
-        # TODO: Make this a bit less sketchy
+        return '<img src="%s"/>' % self.image.url
+    image_tag.short_description = 'Image'
+    image_tag.allow_tags = True
+    # a bit sketchy (couples model and admin app)
+    def admin_image_tag(self):
         url = reverse('admin:%s_%s_change' % (self._meta.app_label,
                                               self._meta.module_name),
                       args=(self.id,))
-        return '<a href="%s"><img src="%s"/></a>' % (url, self.image.url)
-    image_tag.short_description = 'Image'
-    image_tag.allow_tags = True
+        return '<a href="%s">%s</a>' % (url, self.image_tag())
+    admin_image_tag.short_description = 'Image'
+    admin_image_tag.allow_tags = True
     class Meta:
         ordering = ['league', 'code']
         unique_together = ('league', 'code')
@@ -96,6 +100,10 @@ class TeamPlayer(models.Model):
         return self.player.image_tag()
     image_tag.short_description = 'Image'
     image_tag.allow_tags = True
+    def admin_image_tag(self):
+        return self.player.admin_image_tag()
+    admin_image_tag.short_description = 'Image'
+    admin_image_tag.allow_tags = True
     def clean(self):
         if self.team.attribute.league.pk != self.player.league.pk:
             raise ValidationError(
@@ -206,8 +214,12 @@ class Match(models.Model):
         return '%s : %s' % (unicode(self.competition), unicode(self.teamplayer))
     def image_tag(self):
         return self.teamplayer.image_tag()
-    image_tag.short_description = 'Image'
+    image_tag.short_description = 'Target Image'
     image_tag.allow_tags = True
+    def admin_image_tag(self):
+        return self.teamplayer.admin_image_tag()
+    admin_image_tag.short_description = 'Target Image'
+    admin_image_tag.allow_tags = True
     def clean(self):
         if self.competition.tournament.team.pk != self.teamplayer.team.pk:
             raise ValidationError(
@@ -239,6 +251,10 @@ class Competitor(models.Model):
         return self.teamplayer.image_tag()
     image_tag.short_description = 'Image'
     image_tag.allow_tags = True
+    def admin_image_tag(self):
+        return self.teamplayer.admin_image_tag()
+    admin_image_tag.short_description = 'Image'
+    admin_image_tag.allow_tags = True
     def clean(self):
         if self.match.competition.pk != self.competitionteam.competition.pk:
             raise ValidationError(

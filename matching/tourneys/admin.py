@@ -84,11 +84,11 @@ class PlayerAdmin(admin.ModelAdmin):
         ('',                {'fields': ['league']}),
         ('',                {'fields': ['code']}),
         ('',                {'fields': ['description']}),
-        ('',                {'fields': ['image', 'image_tag']}),
+        ('',                {'fields': ['image', 'admin_image_tag']}),
     ]
-    readonly_fields = ('image_tag',)
+    readonly_fields = ('admin_image_tag',)
     inlines = [PlayerAttributeInline]
-    list_display = ('league', 'code', 'description', 'image_tag')
+    list_display = ('league', 'code', 'description', 'admin_image_tag')
     list_display_links = ('description',)
     list_filter = ['league']
     search_fields = ['code', 'description']
@@ -113,7 +113,7 @@ admin.site.register(Player, PlayerAdmin)
 class TeamPlayerInline(admin.TabularInline):
     model = TeamPlayer
     extra = 1
-    readonly_fields = ('image_tag',)
+    readonly_fields = ('admin_image_tag',)
 
 class TeamAdmin(admin.ModelAdmin):
     fieldsets = [
@@ -191,7 +191,7 @@ class CompetitionTeamInline(admin.TabularInline):
 class MatchInline(LinkedInline):
     model = Match
     extra = 0
-    readonly_fields = ('image_tag',) + LinkedInline.readonly_fields
+    readonly_fields = ('admin_image_tag',) + LinkedInline.readonly_fields
 
 class CompetitionAdmin(admin.ModelAdmin):
     fieldsets = [
@@ -238,18 +238,18 @@ admin.site.register(Competition, CompetitionAdmin)
 class CompetitorInline(admin.TabularInline):
     model = Competitor
     extra = 0
-    readonly_fields = ('image_tag',)
+    readonly_fields = ('admin_image_tag',)
 
 class MatchAdmin(admin.ModelAdmin):
     fieldsets = [
         ('',                {'fields': ['competition']}),
         ('',                {'fields': ['teamplayer']}),
-        ('',                {'fields': ['image_tag']}),
+        ('',                {'fields': ['admin_image_tag']}),
         ('',                {'fields': ['finished']}),
     ]
-    readonly_fields = ('image_tag',)
+    readonly_fields = ('admin_image_tag',)
     inlines = [CompetitorInline]
-    list_display = ('competition', 'teamplayer', 'image_tag', 'finished')
+    list_display = ('competition', 'teamplayer', 'admin_image_tag', 'finished')
     list_display_links = ('teamplayer',)
     search_fields = ['competition__tournament__name', 'teamplayer__team__name',
                      'teamplayer__player__description']
