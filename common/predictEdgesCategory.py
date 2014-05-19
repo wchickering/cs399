@@ -52,6 +52,8 @@ def getParser(usage=None):
     parser.add_option('-r', '--random', 
         action='store_true', dest='randomPredict', default=False,
         help='make random predictions')
+    parser.add_option('--seed', type='int', dest='seed', default=None,
+        help='Seed for random number generator.', metavar='NUM')
     return parser
 
 def loadPickle(fname):
@@ -154,6 +156,10 @@ def main():
     usage = 'Usage: %prog [options]'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
+
+    # seed rng
+    if options.seed is not None:
+        random.seed(options.seed)
 
     # load graphs, models, and map
     print 'Load pickles. .'

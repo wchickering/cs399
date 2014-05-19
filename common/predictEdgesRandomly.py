@@ -14,6 +14,8 @@ def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-k', type='int', dest='k', default=2,
         help='Number of predicted edges per node.', metavar='NUM')
+    parser.add_option('--seed', type='int', dest='seed', default=None,
+        help='Seed for random number generator.', metavar='NUM')
     parser.add_option('-s', '--savefile', dest='savefile',
         default='predictEdges.pickle', help='Pickle to dump predicted edges.',
         metavar='FILE')
@@ -44,6 +46,10 @@ def main():
     graph2_filename = args[1]
     if not os.path.isfile(graph2_filename):
         parser.error('Cannot find %s' % graph2_filename)
+
+    # seed rng
+    if options.seed is not None:
+        random.seed(options.seed)
 
     # load graphs
     print 'Loading graph1 from %s. . .' % graph1_filename

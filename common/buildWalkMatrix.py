@@ -10,6 +10,7 @@ import os
 import sys
 import numpy as np
 import math
+import random
 from random import shuffle
 from collections import deque
 
@@ -37,6 +38,8 @@ def getParser(usage=None):
         help='Decay constant for proximity matrix.', metavar='FLOAT')
     parser.add_option('--epsilon', type='float', dest='epsilon', default=0.1,
         help='Espilon parameter for neighbor or flux matrix.', metavar='FLOAT')
+    parser.add_option('--seed', type='int', dest='seed', default=None,
+        help='Seed for random number generator.', metavar='NUM')
     parser.add_option('--savefile', dest='savefile', default='walkMatrix.npz',
         help='Save file name for walk matrix.', metavar='FILE')
     return parser
@@ -188,6 +191,10 @@ def main():
     graphfname = args[0]
     if not os.path.isfile(graphfname):
         parser.error('Cannot find %s' % graphfname)
+
+    # seed rng
+    if options.seed is not None:
+        random.seed(options.seed)
 
     # load graph
     print 'Loading graph from %s. . .' % graphfname

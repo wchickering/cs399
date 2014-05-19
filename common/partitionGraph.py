@@ -28,7 +28,7 @@ def getParser(usage=None):
     parser.add_option('--lost_edges', dest='lostedgesfilename',
         default='lostEdges.pickle', help='Name of lost edges pickle.',
         metavar='FILE')
-    parser.add_option('--seed', type='int', dest='seed', default=10,
+    parser.add_option('--seed', type='int', dest='seed', default=None,
         help='Seed for random number generator.', metavar='NUM')
     parser.add_option('-d', '--database', dest='dbname',
         default='data/macys.db', help='Database to pull descriptions from.')
@@ -93,12 +93,13 @@ def main():
     if not os.path.isfile(graphfname):
         parser.error('Cannot find %s' % graphfname)
 
+    # seed rng
+    if options.seed is not None:
+        random.seed(options.seed)
+
     # load graph
     print 'Loading graph from %s. . .' % graphfname
     graph = loadGraph(graphfname)
-
-    # seed rng
-    random.seed(options.seed)
 
     # connect to database
     print 'Connecting to database. .'

@@ -70,6 +70,13 @@ while test $# -gt 0; do
             verify_number $NUM_TOPICS
             shift
             ;;
+        --seed*)
+            # this should be left undefined by default
+            SEED=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_number $SEED
+            export SEED_OPT="--seed=$SEED"
+            shift
+            ;;
         --directed)
             # this should be left undefined by default
             export DIRECTED='--directed'
@@ -158,7 +165,7 @@ elif [ "$MODEL_TYPE" = "lsi" ]; then
 fi
 
 
-# Construct directed recomender graph from DB --> recGraph
+# Construct recomendation graph from DB
 if [ $START_STAGE -le 1 -a $END_STAGE -ge 1 ]; then
     echo "=== 1. Build directed recommender graph for category from DB ==="
     python $SRC/buildRecGraph.py $DIRECTED --savefile=$GRAPH\
@@ -169,15 +176,15 @@ fi
 # Construct proximity matrix for k-precision/recall evaluation
 if [ $START_STAGE -le 2 -a $END_STAGE -ge 2 ]; then
     echo "=== 2. Build proximity matrix from graph ==="
-    python $SRC/buildWalkMatrix.py --type=proximity --savefile=$PROX_MAT\
-        $GRAPH
+    python $SRC/buildWalkMatrix.py $SEED_OPT --type=proximity\
+        --savefile=$PROX_MAT $GRAPH
 echo
 fi
 
 # Partition graph
 if [ $START_STAGE -le 3 -a $END_STAGE -ge 3 ]; then
     echo "=== 3. Partition category graph ==="
-    python $SRC/partitionGraph.py --graph1=$GRAPH1 --graph2=$GRAPH2\
+    python $SRC/partitionGraph.py $SEED_OPT --graph1=$GRAPH1 --graph2=$GRAPH2\
         --lost_edges=$LOST_EDGES $GRAPH
 echo
 fi
@@ -243,8 +250,8 @@ fi
 if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     echo "=== 9. Predict edges ==="
     echo "Predicting randomly. . ."
-    python $SRC/predictEdgesRandomly.py --savefile=$PREDICTED_RAND $GRAPH1\
-        $GRAPH2
+    python $SRC/predictEdgesRandomly.py $SEED_OPT --savefile=$PREDICTED_RAND\
+        $GRAPH1 $GRAPH2
     echo "Predicting using item-item tfidf. . ."
     python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF --database=$DB\
         --idfname=$IDFS $GRAPH1 $GRAPH2
