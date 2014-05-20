@@ -182,6 +182,18 @@ class Competition(models.Model):
                     params={'nextround': self.next_competition.round,
                             'thisround': self.round}
                 )
+        if self.finished:
+            if self.competitionteam_set.count() != self.tournament.num_players:
+                raise ValidationError(
+                    ('Number of competitionteams not equal to '
+                     'tournament.num_player for finished competition %d') %\
+                     self.pk
+                )
+            if self.match_set.count() != self.tournament.num_matches:
+                raise ValidationError(
+                    ('Number of matches not equal to tournament.num_matches '
+                     'for finished competition %d') % self.pk
+                )
     class Meta:
         ordering = ['tournament', 'round']
 
@@ -230,12 +242,13 @@ class Match(models.Model):
                 params={'competitionteam': self.competition.tournament.team,
                         'playerteam': self.teamplayer.team}
             )
-        winner_count = 0
-        for competitor in self.competitor_set.all():
-            if competitor.winner:
-                winner_count += 1
-        if winner_count > 1:
-            raise ValidationError('Match has multiple winners')
+        if self.finished:
+            if self.competitor_set.count() !=\
+               self.competition.tournament.num_players:
+                raise ValidationError(
+                    ('Number of competitors not equal to tournament.num_payer '
+                     'for finished match %d') % self.pk
+                )
     class Meta:
         ordering = ['competition', 'teamplayer']
 
