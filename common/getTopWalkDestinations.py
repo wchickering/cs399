@@ -12,6 +12,7 @@ import sys
 import numpy as np
 
 # local modules
+from Graph_util import loadGraph
 from SessionTranslator import SessionTranslator
 
 def getParser(usage=None):
@@ -21,11 +22,6 @@ def getParser(usage=None):
     parser.add_option('-n', '--topn', type='int', dest='topn', default=10,
         help='Number of destinations to display.', metavar='NUM')
     return parser
-
-def loadGraph(fname):
-    with open(fname, 'r') as f:
-        graph = pickle.load(f)
-    return graph
 
 def getDestinations(item, matrix, dictionary):
     itemId = -1

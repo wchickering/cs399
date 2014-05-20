@@ -14,6 +14,9 @@ import random
 from random import shuffle
 from collections import deque
 
+# local modules
+from Graph_util import loadGraph
+
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('--type', dest='type', default='random',
@@ -43,11 +46,6 @@ def getParser(usage=None):
     parser.add_option('--savefile', dest='savefile', default='walkMatrix.npz',
         help='Save file name for walk matrix.', metavar='FILE')
     return parser
-
-def loadGraph(fname):
-    with open(fname, 'r') as f:
-        graph = pickle.load(f)
-    return graph
 
 # Experimental transition matrix that decreases likelihood of transitioning to
 # nodes with many incoming edges.

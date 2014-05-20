@@ -3,6 +3,9 @@
 from RRBFSDirectedPredictor import RRBFSDirectedPredictor
 import pickle
 
+# local modules
+from Graph_util import loadGraph
+
 # params
 graph_fname = 'data/recDirectedGraph.pickle'
 
@@ -13,7 +16,7 @@ class MagicWardrobe:
 
     def __init__(self):
         """Initializes predictor/feedback engine."""
-        graph = self._loadGraph()
+        graph = loadGraph(graph_fname)
         self.predictor = RRBFSDirectedPredictor(graph)
         pass
 
@@ -25,12 +28,6 @@ class MagicWardrobe:
 
     def nextItems(self, sessionId, num):
         return self.predictor.nextItems(sessionId, num)
-
-    def _loadGraph(self):
-        with open(graph_fname, 'r') as f:
-            graph = pickle.load(f)
-        return graph
-
 
 ##########################
 # ROUGH UNIT TEST

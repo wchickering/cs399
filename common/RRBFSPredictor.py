@@ -61,16 +61,14 @@ class RRBFSPredictor(ItemPredictor):
 
 import pickle
 
+# local modules
+from Graph_util import loadGraph
+
 # params
 graph_fname = 'data/recGraph.pickle'
 
-def loadGraph():
-    with open(graph_fname, 'r') as f:
-        graph = pickle.load(f)
-    return graph
-
 def main():
-    graph = loadGraph()
+    graph = loadGraph(graph_fname)
     predictor = RRBFSPredictor(graph)
     sessionId = 1
     likes = [45, 74]

@@ -46,16 +46,14 @@ def roundRobinBFS(graph, sources, ignores, k):
 
 import pickle
 
+# local modules
+from Graph_util import loadGraph
+
 # params
 graph_fname = 'data/recGraph.pickle'
 
-def loadGraph():
-    with open(graph_fname, 'r') as f:
-        graph = pickle.load(f)
-    return graph
-
 def main():
-    graph = loadGraph()
+    graph = loadGraph(graph_fname)
     sources = set([45, 74])
     ignores = set([888757, 826391])
     k = 10

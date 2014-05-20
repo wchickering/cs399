@@ -11,6 +11,9 @@ import os
 import sys
 import sqlite3
 
+# local modules
+from Graph_util import loadGraph
+
 # db params
 selectCategoryProductsStmt =\
     ('SELECT Id '
@@ -24,11 +27,6 @@ def getParser(usage=None):
     parser.add_option('--category', dest='category', default=None,
         help='Category to confine start of random walks.', metavar='CAT')
     return parser
-
-def loadGraph(fname):
-    with open(fname, 'r') as f:
-        graph = pickle.load(f)
-    return graph
 
 def findTrapNodes(graph, nodes):
     trapNodes = []

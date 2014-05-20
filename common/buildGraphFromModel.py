@@ -11,6 +11,7 @@ import os
 import sys
 
 # local modules
+from Graph_util import loadGraph
 import LDA_util as lda
 import LSI_util as lsi
 from KNNSearchEngine import KNNSearchEngine
@@ -43,11 +44,6 @@ def getParser(usage=None):
         help='Output pickle file containing re-constructed graph.',
         metavar='FILE')
     return parser
-
-def loadGraph(fname):
-    with open(fname, 'r') as f:
-        graph = pickle.load(f)
-    return graph
 
 # TODO: Clean up this function!
 def getNeighbors(data, dictionary, numEdges, searchEngine, popDictionary=None,

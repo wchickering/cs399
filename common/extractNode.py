@@ -9,17 +9,15 @@ import os
 import sys
 import pickle
 
+# local modules
+from Graph_util import loadGraph
+
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('--savefile', dest='savefile',
         default='modifiedGraph.pickle', help='Save file for modified graph.',
         metavar='FILE')
     return parser
-
-def loadGraph(fname):
-    with open(fname, 'r') as f:
-        graph = pickle.load(f)
-    return graph
 
 def extractNodes(graph, nodes):
     for node in nodes:

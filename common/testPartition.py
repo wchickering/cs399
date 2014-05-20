@@ -14,6 +14,10 @@ import sys
 import string
 import sqlite3
 
+# local modules
+from Graph_util import loadGraph
+
+# db params
 selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
 
 def getParser():
@@ -32,11 +36,6 @@ def getParser():
     parser.add_option('-d', '--database', dest='dbname',
         default='data/macys.db', help='Database to pull descriptions from.')
     return parser
-
-def loadGraph(fname):
-    with open(fname, 'r') as f:
-        graph = pickle.load(f)
-    return graph
 
 def constructItemMap(graph1, graph2):
     print 'Check that no node is in both graphs. .'

@@ -12,6 +12,9 @@ import sys
 from collections import deque
 from collections import defaultdict
 
+# local modules
+from Graph_util import loadGraph
+
 # params
 saveFormat = 'jpg'
 
@@ -47,11 +50,6 @@ def getParser(usage=None):
     parser.add_option('-k', dest='k', default=1, metavar='NUM',
         help='Distance away to consider correct.')
     return parser
-
-def loadGraph(fname):
-    with open(fname, 'r') as f:
-        graph = pickle.load(f)
-    return graph
 
 def compareGraphs(target, source, k, directed=False):
     comparison = GraphComparison()

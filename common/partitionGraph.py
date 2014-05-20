@@ -15,6 +15,10 @@ import os
 import sys
 import sqlite3
 
+# local modules
+from Graph_util import loadGraph
+
+# db params
 selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
 
 def getParser(usage=None):
@@ -33,11 +37,6 @@ def getParser(usage=None):
     parser.add_option('-d', '--database', dest='dbname',
         default='data/macys.db', help='Database to pull descriptions from.')
     return parser
-
-def loadGraph(fname):
-    with open(fname, 'r') as f:
-        graph = pickle.load(f)
-    return graph
 
 def partitionNodesByBrand(db_conn, graph):
     db_curs = db_conn.cursor()

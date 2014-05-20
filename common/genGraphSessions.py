@@ -12,6 +12,9 @@ import sqlite3
 import os
 import sys
 
+# local modules
+from Graph_util import loadGraph
+
 # db_params
 selectRandomItemStmt =\
    ('SELECT Id '
@@ -36,11 +39,6 @@ def getParser(usage=None):
     parser.add_option('--category', dest='category', default=None,
         help='Category to confine start of random walks.', metavar='CAT')
     return parser
-
-def loadGraph(fname):
-    with open(fname, 'r') as f:
-        graph = pickle.load(f)
-    return graph
 
 def genSession(graph, p, db_curs=None, category=None):
     session = []
