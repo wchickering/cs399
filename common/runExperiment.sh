@@ -75,6 +75,11 @@ while test $# -gt 0; do
             export DIRECTED='--directed'
             shift
             ;;
+        --pop)
+            # this should be left undefined by default
+            export POPULARITY='true'
+            shift
+            ;;
         --lda)
             export MODEL_TYPE="lda"
             shift
@@ -139,6 +144,7 @@ GRAPH_BASE=$DATA/graph${CAT}
 GRAPH=${GRAPH_BASE}.pickle
 GRAPH1=${GRAPH_BASE}1.pickle
 GRAPH2=${GRAPH_BASE}2.pickle
+POP_GRAPH=${GRAPH_BASE}Pop.pickle
 LOST_EDGES=$DATA/lostEdges${CAT}.pickle
 RWALK_BASE=$DATA/randomWalk${CAT}
 RWALK=${RWALK_BASE}.npz
@@ -259,18 +265,27 @@ fi
 # Predict edges
 if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     echo "=== 9. Predict edges ==="
+    if [ "$POPULARITY" = "true" ]; then
+        echo "Building directed popularity graph"
+        python $SRC/buildRecGraph.py $DIRECTED --savefile=$POP_GRAPH\
+            --parent-category=$PARENTCAT --category=$CAT $DB
+        POP="--popgraph=$POP_GRAPH"
+    fi
     echo "Predicting randomly. . ."
     python $SRC/predictEdgesRandomly.py $SEED_OPT --savefile=$PREDICTED_RAND\
         $GRAPH1 $GRAPH2
     echo "Predicting using item-item tfidf. . ."
     python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF --database=$DB\
-        --idfname=$IDFS $GRAPH1 $GRAPH2
+        --idfname=$IDFS $POP $GRAPH1 $GRAPH2
+    echo "python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF --database=$DB\
+        --idfname=$IDFS $POP $GRAPH1 $GRAPH2"
     echo "Predicting using one model. . ."
-    python $SRC/predictEdgesOneModel.py --savefile=$PREDICTED_ONE $MODEL\
+    python $SRC/predictEdgesOneModel.py --savefile=$PREDICTED_ONE $POP $MODEL\
         $GRAPH1 $GRAPH2
     echo "Predicting with mapping between models. . ."
-    python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $MAP $MODEL1 $MODEL2
-    echo python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $MAP $MODEL1\
+    echo "python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $POP $MAP $MODEL1\
+        $MODEL2"
+    python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $POP $MAP $MODEL1\
         $MODEL2
 echo
 fi
