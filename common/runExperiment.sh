@@ -103,6 +103,11 @@ while test $# -gt 0; do
             verify_number $MAX_CONN
             shift
             ;;
+        --eval-k*)
+            export EVAL_K=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_number $EVAL_K
+            shift
+            ;;
         --seed*)
             # this should be left undefined by default
             SEED=`echo $1 | sed -e 's/^[^=]*=//g'`
@@ -147,6 +152,11 @@ fi
 if [[ -z "$MAX_CONN" ]]; then
     MAX_CONN=$NUM_TOPICS
 fi
+
+if [[ -z "$EVAL_K" ]]; then
+    EVAL_K=2
+fi
+
 
 # Setup environment
 SRC=../common
@@ -282,6 +292,7 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     if [ "$POPULARITY" = "true" ]; then
         echo "Building directed popularity graph"
         python $SRC/buildRecGraph.py $DIRECTED --savefile=$POP_GRAPH\
+            --min-component-size=0 \
             --parent-category=$PARENTCAT --category=$CAT $DB
         POP="--popgraph=$POP_GRAPH"
     fi
@@ -305,18 +316,18 @@ if [ $START_STAGE -le 10 -a $END_STAGE -ge 10 ]; then
     echo "=== 10. Evaluate predictions ==="
     echo
     echo "  RANDOM PREDICTIONS "
-    python $SRC/evalPredictedEdges.py -k 2 $PROX_MAT $PREDICTED_RAND\
+    python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_RAND\
         $LOST_EDGES
     echo
     echo "  TFIDF PREDICTIONS "
-    python $SRC/evalPredictedEdges.py -k 2 $PROX_MAT $PREDICTED_TFIDF\
+    python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_TFIDF\
         $LOST_EDGES
     echo
     echo "  ONE MODEL PREDICTIONS "
-    python $SRC/evalPredictedEdges.py -k 2 $PROX_MAT $PREDICTED_ONE\
+    python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_ONE\
         $LOST_EDGES
     echo
     echo "  MAPPING MODEL PREDICTIONS "
-    python $SRC/evalPredictedEdges.py -k 2 $PROX_MAT $PREDICTED_EDGES\
+    python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_EDGES\
         $LOST_EDGES
 fi
