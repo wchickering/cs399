@@ -15,11 +15,13 @@ import sqlite3
 import string
 import math
 
+# local modules
+import Util as util
+import Prediction_util as pred
+
 # params
 selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
 displayInterval = 100
-basePop = 0.1
-alpha = 1.0
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -42,11 +44,6 @@ def getParser(usage=None):
         help='Picked graph representing item "popularity".', metavar='FILE')
     return parser
 
-def loadPickle(fname):
-    with open(fname, 'r') as f:
-        obj = pickle.load(f)
-    return obj
-
 def tfidfSimilarity(tfidf1, tfidf2, cosine):
     score = 0.0
     for word1 in tfidf1:
@@ -64,7 +61,7 @@ def tfidfNeighbors(tfidf1, tfidfs2, k, cosine, popDictionary):
     for node2 in tfidfs2:
         similarity = tfidfSimilarity(tfidf1, tfidfs2[node2], cosine)
         if popDictionary is not None:
-            similarity *= (basePop + popDictionary[node2]**alpha)
+            similarity *= popDictionary[node2]
         queue.put((similarity, node2))
         if queue.qsize() > k:
             queue.get()
@@ -110,48 +107,31 @@ def main():
     (options, args) = parser.parse_args()
     if len(args) != 2:
         parser.error('Wrong number of arguments') 
-    graph1_filename = args[0]
-    if not os.path.isfile(graph1_filename):
-        parser.error('Cannot find %s' % graph1fname)
-    graph2_filename = args[1]
-    if not os.path.isfile(graph2_filename):
-        parser.error('Cannot find %s' % graph2_filename)
-    idf_filename = options.idfname
-    if not os.path.isfile(idf_filename):
-        parser.error('Cannot find %s' % idf_filename)
+
+    graph1_filename = util.getAndCheckFilename(args[0])
+    graph2_filename = util.getAndCheckFilename(args[1])
+    idf_filename = util.getAndCheckFilename(options.idfname)
 
     # get stop words
     print 'Loading Stopwords and IDFs. . .'
-    if os.path.isfile(options.stopwords):
-        with open(options.stopwords, 'r') as f:
-            try:
-                stopwords = f.readline().split(',')
-            except:
-                print >> sys.stderr, 'Failed to parse stop words.'
-                return
-    else:
-        print >> sys.stderr,\
-            'WARNING: stop words file not found: %s' % options.stopwords
-        stopwords = None
+    stopwords = util.getStopwords(options.stopwords)
 
     # Get popularity
     if options.popgraph:
         print 'Loading "popularity" graph from %s. . .' % options.popgraph
-        popgraph = loadPickle(options.popgraph)
-        popDictionary = {}
-        for item in popgraph:
-            # set popularity equal to in-degree
-            popDictionary[item] = len(popgraph[item][1])
+        popgraph_fname = util.getAndCheckFilename(options.popgraph)
+        popgraph = util.loadPickle(popgraph_fname)
+        popDictionary = pred.getPopDictionary(popgraph)
     else:
         popDictionary = None
 
     # load graphs
     print 'Loading graph1 from %s. . .' % graph1_filename
-    graph1 = loadPickle(graph1_filename)
+    graph1 = util.loadPickle(graph1_filename)
     print 'Loading graph2 from %s. . .' % graph2_filename
-    graph2 = loadPickle(graph2_filename)
+    graph2 = util.loadPickle(graph2_filename)
     print 'Loading idfs from %s. . .' % idf_filename
-    idf = loadPickle(idf_filename)
+    idf = util.loadPickle(idf_filename)
 
     # connect to database
     print 'Connecting to database. .'

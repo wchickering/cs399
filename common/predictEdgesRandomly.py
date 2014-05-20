@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 """
 Randomly predicts the edges across two paritionaed graphs
 """
@@ -10,6 +9,9 @@ import os
 import sys
 import random
 
+# local modules
+import Util as util
+
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-k', type='int', dest='k', default=2,
@@ -19,12 +21,9 @@ def getParser(usage=None):
     parser.add_option('-s', '--savefile', dest='savefile',
         default='predictEdges.pickle', help='Pickle to dump predicted edges.',
         metavar='FILE')
+    parser.add_option('--popgraph', dest='popgraph', default=None,
+        help='Picked graph representing item "popularity".', metavar='FILE')
     return parser
-
-def loadPickle(fname):
-    with open(fname, 'r') as f:
-        obj = pickle.load(f)
-    return obj
 
 def predictRandomEdges(graph1, graph2, k):
     predicted_edges = []
@@ -40,12 +39,9 @@ def main():
     (options, args) = parser.parse_args()
     if len(args) != 2:
         parser.error('Wrong number of arguments') 
-    graph1_filename = args[0]
-    if not os.path.isfile(graph1_filename):
-        parser.error('Cannot find %s' % graph1fname)
-    graph2_filename = args[1]
-    if not os.path.isfile(graph2_filename):
-        parser.error('Cannot find %s' % graph2_filename)
+
+    graph1_filename = util.getAndCheckFilename(args[0])
+    graph2_filename = util.getAndCheckFilename(args[1])
 
     # seed rng
     if options.seed is not None:
@@ -53,9 +49,9 @@ def main():
 
     # load graphs
     print 'Loading graph1 from %s. . .' % graph1_filename
-    graph1 = loadPickle(graph1_filename)
+    graph1 = util.loadPickle(graph1_filename)
     print 'Loading graph2 from %s. . .' % graph2_filename
-    graph2 = loadPickle(graph2_filename)
+    graph2 = util.loadPickle(graph2_filename)
 
     # predict edges
     print 'Randomly predicting edges. . .'
