@@ -43,6 +43,13 @@ def getComponents(graph):
         c += 1
     return comps
 
+def getComponentLists(graph):
+    components = getComponents(graph)
+    lists = [[None] for i in range(max(components.values())+1)]
+    for node, comp in components.items():
+        lists[comp].append(node)
+    return lists
+
 def getSCCs(graph):
     """
     Finds strongly connected components of a directed graph.

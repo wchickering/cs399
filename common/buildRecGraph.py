@@ -10,7 +10,7 @@ import sys
 import sqlite3
 
 # local modules
-from Graph_util import saveGraph, getComponents
+from Graph_util import saveGraph, getComponentLists, extractNodes
 
 # db params
 selectRecommendsStmt =\
@@ -22,11 +22,11 @@ selectCategoryRecommendsStmt =\
      'Categories as C1, '
      'Categories as C2 '
      'WHERE C1.Id = R.Id1 '
-     'AND C1.ParentCategory = :ParentCategory1 '
-     'AND C1.Category = :Category1 '
      'AND C2.Id = R.Id2 '
-     'AND C2.ParentCategory = :ParentCategory2 '
-     'AND C2.Category = :Category2')
+     'AND C2.ParentCategory = C1.ParentCategory '
+     'AND C2.Category = C1.Category '
+     'AND C1.ParentCategory = :ParentCategory1 '
+     'AND C1.Category = :Category1')
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -38,6 +38,9 @@ def getParser(usage=None):
         help='Confine graph to parent category.', metavar='PARCAT')
     parser.add_option('--category', dest='category', default=None,
         help='Confine graph to category.', metavar='CAT')
+    parser.add_option('--min-component-size', type='int',
+        dest='minComponentSize', default=5, help='Minimum component size.',
+        metavar='NUM')
     return parser
 
 def makeGraph(db_conn, parentCategory=None, category=None, directed=True):
@@ -47,7 +50,7 @@ def makeGraph(db_conn, parentCategory=None, category=None, directed=True):
     db_curs = db_conn.cursor()
     if parentCategory is not None and category is not None:
         db_curs.execute(selectCategoryRecommendsStmt,
-                        (parentCategory, category, parentCategory, category))
+                        (parentCategory, category))
     else:
         db_curs.execute(selectRecommendsStmt)
     for row in db_curs.fetchall():
@@ -90,6 +93,12 @@ def main():
     graph = makeGraph(db_conn, directed=options.directed,
                       parentCategory=options.parentCategory,
                       category=options.category)
+
+    # Remove any components below minComponentSize
+    component_lists = getComponentLists(graph)
+    for component in component_lists:
+        if len(component) < options.minComponentSize:
+            extractNodes(graph, component)
 
     # save graph
     print 'Saving graph to %s. . .' % options.savefile
