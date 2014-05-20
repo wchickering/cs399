@@ -244,6 +244,7 @@ class Competitor(models.Model):
                                         verbose_name='Competition Team')
     teamplayer = models.ForeignKey(TeamPlayer, verbose_name='Team Player')
     winner = models.NullBooleanField(verbose_name='Winner?')
+    score = models.FloatField(null=True, blank=True)
     def __unicode__(self):
         return '%s : %s' % (unicode(self.competitionteam),
                             unicode(self.teamplayer))

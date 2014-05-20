@@ -1,0 +1,44 @@
+<h1>Match the items!</h1>
+
+{% if not match %}
+    <p><strong>No more matches!</strong></p>
+{% else %}
+
+    <form action="{% url 'tourneys:matchsubmit' match.id %}" method="post">
+    {% csrf_token %}
+    <table>
+      <tr>
+        <td>
+          <table>
+            <tr><td> {{ match.teamplayer.image_tag|safe }} </td></tr>
+            <tr><td><p>{{ match.teamplayer.player.description }}</p></td></tr>
+          </table>
+        <td>
+      </tr>
+      <tr>
+      {% for competitor in match.competitor_set.all %}
+        <td>
+          <table>
+            <tr>
+              <td>
+                <table>
+                  <tr><td>{{ competitor.image_tag|safe  }}</td></tr>
+                  <tr><td>
+                    <p>{{ competitor.teamplayer.player.description }}</p>
+                  </td></tr>
+                  <tr><td>
+                    <input type="checkbox" name="competitors"
+                           value="{{ competitor.id }}">
+                  </td></tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      {% endfor %}
+      </tr>
+    </table>
+    <input type="submit" value="Submit" />
+    </form>
+
+{% endif %}

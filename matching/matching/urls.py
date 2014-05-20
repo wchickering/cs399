@@ -7,11 +7,7 @@ import settings
 admin.autodiscover()
 
 urlpatterns = patterns('',
-    # Examples:
-    # url(r'^$', 'matching.views.home', name='home'),
-    # url(r'^blog/', include('blog.urls')),
-
-    url(r'^tourneys/', include('tourneys.urls')),
+    url(r'^tourneys/', include('tourneys.urls', namespace='tourneys')),
     url(r'^admin/', include(admin.site.urls)),
 )
 
