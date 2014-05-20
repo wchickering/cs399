@@ -291,14 +291,10 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     echo "Predicting using item-item tfidf. . ."
     python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF --database=$DB\
         --idfname=$IDFS $POP $GRAPH1 $GRAPH2
-    echo "python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF --database=$DB\
-        --idfname=$IDFS $POP $GRAPH1 $GRAPH2"
     echo "Predicting using one model. . ."
     python $SRC/predictEdgesOneModel.py --savefile=$PREDICTED_ONE $POP $MODEL\
         $GRAPH1 $GRAPH2
     echo "Predicting with mapping between models. . ."
-    echo "python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $POP $MAP $MODEL1\
-        $MODEL2"
     python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $POP $MAP $MODEL1\
         $MODEL2
 echo
