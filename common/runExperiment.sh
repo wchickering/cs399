@@ -80,6 +80,11 @@ while test $# -gt 0; do
             export POPULARITY='true'
             shift
             ;;
+        --remove-pop)
+            # this should be left undefined by default
+            export REMOVE_POP='--tran2'
+            shift
+            ;;
         --lda)
             export MODEL_TYPE="lda"
             shift
@@ -209,11 +214,11 @@ fi
 if [ $START_STAGE -le 4 -a $END_STAGE -ge 4 ]; then
     echo "=== 4. Randomly walk each graph ==="
     python $SRC/buildWalkMatrix.py --home=0.05 --steps=50 --savefile=$RWALK\
-        $GRAPH
+        $REMOVE_POP $GRAPH
     python $SRC/buildWalkMatrix.py --home=0.05 --steps=50 --savefile=$RWALK1\
-        $GRAPH1
+        $REMOVE_POP $GRAPH1
     python $SRC/buildWalkMatrix.py --home=0.05 --steps=50 --savefile=$RWALK2\
-        $GRAPH2
+        $REMOVE_POP $GRAPH2
 echo
 fi
 
