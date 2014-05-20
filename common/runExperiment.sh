@@ -98,6 +98,11 @@ while test $# -gt 0; do
             verify_number $MIN_COMPONENT_SIZE
             shift
             ;;
+        --max-mapping-connections*)
+            export MAX_CONN=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_number $MAX_CONN
+            shift
+            ;;
         --seed*)
             # this should be left undefined by default
             SEED=`echo $1 | sed -e 's/^[^=]*=//g'`
@@ -137,6 +142,10 @@ fi
 
 if [[ -z "$MIN_COMPONENT_SIZE" ]]; then
     MIN_COMPONENT_SIZE=100
+fi
+
+if [[ -z "$MAX_CONN" ]]; then
+    MAX_CONN=$NUM_TOPICS
 fi
 
 # Setup environment
@@ -262,8 +271,8 @@ fi
 # Map tfidf topic spaces
 if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
     echo "=== 8. Construct topic map from graph1 to graph2 ==="
-    python $SRC/mapTopics.py --max_connections 1 --outputpickle=$MAP $TFIDF1\
-        $TFIDF2
+    python $SRC/mapTopics.py --max_connections $MAX_CONN --outputpickle=$MAP\
+        $TFIDF1 $TFIDF2
 echo
 fi
 
