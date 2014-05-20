@@ -12,6 +12,19 @@ def loadGraph(fname):
         graph = pickle.load(f)
     return graph
 
+def saveGraph(graph, fname):
+    pickle.dump(graph, open(fname, 'w'))
+
+def extractNodes(graph, nodes):
+    for node in nodes:
+        if node not in graph:
+            continue
+        for neighbor in graph[node][0]:
+            graph[neighbor][1].remove(node)
+        for neighbor in graph[node][1]:
+            graph[neighbor][0].remove(node)
+        del graph[node]
+
 def getComponents(graph):
     comps = {}
     c = 0

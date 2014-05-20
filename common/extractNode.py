@@ -7,10 +7,9 @@ Removes one or more specified nodes from a graph.
 from optparse import OptionParser
 import os
 import sys
-import pickle
 
 # local modules
-from Graph_util import loadGraph
+from Graph_util import loadGraph, saveGraph, extractNodes
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -18,16 +17,6 @@ def getParser(usage=None):
         default='modifiedGraph.pickle', help='Save file for modified graph.',
         metavar='FILE')
     return parser
-
-def extractNodes(graph, nodes):
-    for node in nodes:
-        if node not in graph:
-            continue
-        for neighbor in graph[node][0]:
-            graph[neighbor][1].remove(node)
-        for neighbor in graph[node][1]:
-            graph[neighbor][0].remove(node)
-        del graph[node]
 
 def main():
     # Parse options
@@ -58,7 +47,7 @@ def main():
 
     # save graph
     print 'Saving modified graph to %s. . .' % options.savefile
-    pickle.dump(graph, open(options.savefile, 'w'))
+    saveGraph(graph, options.savefile)
 
 if __name__ == '__main__':
     main()

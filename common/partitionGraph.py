@@ -16,7 +16,7 @@ import sys
 import sqlite3
 
 # local modules
-from Graph_util import loadGraph
+from Graph_util import loadGraph, saveGraph
 
 # db params
 selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
@@ -114,9 +114,9 @@ def main():
     
     # dump results
     print 'Saving graph1 to %s. . .' % options.graph1filename
-    pickle.dump(graph1, open(options.graph1filename, 'w'))
+    saveGraph(graph1, options.graph1filename)
     print 'Saving graph2 to %s. . .' % options.graph2filename
-    pickle.dump(graph2, open(options.graph2filename, 'w'))
+    saveGraph(graph2, options.graph2filename)
     print 'Saving lost edges to %s. . .' % options.lostedgesfilename
     pickle.dump(lost_edges, open(options.lostedgesfilename, 'w'))
 

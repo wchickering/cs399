@@ -8,7 +8,9 @@ from optparse import OptionParser
 import os
 import sys
 import sqlite3
-import pickle
+
+# local modules
+from Graph_util import saveGraph, getComponents
 
 # db params
 selectRecommendsStmt =\
@@ -91,7 +93,7 @@ def main():
 
     # save graph
     print 'Saving graph to %s. . .' % options.savefile
-    pickle.dump(graph, open(options.savefile, 'w'))
+    saveGraph(graph, options.savefile)
 
 if __name__ == '__main__':
     main()

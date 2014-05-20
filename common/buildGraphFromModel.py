@@ -11,7 +11,7 @@ import os
 import sys
 
 # local modules
-from Graph_util import loadGraph
+from Graph_util import loadGraph, saveGraph
 import LDA_util as lda
 import LSI_util as lsi
 from KNNSearchEngine import KNNSearchEngine
@@ -191,7 +191,7 @@ def main():
 
     # save graph
     print 'Saving graph to %s. . .' % options.outfilename
-    pickle.dump(graph, open(options.outfilename, 'w'))
+    saveGraph(graph, options.outfilename)
 
 if __name__ == '__main__':
     main()

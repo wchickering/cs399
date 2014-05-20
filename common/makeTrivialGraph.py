@@ -5,6 +5,9 @@ import pickle
 import os
 import sys
 
+# local modules
+from Graph_util import saveGraph
+
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-o', '--output', dest='outfilename',
@@ -42,7 +45,7 @@ def main():
 
     # save graph
     print 'Saving graph to %s. . .' % options.outfilename
-    pickle.dump(graph, open(options.outfilename, 'w'))
+    saveGraph(graph, options.outfilename)
 
 if __name__ == '__main__':
     main()
