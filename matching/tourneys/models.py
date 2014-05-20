@@ -123,6 +123,8 @@ class Tournament(models.Model):
     league = models.ForeignKey(League)
     # target team being matched to
     team = models.ForeignKey(Team, verbose_name='Target Team')
+    num_players = models.PositiveSmallIntegerField()
+    num_matches = models.PositiveSmallIntegerField()
     round = models.PositiveSmallIntegerField(default=1)
     finished = models.BooleanField(default=False)
     def __unicode__(self):

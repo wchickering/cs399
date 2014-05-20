@@ -158,14 +158,17 @@ class TournamentAdmin(admin.ModelAdmin):
         ('Target',          {'fields': ['targetleague',
                                         'targetattribute',
                                         'team']}),
-        ('',                {'fields': ['round']}),
-        ('',                {'fields': ['finished']}),
+        ('Parameters',      {'fields': ['num_players',
+                                        'num_matches']}),
+        ('State',           {'fields': ['round',
+                                        'finished']}),
     ]
     readonly_fields = ('targetattribute', 'targetleague')
     inlines = [CompetitionInline]
-    list_display = ('league', 'name', 'team', 'round', 'finished')
+    list_display = ('league', 'name', 'team', 'num_players', 'num_matches',
+                    'round', 'finished')
     list_display_links = ('name',)
-    list_filter = ['league', 'finished']
+    list_filter = ['league', 'num_players', 'num_matches', 'finished']
     search_fields = ['league__name', 'name', 'team__name']
     # solution to FK filtering problem
     def change_view(self, request, object_id, extra_context=None):

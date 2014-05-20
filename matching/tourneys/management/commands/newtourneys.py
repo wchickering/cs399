@@ -157,7 +157,9 @@ class Command(BaseCommand):
             name = self.getTournamentName(targetteam, sourceleague)
             self.stdout.write('Creating tournament: %s' % name)
             tournament = Tournament(name=name, league=sourceleague,
-                                    team=targetteam, round=1, finished=False)
+                                    team=targetteam, num_players=num_players,
+                                    num_matches=num_matches, round=1,
+                                    finished=False)
             tournament.save()
             # create competitions
             self.createCompetitions(tournament, 1, num_players)
