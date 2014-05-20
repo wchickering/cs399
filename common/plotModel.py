@@ -12,6 +12,7 @@ import os
 import sys
 
 # local modules
+from Graph_util import loadGraph
 import LDA_util as lda
 import LSI_util as lsi
 from KNNSearchEngine import KNNSearchEngine
@@ -37,11 +38,6 @@ def getParser(usage=None):
         dest='notopicplots', default=False, help='Do not produce topic plots.')
     return parser
 
-def loadGraph(fname):
-    with open(fname, 'r') as f:
-        graph = pickle.load(f)
-    return graph
-
 def plotModelTopics(data, numBins, savedir, xlim=None, show=False):
     first = True
     for topic in range(data.shape[0]):
@@ -56,7 +52,9 @@ def plotModelTopics(data, numBins, savedir, xlim=None, show=False):
         plt.xlabel('Topic Amount')
         if xlim is not None:
             plt.xlim(xlim)
-        plt.savefig(os.path.join(savedir, 'topic%d.%s' % (topic, saveFormat)))
+        if savedir is not None:
+            plt.savefig(os.path.join(savedir,
+                                     'topic%d.%s' % (topic, saveFormat)))
     if show:
         plt.show()
 
@@ -80,7 +78,8 @@ def plotGraphAnalysis(graph, searchEngine, savedir, numBins=100, show=False):
     plt.ylabel('Fraction of Edges')
     plt.xlabel('NN Rank in Topic Space')
     plt.xlim([0,numBins])
-    plt.savefig(os.path.join(savedir, 'graphAnalysis.%s' % saveFormat))
+    if savedir is not None:
+        plt.savefig(os.path.join(savedir, 'graphAnalysis.%s' % saveFormat))
     if show:
         plt.show()
 
@@ -92,7 +91,7 @@ def main():
     if options.ldafile is None and options.svdfile is None:
         parser.error('Must provide either an LDA model or SVD products.')
     if options.savedir is None:
-        savedir = os.getcwd()
+        savedir = None
     elif os.path.isdir(options.savedir):
         savedir = options.savedir
     else:

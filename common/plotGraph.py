@@ -40,9 +40,10 @@ def plotSCCHist(graph, savedir, numBins=100, show=False):
     plt.title('Strongly Connected Components')
     plt.ylabel('Number of Nodes')
     plt.xlabel('Component Size')
-    savefile = os.path.join(savedir, 'scchist.%s' % saveFormat)
-    print 'Saving SCC Histogram to %s. . .' % savefile
-    plt.savefig(savefile)
+    if savedir is not None:
+        savefile = os.path.join(savedir, 'scchist.%s' % saveFormat)
+        print 'Saving SCC Histogram to %s. . .' % savefile
+        plt.savefig(savefile)
     if show:
         plt.show()
 
@@ -62,10 +63,10 @@ def plotCompHist(graph, savedir, numBins=100, show=False):
     plt.title('Components')
     plt.ylabel('Number of Nodes')
     plt.xlabel('Component Size')
-    savefile = os.path.join(savedir, 'comphist.%s' % saveFormat)
-    print 'Saving Component Histogram to %s. . .' % savefile
-    plt.savefig(savefile)
-    plt.figure()
+    if savedir is not None:
+        savefile = os.path.join(savedir, 'comphist.%s' % saveFormat)
+        print 'Saving Component Histogram to %s. . .' % savefile
+        plt.savefig(savefile)
     if show:
         plt.show()
 
@@ -77,10 +78,10 @@ def plotInDegreeDist(graph, savedir, numBins=30, show=False):
     plt.title('In-Degree Distribution')
     plt.ylabel('Number of Nodes')
     plt.xlabel('In-Degree')
-    savefile = os.path.join(savedir, 'indegree.%s' % saveFormat)
-    print 'Saving In-Degree Distribution to %s. . .' % savefile
-    plt.savefig(savefile)
-    plt.figure()
+    if savedir is not None:
+        savefile = os.path.join(savedir, 'indegree.%s' % saveFormat)
+        print 'Saving In-Degree Distribution to %s. . .' % savefile
+        plt.savefig(savefile)
     if show:
         plt.show()
 
@@ -95,16 +96,17 @@ def main():
     if not os.path.isfile(graphfname):
         parser.error('Cannot find %s' % graphfname)
     if options.savedir is None:
-        savedir = os.getcwd()
-    elif os.path.isdir(options.savedir):
-        savedir = options.savedir
+        savedir = None
     else:
-        if os.path.isdir(os.path.split(options.savedir)[0]):
-            print 'Creating directory %s. . .' % options.savedir
-            os.mkdir(options.savedir)
+        if  os.path.isdir(options.savedir):
             savedir = options.savedir
         else:
-            parser.error('Cannot find dir: %s' % options.savedir)
+            if os.path.isdir(os.path.split(options.savedir)[0]):
+                print 'Creating directory %s. . .' % options.savedir
+                os.mkdir(options.savedir)
+                savedir = options.savedir
+            else:
+                parser.error('Cannot find dir: %s' % options.savedir)
 
     # load graph
     print 'Loading graph from %s. . .' % graphfname
@@ -113,17 +115,16 @@ def main():
     if options.directed:
         # strongly connected components histogram
         print 'Plotting SCC histogram. . .'
-        plotSCCHist(graph, options.savedir, numBins=options.bins,
-                    show=options.show)
+        plotSCCHist(graph, savedir, numBins=options.bins, show=options.show)
     else:
         # components histogram
         print 'Plotting Components histogram. . .'
-        plotCompHist(graph, options.savedir, numBins=options.bins,
+        plotCompHist(graph, savedir, numBins=options.bins,
                      show=options.show)
 
     # in-degree distribution
     print 'Plotting in-degree distribution. . .'
-    plotInDegreeDist(graph, options.savedir, show=options.show)
+    plotInDegreeDist(graph, savedir, show=options.show)
 
 if __name__ == '__main__':
     main()
