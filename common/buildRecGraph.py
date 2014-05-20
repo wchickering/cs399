@@ -39,7 +39,7 @@ def getParser(usage=None):
     parser.add_option('--category', dest='category', default=None,
         help='Confine graph to category.', metavar='CAT')
     parser.add_option('--min-component-size', type='int',
-        dest='minComponentSize', default=5, help='Minimum component size.',
+        dest='minComponentSize', default=10, help='Minimum component size.',
         metavar='NUM')
     return parser
 

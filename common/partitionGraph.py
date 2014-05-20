@@ -16,13 +16,15 @@ import sys
 import sqlite3
 
 # local modules
-from Graph_util import loadGraph, saveGraph
+from Graph_util import loadGraph, saveGraph, getComponentLists, extractNodes
 
 # db params
 selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
+    parser.add_option('-d', '--database', dest='dbname',
+        default='data/macys.db', help='Database to pull descriptions from.')
     parser.add_option('--graph1', dest='graph1filename',
         default='partitionedGraph1.pickle',
         help='Name of partitioned graph1 pickle.', metavar='FILE')
@@ -32,10 +34,11 @@ def getParser(usage=None):
     parser.add_option('--lost_edges', dest='lostedgesfilename',
         default='lostEdges.pickle', help='Name of lost edges pickle.',
         metavar='FILE')
+    parser.add_option('--min-component-size', type='int',
+        dest='minComponentSize', default=10, help='Minimum component size.',
+        metavar='NUM')
     parser.add_option('--seed', type='int', dest='seed', default=None,
         help='Seed for random number generator.', metavar='NUM')
-    parser.add_option('-d', '--database', dest='dbname',
-        default='data/macys.db', help='Database to pull descriptions from.')
     return parser
 
 def partitionNodesByBrand(db_conn, graph):
@@ -107,10 +110,14 @@ def main():
     # partition graph
     print 'Partitioning graph. . .'
     itemMap = partitionNodesByBrand(db_conn, graph)
-    results = buildGraphs(itemMap, graph)
-    graph1 = results[0]
-    graph2 = results[1]
-    lost_edges = results[2]
+    graph1, graph2, lost_edges = buildGraphs(itemMap, graph)
+
+    # Remove any components below minComponentSize
+    for partGraph in [graph1, graph2]:
+        component_lists = getComponentLists(partGraph)
+        for component in component_lists:
+            if len(component) < options.minComponentSize:
+                extractNodes(partGraph, component)
     
     # dump results
     print 'Saving graph1 to %s. . .' % options.graph1filename

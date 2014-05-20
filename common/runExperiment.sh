@@ -70,13 +70,6 @@ while test $# -gt 0; do
             verify_number $NUM_TOPICS
             shift
             ;;
-        --seed*)
-            # this should be left undefined by default
-            SEED=`echo $1 | sed -e 's/^[^=]*=//g'`
-            verify_number $SEED
-            export SEED_OPT="--seed=$SEED"
-            shift
-            ;;
         --directed)
             # this should be left undefined by default
             export DIRECTED='--directed'
@@ -88,6 +81,18 @@ while test $# -gt 0; do
             ;;
         --lsi)
             export MODEL_TYPE="lsi"
+            shift
+            ;;
+        --min-component-size*)
+            export MIN_COMPONENT_SIZE=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_number $MIN_COMPONENT_SIZE
+            shift
+            ;;
+        --seed*)
+            # this should be left undefined by default
+            SEED=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_number $SEED
+            export SEED_OPT="--seed=$SEED"
             shift
             ;;
         *)
@@ -118,6 +123,10 @@ fi
 
 if [[ -z "$MODEL_TYPE" ]]; then
     MODEL_TYPE="lsi"
+fi
+
+if [[ -z "$MIN_COMPONENT_SIZE" ]]; then
+    MIN_COMPONENT_SIZE=100
 fi
 
 # Setup environment
@@ -168,7 +177,8 @@ fi
 # Construct recomendation graph from DB
 if [ $START_STAGE -le 1 -a $END_STAGE -ge 1 ]; then
     echo "=== 1. Build directed recommender graph for category from DB ==="
-    python $SRC/buildRecGraph.py $DIRECTED --savefile=$GRAPH\
+    python $SRC/buildRecGraph.py $DIRECTED\
+        --min-component-size=$MIN_COMPONENT_SIZE --savefile=$GRAPH\
         --parent-category=$PARENTCAT --category=$CAT $DB
 echo
 fi
@@ -185,7 +195,7 @@ fi
 if [ $START_STAGE -le 3 -a $END_STAGE -ge 3 ]; then
     echo "=== 3. Partition category graph ==="
     python $SRC/partitionGraph.py $SEED_OPT --graph1=$GRAPH1 --graph2=$GRAPH2\
-        --lost_edges=$LOST_EDGES $GRAPH
+        --min-component-size=$MIN_COMPONENT_SIZE --lost_edges=$LOST_EDGES $GRAPH
 echo
 fi
 
