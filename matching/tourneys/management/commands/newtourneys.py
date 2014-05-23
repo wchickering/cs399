@@ -155,8 +155,10 @@ class Command(BaseCommand):
         for targetteam in\
             Team.objects.filter(attribute__in=targetleague.attribute_set.all()):
             name = self.getTournamentName(targetteam, sourceleague)
+            # for now, all tournaments are single-elimination
+            ttype = TournamentType.objects.get(name='single-elimination')
             self.stdout.write('Creating tournament: %s' % name)
-            tournament = Tournament(name=name, league=sourceleague,
+            tournament = Tournament(name=name, ttype=ttype, league=sourceleague,
                                     team=targetteam, num_players=num_players,
                                     num_matches=num_matches, round=1,
                                     finished=False)
