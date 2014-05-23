@@ -75,6 +75,16 @@ while test $# -gt 0; do
             export DIRECTED='--directed'
             shift
             ;;
+        --pop)
+            # this should be left undefined by default
+            export POPULARITY='true'
+            shift
+            ;;
+        --remove-pop)
+            # this should be left undefined by default
+            export REMOVE_POP='--tran2'
+            shift
+            ;;
         --lda)
             export MODEL_TYPE="lda"
             shift
@@ -86,6 +96,16 @@ while test $# -gt 0; do
         --min-component-size*)
             export MIN_COMPONENT_SIZE=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_number $MIN_COMPONENT_SIZE
+            shift
+            ;;
+        --max-mapping-connections*)
+            export MAX_CONN=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_number $MAX_CONN
+            shift
+            ;;
+        --eval-k*)
+            export EVAL_K=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_number $EVAL_K
             shift
             ;;
         --seed*)
@@ -129,6 +149,15 @@ if [[ -z "$MIN_COMPONENT_SIZE" ]]; then
     MIN_COMPONENT_SIZE=100
 fi
 
+if [[ -z "$MAX_CONN" ]]; then
+    MAX_CONN=$NUM_TOPICS
+fi
+
+if [[ -z "$EVAL_K" ]]; then
+    EVAL_K=2
+fi
+
+
 # Setup environment
 SRC=../common
 DATA=data
@@ -139,6 +168,7 @@ GRAPH_BASE=$DATA/graph${CAT}
 GRAPH=${GRAPH_BASE}.pickle
 GRAPH1=${GRAPH_BASE}1.pickle
 GRAPH2=${GRAPH_BASE}2.pickle
+POP_GRAPH=${GRAPH_BASE}Pop.pickle
 LOST_EDGES=$DATA/lostEdges${CAT}.pickle
 RWALK_BASE=$DATA/randomWalk${CAT}
 RWALK=${RWALK_BASE}.npz
@@ -203,11 +233,11 @@ fi
 if [ $START_STAGE -le 4 -a $END_STAGE -ge 4 ]; then
     echo "=== 4. Randomly walk each graph ==="
     python $SRC/buildWalkMatrix.py --home=0.05 --steps=50 --savefile=$RWALK\
-        $GRAPH
+        $REMOVE_POP $GRAPH
     python $SRC/buildWalkMatrix.py --home=0.05 --steps=50 --savefile=$RWALK1\
-        $GRAPH1
+        $REMOVE_POP $GRAPH1
     python $SRC/buildWalkMatrix.py --home=0.05 --steps=50 --savefile=$RWALK2\
-        $GRAPH2
+        $REMOVE_POP $GRAPH2
 echo
 fi
 
@@ -251,26 +281,32 @@ fi
 # Map tfidf topic spaces
 if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
     echo "=== 8. Construct topic map from graph1 to graph2 ==="
-    python $SRC/mapTopics.py --max_connections 1 --outputpickle=$MAP $TFIDF1\
-        $TFIDF2
+    python $SRC/mapTopics.py --max_connections $MAX_CONN --outputpickle=$MAP\
+        $TFIDF1 $TFIDF2
 echo
 fi
 
 # Predict edges
 if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     echo "=== 9. Predict edges ==="
+    if [ "$POPULARITY" = "true" ]; then
+        echo "Building directed popularity graph"
+        python $SRC/buildRecGraph.py $DIRECTED --savefile=$POP_GRAPH\
+            --min-component-size=0 \
+            --parent-category=$PARENTCAT --category=$CAT $DB
+        POP="--popgraph=$POP_GRAPH"
+    fi
     echo "Predicting randomly. . ."
     python $SRC/predictEdgesRandomly.py $SEED_OPT --savefile=$PREDICTED_RAND\
         $GRAPH1 $GRAPH2
     echo "Predicting using item-item tfidf. . ."
     python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF --database=$DB\
-        --idfname=$IDFS $GRAPH1 $GRAPH2
+        --idfname=$IDFS $POP $GRAPH1 $GRAPH2
     echo "Predicting using one model. . ."
-    python $SRC/predictEdgesOneModel.py --savefile=$PREDICTED_ONE $MODEL\
+    python $SRC/predictEdgesOneModel.py --savefile=$PREDICTED_ONE $POP $MODEL\
         $GRAPH1 $GRAPH2
     echo "Predicting with mapping between models. . ."
-    python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $MAP $MODEL1 $MODEL2
-    echo python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $MAP $MODEL1\
+    python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $POP $MAP $MODEL1\
         $MODEL2
 echo
 fi
@@ -280,18 +316,18 @@ if [ $START_STAGE -le 10 -a $END_STAGE -ge 10 ]; then
     echo "=== 10. Evaluate predictions ==="
     echo
     echo "  RANDOM PREDICTIONS "
-    python $SRC/evalPredictedEdges.py -k 2 $PROX_MAT $PREDICTED_RAND\
+    python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_RAND\
         $LOST_EDGES
     echo
     echo "  TFIDF PREDICTIONS "
-    python $SRC/evalPredictedEdges.py -k 2 $PROX_MAT $PREDICTED_TFIDF\
+    python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_TFIDF\
         $LOST_EDGES
     echo
     echo "  ONE MODEL PREDICTIONS "
-    python $SRC/evalPredictedEdges.py -k 2 $PROX_MAT $PREDICTED_ONE\
+    python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_ONE\
         $LOST_EDGES
     echo
     echo "  MAPPING MODEL PREDICTIONS "
-    python $SRC/evalPredictedEdges.py -k 2 $PROX_MAT $PREDICTED_EDGES\
+    python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_EDGES\
         $LOST_EDGES
 fi
