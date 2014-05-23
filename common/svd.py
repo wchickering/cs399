@@ -16,6 +16,10 @@ def getParser(usage=None):
         help='Rank of computed latent space.', metavar='NUM')
     parser.add_option('-s', '--savefile', dest='savefile', default='svd.npz',
         help='Save file for SVD products.', metavar='FILE')
+    parser.add_option('--documents', action='store_true', dest='documents',
+        default=False, help='Learn topics of documents for comparison')
+    parser.add_option('--pca', action='store_true', dest='pca',
+        default=False, help='Subtract mean before SVD, as in PCA')
     return parser
 
 def loadMatrices(args):
@@ -65,11 +69,18 @@ def main():
 
     # load matrices: rows = documents, cols = products
     matrix, dictionary = loadMatrices(args) 
+    if (options.pca):
+        # subtract mean of each product
+        matrix = np.array(matrix)
+        matrix = matrix - matrix.mean(0)
 
     # do svd on matrix transpose (rows should be products): u is term-concept,
     #   s is diagonal concept strength, v is document-concept 
     print 'Performing SVD. . .'
-    u, s, v = np.linalg.svd(matrix.transpose(), full_matrices=False)
+    if (options.documents):
+        u, s, v = np.linalg.svd(matrix, full_matrices=False)
+    else:
+        u, s, v = np.linalg.svd(matrix.transpose(), full_matrices=False)
 
     # write SVD products to disk
     print 'Saving SVD products to %s. . .' % options.savefile
