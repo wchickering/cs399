@@ -10,19 +10,15 @@ from django.core.management.base import BaseCommand, CommandError
 
 from tourneys.models import *
 
-class Command(BaseCommand):
+from TourneysCommand import TourneysCommand
+
+class Command(TourneysCommand):
     args = '[options]'
     help = 'Randomly choose winners for all unfinished matches'
     option_list = BaseCommand.option_list + (
         make_option('--seed', type='int', dest='seed', default=None,
                     help='Seed for random number generator.'),
     )
-
-    def get_command(self):
-        return os.path.splitext(os.path.basename(__file__))[0]
-
-    def print_help(self):
-        super(Command, self).print_help(self.get_command(), None)
 
     def handle(self, *args, **options):
         # parse command line
