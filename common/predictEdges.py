@@ -58,7 +58,7 @@ def main():
 
     # transform to common topic space
     print 'Transforming topic space 1 to topic space 2. . .'
-    transformed_data1 = np.dot(topic_map, data1.transpose()).transpose()
+    transformed_data1 = np.dot(data1, np.array(topic_map).transpose())
 
     # create search engine
     print 'Creating KNN search engine from model2. . .'
