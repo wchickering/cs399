@@ -9,6 +9,7 @@ rank-reduced numpy.linalg.svd() products.
 """
 
 def getTermConcepts(u, s):
+    # matrix returned: rows are topics, columns are products
     return np.transpose(u.dot(np.diag(s)))
 
 def showConcept(u, concept, topn=10, reverse=True, dictionary=None):

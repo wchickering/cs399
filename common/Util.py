@@ -22,7 +22,7 @@ def loadModel(filename):
         dictionary = {}
         for i, node in model.id2word.items():
             dictionary[i] = int(node)
-        data = lda.getTopicGivenItemProbs(model)
+        data = lda.getTopicGivenItemProbs(model).transpose()
     elif filename.endswith('.npz'):
         # load LSI model
         npzfile = np.load(filename)
@@ -33,7 +33,8 @@ def loadModel(filename):
         dictionary = {}
         for i in range(len(nodes)):
             dictionary[i] = int(nodes[i])
-        data = lsi.getTermConcepts(u, s)
+        # data returned: each row is a product, each column is a topic
+        data = lsi.getTermConcepts(u, s).transpose()
     else:
         print >> sys.stderr,\
             'error: Model file must be either a .pickle or .npz file.'
