@@ -20,9 +20,21 @@ while test $# -gt 0; do
             echo "$package [options] application [arguments]"
             echo " "
             echo "options:"
-            echo "-h, --help                show brief help"
-            echo "-s, --start-stage=NUM     specify the starting stage"
-            echo "-e, --end-stage=NUM       specify the ending stage"
+            echo "-h, --help                Show brief help"
+            echo "-s, --start-stage=NUM     Specify the starting stage"
+            echo "-e, --end-stage=NUM       Specify the ending stage"
+            echo "--directed                Run experiment on directed graphs"
+            echo "--no-popularity-added     Don't add popularity back into graph"
+            echo "--no-popularity-removed   Don't remove popularity in graph"
+            echo "                          traversal"
+            echo "--lda                     Use lda instead of lsi for latent"
+            echo "                          space"
+            echo "--min-component-size=NUM  Specifiy minimum component size"
+            echo "                          allowed in graph"
+            echo "--max-mapping-connections=NUM   Specify the maximum number"
+            echo "                          of topics one topic can map to"
+            echo "--eval-k=NUM              Specify k for k-precision and"
+            echo "                          k-recall in evaluation"
             exit 0
             ;;
         -s)
@@ -75,22 +87,18 @@ while test $# -gt 0; do
             export DIRECTED='--directed'
             shift
             ;;
-        --pop)
+        --no-popularity-added)
             # this should be left undefined by default
-            export POPULARITY='true'
+            export POPULARITY='false'
             shift
             ;;
-        --remove-pop)
+        --no-popularity-added)
             # this should be left undefined by default
-            export REMOVE_POP='--tran2'
+            export REMOVE_POP='false'
             shift
             ;;
         --lda)
             export MODEL_TYPE="lda"
-            shift
-            ;;
-        --lsi)
-            export MODEL_TYPE="lsi"
             shift
             ;;
         --min-component-size*)
@@ -157,6 +165,16 @@ if [[ -z "$EVAL_K" ]]; then
     EVAL_K=2
 fi
 
+if [[ -z "$POPULARITY" ]]; then
+    POPULARITY='true'
+fi
+
+if [ "$REMOVE_POP" = "false" ]; then
+    REMOVE_POP=''
+else
+    REMOVE_POP='--tran2'
+fi
+
 
 # Setup environment
 SRC=../common
@@ -197,7 +215,7 @@ if [ "$MODEL_TYPE" = "lda" ]; then
     MODEL=$LDA
     MODEL1=$LDA1
     MODEL2=$LDA2
-elif [ "$MODEL_TYPE" = "lsi" ]; then
+else
     MODEL=$LSI
     MODEL1=$LSI1
     MODEL2=$LSI2
@@ -251,12 +269,10 @@ if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
             --matrixfile=$RWALK1 --lda-file=$MODEL1
         python $SRC/buildLDAModel.py --num-topics=$NUM_TOPICS\
             --matrixfile=$RWALK2 --lda-file=$MODEL2
-    elif [ "$MODEL_TYPE" = "lsi" ]; then
+    else
         python $SRC/svd.py -k $NUM_TOPICS --savefile=$MODEL $RWALK
         python $SRC/svd.py -k $NUM_TOPICS --savefile=$MODEL1 $RWALK1
         python $SRC/svd.py -k $NUM_TOPICS --savefile=$MODEL2 $RWALK2
-    else
-        die "Invalid model type: $MODEL_TYPE"
     fi
 echo
 fi
@@ -299,9 +315,9 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     echo "Predicting randomly. . ."
     python $SRC/predictEdgesRandomly.py $SEED_OPT --savefile=$PREDICTED_RAND\
         $GRAPH1 $GRAPH2
-    echo "Predicting using item-item tfidf. . ."
-    python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF --database=$DB\
-        --idfname=$IDFS $POP $GRAPH1 $GRAPH2
+    #echo "Predicting using item-item tfidf. . ."
+    #python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF --database=$DB\
+    #    --idfname=$IDFS $POP $GRAPH1 $GRAPH2
     echo "Predicting using one model. . ."
     python $SRC/predictEdgesOneModel.py --savefile=$PREDICTED_ONE $POP $MODEL\
         $GRAPH1 $GRAPH2
