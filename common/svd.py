@@ -63,12 +63,13 @@ def main():
     if len(args) < 1:
         parser.error('Must provide at least one matrix file.')
 
-    # load matrices
-    matrix, dictionary = loadMatrices(args)
+    # load matrices: rows = documents, cols = products
+    matrix, dictionary = loadMatrices(args) 
 
-    # do svd
+    # do svd on matrix transpose (rows should be products): u is term-concept,
+    #   s is diagonal concept strength, v is document-concept 
     print 'Performing SVD. . .'
-    u, s, v = np.linalg.svd(matrix, full_matrices=False)
+    u, s, v = np.linalg.svd(matrix.transpose(), full_matrices=False)
 
     # write SVD products to disk
     print 'Saving SVD products to %s. . .' % options.savefile
