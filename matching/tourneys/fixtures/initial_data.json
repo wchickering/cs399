@@ -1,0 +1,1 @@
+[{"pk": 0, "model": "tourneys.tournamenttype", "fields": {"name": "single-elimination", "description": "Only the winning team of each competition advances to the next round."}}]

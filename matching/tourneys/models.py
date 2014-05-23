@@ -116,9 +116,18 @@ class TeamPlayer(models.Model):
         ordering = ['team', 'player']
         unique_together = ('team', 'player')
 
+class TournamentType(models.Model):
+    name = models.CharField(max_length=20, unique=True)
+    description = models.TextField()
+    def __unicode__(self):
+        return self.name
+    class Meta:
+        ordering = ['name']
+
 # analogous to a MTurk job
 class Tournament(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    ttype = models.ForeignKey(TournamentType, verbose_name='Tournament Type')
     # league within which teams will compete
     league = models.ForeignKey(League)
     # target team being matched to

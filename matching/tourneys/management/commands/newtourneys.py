@@ -11,7 +11,9 @@ from django.core.management.base import BaseCommand, CommandError
 
 from tourneys.models import *
 
-class Command(BaseCommand):
+from TourneysCommand import TourneysCommand
+
+class Command(TourneysCommand):
     args = '[options] <targetleague sourceleague>'
     help = ('Setup new tournaments or add a round to existing ones between two '
             'leagues')
@@ -26,12 +28,6 @@ class Command(BaseCommand):
         make_option('--seed', type='int', dest='seed', default=None,
                     help='Seed for random number generator.'),
     )
-
-    def get_command(self):
-        return os.path.splitext(os.path.basename(__file__))[0]
-
-    def print_help(self):
-        super(Command, self).print_help(self.get_command(), None)
 
     def getTournamentName(self, targetteam, sourceleague):
         return '%s_%s__%s_tourney' % (targetteam.attribute.name,
@@ -155,8 +151,10 @@ class Command(BaseCommand):
         for targetteam in\
             Team.objects.filter(attribute__in=targetleague.attribute_set.all()):
             name = self.getTournamentName(targetteam, sourceleague)
+            # for now, all tournaments are single-elimination
+            ttype = TournamentType.objects.get(name='single-elimination')
             self.stdout.write('Creating tournament: %s' % name)
-            tournament = Tournament(name=name, league=sourceleague,
+            tournament = Tournament(name=name, ttype=ttype, league=sourceleague,
                                     team=targetteam, num_players=num_players,
                                     num_matches=num_matches, round=1,
                                     finished=False)

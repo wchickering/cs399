@@ -9,15 +9,11 @@ from django.core.management.base import BaseCommand, CommandError
 
 from tourneys.models import *
 
-class Command(BaseCommand):
+from TourneysCommand import TourneysCommand
+
+class Command(TourneysCommand):
     args = '[options] <targetleague sourceleague>'
     help = 'Delete tournaments between two leagues'
-
-    def get_command(self):
-        return os.path.splitext(os.path.basename(__file__))[0]
-
-    def print_help(self):
-        super(Command, self).print_help(self.get_command(), None)
 
     def getTournamentName(self, targetteam, sourceleague):
         return '%s_%s__%s_tourney' % (targetteam.attribute.name,
