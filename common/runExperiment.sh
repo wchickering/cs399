@@ -29,6 +29,7 @@ while test $# -gt 0; do
             echo "                          traversal"
             echo "--lda                     Use lda instead of lsi for latent"
             echo "                          space"
+            echo "--zero-mean               Subtract mean before lsi"
             echo "--min-component-size=NUM  Specifiy minimum component size"
             echo "                          allowed in graph"
             echo "--max-mapping-connections=NUM   Specify the maximum number"
@@ -92,13 +93,17 @@ while test $# -gt 0; do
             export POPULARITY='false'
             shift
             ;;
-        --no-popularity-added)
+        --no-popularity-removed)
             # this should be left undefined by default
             export REMOVE_POP='false'
             shift
             ;;
         --lda)
             export MODEL_TYPE="lda"
+            shift
+            ;;
+        --zero-mean)
+            export PCA="--pca"
             shift
             ;;
         --min-component-size*)
@@ -270,9 +275,9 @@ if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
         python $SRC/buildLDAModel.py --num-topics=$NUM_TOPICS\
             --matrixfile=$RWALK2 --lda-file=$MODEL2
     else
-        python $SRC/svd.py -k $NUM_TOPICS --savefile=$MODEL $RWALK
-        python $SRC/svd.py -k $NUM_TOPICS --savefile=$MODEL1 $RWALK1
-        python $SRC/svd.py -k $NUM_TOPICS --savefile=$MODEL2 $RWALK2
+        python $SRC/svd.py -k $NUM_TOPICS $PCA --savefile=$MODEL $RWALK
+        python $SRC/svd.py -k $NUM_TOPICS $PCA --savefile=$MODEL1 $RWALK1
+        python $SRC/svd.py -k $NUM_TOPICS $PCA --savefile=$MODEL2 $RWALK2
     fi
 echo
 fi
@@ -315,9 +320,9 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     echo "Predicting randomly. . ."
     python $SRC/predictEdgesRandomly.py $SEED_OPT --savefile=$PREDICTED_RAND\
         $GRAPH1 $GRAPH2
-    #echo "Predicting using item-item tfidf. . ."
-    #python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF --database=$DB\
-    #    --idfname=$IDFS $POP $GRAPH1 $GRAPH2
+    echo "Predicting using item-item tfidf. . ."
+    python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF --database=$DB\
+        --idfname=$IDFS $POP $GRAPH1 $GRAPH2
     echo "Predicting using one model. . ."
     python $SRC/predictEdgesOneModel.py --savefile=$PREDICTED_ONE $POP $MODEL\
         $GRAPH1 $GRAPH2
