@@ -5,7 +5,7 @@ from tourneys.models import *
 
 def match(request):
     try:
-        match = Match.objects.filter(finished=False)[:1].get()
+        match = Match.objects.filter(finished=False).order_by('?')[:1].get()
     except Match.DoesNotExist:
         match = None
     context = { 'match': match }
