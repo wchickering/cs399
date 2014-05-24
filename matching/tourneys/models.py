@@ -1,5 +1,7 @@
 import datetime
 import os
+import random
+import math
 
 from django.db import models
 from django.utils import timezone
@@ -15,6 +17,93 @@ class League(models.Model):
         return self.name
     class Meta:
         ordering = ['name']
+    #####
+    # actions
+    ######
+    def create_teams(self, teamsize):
+        """Create two teams per attribute, one positive, the other negative."""
+        for attribute in self.attribute_set.all():
+           for positive in [True, False]:
+               team_name = '%s_%s_team' %\
+                   (attribute.name, 'pos' if positive else 'neg')
+               # TODO: Change this--cascading delete here is too dangerous
+               # delete any preexisting team
+               try:
+                   team = Team.objects.get(name=team_name)
+                   team.delete() # cascading delete
+               except Team.DoesNotExist:
+                   pass
+               # create new team object
+               team = Team(name=team_name, attribute=attribute,
+                           positive=positive)
+               attribute.team_set.add(team)
+               # get top players for attribute
+               top_playerattributes = attribute.playerattribute_set\
+                   .order_by('-value' if positive else 'value')[:teamsize]
+               for top_pa in top_playerattributes:
+                   # create teamplayer object
+                   teamplayer = TeamPlayer(team=team, player=top_pa.player)
+                   team.teamplayer_set.add(teamplayer)
+    def create_tournaments(self, targetleague, tournamenttype, num_players,
+                           num_matches):
+        """Create tournaments targeting TARGETLEAGUE."""
+        self.clean_tournaments(targetleague, tournamenttype, num_players,
+                               num_matches)
+        for targetteam in Team.objects\
+                              .filter(attribute__league=targetleague):
+            name = self.get_tournament_name(targetteam)
+            tournament = Tournament(
+                name=name, ttype=tournamenttype, league=self,
+                targetteam=targetteam, num_players=num_players,
+                num_matches=num_matches, round=1, finished=False
+            )
+            self.tournament_set.add(tournament)
+            # create tournament teams
+            for team in Team.objects.filter(attribute__league=self):
+                tournamentteam = TournamentTeam(tournament=tournament,
+                                                team=team)
+                tournament.tournamentteam_set.add(tournamentteam)
+            # create competitions
+            tournament.create_competitions()
+
+    def get_tournament_name(self, targetteam):
+        """Generate a name for a new tournament."""
+        return '%s_%s__%s_tourney' % (targetteam.attribute.name,
+                                      'pos' if targetteam.positive else 'neg',
+                                      self.name)
+    def clean_tournaments(self, targetleague, tournamenttype, num_players,
+                          num_matches):
+        """Validate models prior to creating tournaments."""
+        if tournamenttype.name == 'single-elimination':
+            # verify attributes
+            num_attributes = self.attribute_set.count()
+            num_rounds = math.log(2*num_attributes)/math.log(num_players)
+            if not num_rounds.is_integer():
+                raise ValidationError(
+                    ('Nonintegral number of rounds computed for league '
+                     '((league)%s). For single-elimination tournaments, number '
+                     'of attributes in league must equal (k^n)/2, where k > 2 '
+                     'is number of players per match and n > 2 is the number '
+                     'of rounds in the tournament.'),
+                    params={'league': self}
+                )
+        else:
+            raise ValidationError(
+                'Unsupported tournament type: (%(ttype)s)',
+                params={'ttype': tournamenttype}
+            )
+        # verify tournaments don't already exist
+        for targetteam in Team.objects\
+                              .filter(attribute__league=targetleague):
+            tournament_name = self.get_tournament_name(targetteam)
+            try:
+                tournament = Tournament.objects.get(name=tournament_name)
+                raise ValidationError(
+                    'Tournament ((tournament)%s) already exists.',
+                    params={'tournament': tournament}
+                )
+            except Tournament.DoesNotExist:
+                pass
 
 # analogous to a concept
 class Attribute(models.Model):
@@ -147,6 +236,86 @@ class Tournament(models.Model):
     targetleague.short_description = 'Target League'
     class Meta:
         ordering = ['name']
+    ######
+    # actions
+    ######
+    def create_competitions(self):
+        """Create initial competitions for tournament."""
+        if self.round != 1:
+            raise ValidationError(
+                ('Call to crate initial competitions for tournament '
+                 '(%(tournament)s) with round != 1'),
+                params={'tournament': self}
+            )
+        if self.competition_set.exists():
+            raise ValidationError(
+                ('Duplicate call to create initial competitions for '
+                 'tournament (%(tournament)s)'),
+                params={'tournament': self}
+            )
+        # randomize teams
+        tournamentteams = list(self.tournamentteam_set.all())
+        random.shuffle(tournamentteams)
+        if self.ttype.name == 'single-elimination':
+            # create competition objects
+            for i in range(len(tournamentteams)/self.num_players):
+                # create competition object
+                competition = Competition(tournament=self,
+                                          round=self.round)
+                self.competition_set.add(competition)
+                # create competitionteam objects
+                for j in range(self.num_players):
+                    tournamentteam = tournamentteams.pop()
+                    competitionteam = CompetitionTeam(competition=competition,
+                                                      team=tournamentteam.team)
+                    competition.competitionteam_set.add(competitionteam)
+                # create matches
+                competition.create_matches()
+        else:
+            raise ValidationError(
+                'Unsupported tournament type: (%(ttype)s)',
+                params={'ttype': self.ttype}
+            )
+    def advance(self):
+        """Advance to next round, creating new competitions, etc.."""
+        if self.ttype.name == 'single-elimination':
+            all_competitions_finished = True
+            winners = []
+            for competition in self.competition_set.filter(round=self.round):
+                if not competition.finished:
+                    # tournament round not complete
+                    return
+                winners.append(competition.get_winner())
+            if len(winners) == 1:
+                # tournament finished
+                self.finished = True
+                self.save()
+                return
+            random.shuffle(winners)
+            # create competition objects
+            for i in range(len(winners)/self.num_players):
+                # create competition object
+                competition = Competition(tournament=self,
+                                          round=self.round + 1)
+                self.competition_set.add(competition)
+                # create competitionteam objects
+                for j in range(self.num_players):
+                    team = winners.pop()
+                    competitionteam = CompetitionTeam(competition=competition,
+                                                      team=team)
+                    competition.competitionteam_set.add(competitionteam)
+                # create matches
+                competition.create_matches()
+            self.round += 1
+            self.save()
+        else:
+            raise ValidationError(
+                'Unsupported tournament type: (%(ttype)s)',
+                params={'ttype': self.ttype}
+            )
+    #####
+    # validation
+    ######
     def clean(self):
         if self.round == 0:
             raise ValidationError('Round must be finite.')
@@ -198,6 +367,77 @@ class Competition(models.Model):
     targetleague.short_description = 'Target League'
     class Meta:
         ordering = ['tournament', 'round']
+    ######
+    # actions
+    ######
+    def create_matches(self):
+        """Create matches between competitionteams."""
+        targetteamplayers =\
+            list(self.tournament.targetteam.teamplayer_set.all())
+        # randomize target teamplayers
+        random.shuffle(targetteamplayers)
+        teamplayer_lists = {}
+        for competitionteam in self.competitionteam_set.all():
+           teamplayers = list(competitionteam.team.teamplayer_set.all())
+           # randomize source teamplayers
+           random.shuffle(teamplayers)
+           teamplayer_lists[competitionteam.pk] = teamplayers
+        for i in range(self.tournament.num_matches):
+            # create match object
+            match = Match(competition=self,
+                          teamplayer=targetteamplayers[i%len(targetteamplayers)])
+            self.match_set.add(match)
+            for competitionteam in self.competitionteam_set.all():
+                # create competitor object
+                teamplayer = teamplayer_lists[competitionteam.pk].pop()
+                competitor = Competitor(match=match,
+                                        competitionteam=competitionteam,
+                                        teamplayer=teamplayer)
+                match.competitor_set.add(competitor)
+    def score(self):
+        """
+        Determine and set scores for competition. If all matches in a
+        competition have finished=True, then competition.finished will be set to
+        True.
+        """
+        scores = {}
+        all_matches_finished = True
+        for match in self.match_set.all():
+            if not match.finished:
+                all_matched_finished = False
+                continue
+            match.score()
+            for competitor in match.competitor_set.all():
+                if competitor.competitionteam.pk not in scores:
+                    scores[competitor.competitionteam.pk] = []
+                scores[competitor.competitionteam.pk]\
+                    .append(competitor.score)
+        if all_matches_finished:
+            for competitionteam_pk, match_scores in scores.items():
+                competitionteam = CompetitionTeam.objects\
+                                                 .get(pk=competitionteam_pk)
+                competitionteam.score = sum(match_scores)/len(match_scores)
+                competitionteam.save()
+            self.finished = True
+            self.save()
+    def get_winner(self):
+        """
+        Return the winning team, randomly breaking ties. If competition has
+        finished=False, returns None.
+        """
+        if not self.finished:
+            return None
+        candidates = []
+        for competitionteam in self.competitionteam_set.order_by('-score'):
+            if not candidates or \
+                competitionteam.score == candidates[-1].score:
+                candidates.append(competitionteam)
+            else:
+                break
+        return random.choice(candidates).team
+    #####
+    # validation
+    ######
     def clean(self):
         if self.next_competition is not None:
             if self.next_competition.tournament != self.tournament:
@@ -265,6 +505,20 @@ class Match(models.Model):
     admin_image_tag.allow_tags = True
     class Meta:
         ordering = ['competition', 'teamplayer']
+    def score(self):
+        """Determine and set scores for match."""
+        competitors = self.competitor_set.all()
+        num_winners = competitors.filter(winner=True).count()
+        if num_winners > 0:
+            winner_score = 1.0/num_winners
+        else:
+            winner_score = 1.0/competitors.count()
+        for competitor in competitors:
+            if num_winners == 0 or competitor.winner:
+                competitor.score = winner_score
+            else:
+                competitor.score = 0.0
+            competitor.save()
     def clean(self):
         if self.competition.tournament.targetteam != self.teamplayer.team:
             raise ValidationError(

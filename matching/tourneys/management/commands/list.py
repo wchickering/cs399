@@ -18,10 +18,14 @@ class Command(NoArgsCommand):
         for app_name in app_names:
             command_names = find_commands(find_management_module(app_name))
             for command_name in command_names:
-                help_text = load_command_class(app_name, command_name).help
-                self.stdout.write(
-                    '%s\n\t%s (%s)\n' % (command_name, help_text, app_name)
-                )
+                try:
+                    help_text = load_command_class(app_name, command_name).help
+                    self.stdout.write(
+                        '%s\n\t%s (%s)\n' % (command_name, help_text, app_name)
+                    )
+                except AttributeError:
+                    # ignore non-commands
+                    pass
         if not app_names:
             self.stdout.write('None')
 

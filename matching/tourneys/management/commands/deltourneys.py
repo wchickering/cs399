@@ -2,8 +2,6 @@
 Delete tournaments between two leagues
 """
 
-from optparse import make_option
-
 from django.core.management.base import CommandError
 
 from TourneysCommand import TourneysCommand

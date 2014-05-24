@@ -32,26 +32,5 @@ class Command(TourneysCommand):
         # form teams
         for league in leagues:
             self.stdout.write('Forming teams for %s. . .' % league.name)
-            for attribute in league.attribute_set.all():
-                for positive in [True, False]:
-                    team_name = '%s_%s_team' %\
-                        (attribute.name, 'pos' if positive else 'neg')
-                    # delete any preexisting team
-                    try:
-                        team = Team.objects.get(name=team_name)
-                        team.delete() # cascading delete
-                    except Team.DoesNotExist:
-                        pass
-                    # create new team object
-                    team = Team(name=team_name, attribute=attribute,
-                                positive=positive)
-                    team.save()
-                    # get top players for attribute
-                    top_playerattributes = PlayerAttribute.objects\
-                        .filter(attribute=attribute)\
-                        .order_by('-value' if positive else 'value')[:teamsize]
-                    for top_pa in top_playerattributes:
-                        # create teamplayer object
-                        teamplayer = TeamPlayer(team=team, player=top_pa.player)
-                        teamplayer.save()
+            league.create_teams(teamsize)
 
