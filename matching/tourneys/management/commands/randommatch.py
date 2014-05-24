@@ -3,19 +3,15 @@ Randomly choose winners for all unfinished matches.
 """
 
 from optparse import make_option
-import os
 import random
 
-from django.core.management.base import BaseCommand, CommandError
-
-from tourneys.models import *
-
 from TourneysCommand import TourneysCommand
+from tourneys.models import *
 
 class Command(TourneysCommand):
     args = '[options]'
     help = 'Randomly choose winners for all unfinished matches'
-    option_list = BaseCommand.option_list + (
+    option_list = TourneysCommand.option_list + (
         make_option('--seed', type='int', dest='seed', default=None,
                     help='Seed for random number generator.'),
     )
@@ -28,6 +24,7 @@ class Command(TourneysCommand):
         if seed is not None:
             random.seed(seed)
 
+        # randomly choose winners
         for match in Match.objects.filter(finished=False):
             competitors = match.competitor_set.all()
             winner = random.choice(competitors)

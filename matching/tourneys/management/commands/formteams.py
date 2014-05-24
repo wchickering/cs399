@@ -4,16 +4,15 @@ Form teams for one or more given leagues.
 
 from optparse import make_option
 
-from django.core.management.base import BaseCommand, CommandError
-
-from tourneys.models import *
+from django.core.management.base import CommandError
 
 from TourneysCommand import TourneysCommand
+from tourneys.models import *
 
 class Command(TourneysCommand):
     args = '[options] <league1> [league2 league3 ...]'
     help = 'Form teams for one or more given leagues'
-    option_list = BaseCommand.option_list + (
+    option_list = TourneysCommand.option_list + (
         make_option('--teamsize', type='int', dest='teamsize', default=10,
                     help='Number of players per team.'),
     )
@@ -49,7 +48,7 @@ class Command(TourneysCommand):
                     team.save()
                     # get top players for attribute
                     top_playerattributes = PlayerAttribute.objects\
-                        .filter(attribute__pk=attribute.pk)\
+                        .filter(attribute=attribute)\
                         .order_by('-value' if positive else 'value')[:teamsize]
                     for top_pa in top_playerattributes:
                         # create teamplayer object

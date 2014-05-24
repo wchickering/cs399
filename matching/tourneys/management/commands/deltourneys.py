@@ -3,13 +3,11 @@ Delete tournaments between two leagues
 """
 
 from optparse import make_option
-import os
 
-from django.core.management.base import BaseCommand, CommandError
-
-from tourneys.models import *
+from django.core.management.base import CommandError
 
 from TourneysCommand import TourneysCommand
+from tourneys.models import *
 
 class Command(TourneysCommand):
     args = '[options] <targetleague sourceleague>'

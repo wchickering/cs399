@@ -61,17 +61,17 @@ class PlayerAttribute(models.Model):
         return '%s : %s' % (unicode(self.player), unicode(self.attribute))
     def league(self):
         return self.attribute.league
+    class Meta:
+        ordering = ['player', 'attribute']
+        unique_together = ('player', 'attribute')
     def clean(self):
-        if self.player.league.pk != self.attribute.league.pk:
+        if self.player.league != self.attribute.league:
             raise ValidationError(
                 ('Player League (%(playerleague)s) not equal to Attribute '
                  'League (%(attributeleague)s)'),
                 params={'playerleague': self.player.league,
                         'attributeleague': self.attribute.league}
             )
-    class Meta:
-        ordering = ['player', 'attribute']
-        unique_together = ('player', 'attribute')
 
 # an attribute (i.e. concept) in the context of tournaments
 class Team(models.Model):
@@ -104,17 +104,17 @@ class TeamPlayer(models.Model):
         return self.player.admin_image_tag()
     admin_image_tag.short_description = 'Image'
     admin_image_tag.allow_tags = True
+    class Meta:
+        ordering = ['team', 'player']
+        unique_together = ('team', 'player')
     def clean(self):
-        if self.team.attribute.league.pk != self.player.league.pk:
+        if self.team.attribute.league != self.player.league:
             raise ValidationError(
                 ('Team League (%(teamleague)s) not equal to Player '
                  'League (%(playerleague)s)'),
                 params={'teamleague': self.team.attribute.league,
                         'playerleague': self.player.league}
             )
-    class Meta:
-        ordering = ['team', 'player']
-        unique_together = ('team', 'player')
 
 class TournamentType(models.Model):
     name = models.CharField(max_length=20, unique=True)
@@ -131,7 +131,8 @@ class Tournament(models.Model):
     # league within which teams will compete
     league = models.ForeignKey(League)
     # target team being matched to
-    team = models.ForeignKey(Team, verbose_name='Target Team')
+    targetteam = models.ForeignKey(Team, related_name='targetteam',
+                                   verbose_name='Target Team')
     num_players = models.PositiveSmallIntegerField()
     num_matches = models.PositiveSmallIntegerField()
     round = models.PositiveSmallIntegerField(default=1)
@@ -139,22 +140,42 @@ class Tournament(models.Model):
     def __unicode__(self):
         return self.name
     def targetattribute(self):
-        return self.team.attribute
+        return self.targetteam.attribute
     targetattribute.short_description = 'Target Attribute'
     def targetleague(self):
         return self.targetattribute().league
     targetleague.short_description = 'Target League'
+    class Meta:
+        ordering = ['name']
     def clean(self):
         if self.round == 0:
             raise ValidationError('Round must be finite.')
-        if self.league.pk == self.team.attribute.league.pk:
+        # TODO: Perhaps we want to lift this constraint in order to run tests in
+        # which we match attributes against themselves
+        if self.league == self.targetteam.attribute.league:
             raise ValidationError(
                 ('Source League (%(league)s) is equal to Target Team '
                  'League'),
                 params={'league': self.league}
             )
+
+# a team (i.e. concept) in the context of a tournament
+class TournamentTeam(models.Model):
+    tournament = models.ForeignKey(Tournament)
+    team = models.ForeignKey(Team)
+    def __unicode__(self):
+        return '%s : %s' % (unicode(self.tournament), unicode(self.team))
     class Meta:
-        ordering = ['name']
+        ordering = ['tournament', 'team']
+        unique_together = ('tournament', 'team')
+    def clean(self):
+        if self.tournament.league != self.team.attribute.league:
+            raise ValidationError(
+                ('Tournament League (%(tournamentleague)s) not equal to '
+                 'Team League (%(teamleague)s)'),
+                params={'tournamentleague': self.tournament.league,
+                        'teamleague': self.team.attribute.league}
+            )
 
 # a competition between multiple source concepts to match a target concept
 class Competition(models.Model):
@@ -167,17 +188,19 @@ class Competition(models.Model):
     def league(self):
         return self.tournament.league
     def team(self):
-        return self.tournament.team
+        return self.tournament.targetteam
     team.short_description = 'Target Team'
     def attribute(self):
-        return self.tournament.team.attribute
+        return self.tournament.targetteam.attribute
     attribute.short_description = 'Team Attribute'
     def targetleague(self):
         return self.tournament.targetleague()
     targetleague.short_description = 'Target League'
+    class Meta:
+        ordering = ['tournament', 'round']
     def clean(self):
         if self.next_competition is not None:
-            if self.next_competition.tournament.pk != self.tournament.pk:
+            if self.next_competition.tournament != self.tournament:
                 raise ValidationError(
                     ('Next competition tournament (%(nexttournary)s) not equal '
                      'to this competition tournament (%(thistourney)s)'),
@@ -203,8 +226,6 @@ class Competition(models.Model):
                     ('Number of matches not equal to tournament.num_matches '
                      'for finished competition %d') % self.pk
                 )
-    class Meta:
-        ordering = ['tournament', 'round']
 
 # a team (i.e. concept) in the context of a competition
 class CompetitionTeam(models.Model):
@@ -213,18 +234,17 @@ class CompetitionTeam(models.Model):
     score = models.FloatField(null=True, blank=True)
     def __unicode__(self):
         return '%s : %s' % (unicode(self.competition), unicode(self.team))
-    def clean(self):
-        if self.competition.tournament.league.pk !=\
-           self.team.attribute.league.pk:
-            raise ValidationError(
-                ('Competition League (%(competitionleague)s) not equal to '
-                 'Team League (%(teamleague)s)'),
-                params={'competitionleague': self.competition.tournament.league,
-                        'teamleague': self.team.attribute.league}
-            )
     class Meta:
         ordering = ['competition', 'team']
         unique_together = ('competition', 'team')
+    def clean(self):
+        if not self.competition.tournament.tournamentteam_set\
+                                          .filter(team=self.team).exists():
+            raise ValidationError(
+                'Team (%(team)s) not in Tournament (%(tournament)s)',
+                params={'team': self.team,
+                        'tournament': self.competition.tournament}
+            )
 
 # analogous to a task in MTurk
 # a competition consists of several matches
@@ -243,13 +263,17 @@ class Match(models.Model):
         return self.teamplayer.admin_image_tag()
     admin_image_tag.short_description = 'Target Image'
     admin_image_tag.allow_tags = True
+    class Meta:
+        ordering = ['competition', 'teamplayer']
     def clean(self):
-        if self.competition.tournament.team.pk != self.teamplayer.team.pk:
+        if self.competition.tournament.targetteam != self.teamplayer.team:
             raise ValidationError(
                 ('Competition Team (%(competitionteam)s) not equal to '
                  'TeamPlayer Team (%(playerteam)s)'),
-                params={'competitionteam': self.competition.tournament.team,
-                        'playerteam': self.teamplayer.team}
+                params={
+                    'competitionteam': self.competition.tournament.targetteam,
+                    'playerteam': self.teamplayer.team
+                }
             )
         if self.finished:
             if self.competitor_set.count() !=\
@@ -258,8 +282,6 @@ class Match(models.Model):
                     ('Number of competitors not equal to tournament.num_payer '
                      'for finished match %d') % self.pk
                 )
-    class Meta:
-        ordering = ['competition', 'teamplayer']
 
 # a player (i.e. product) in the context of a match
 class Competitor(models.Model):
@@ -280,24 +302,24 @@ class Competitor(models.Model):
         return self.teamplayer.admin_image_tag()
     admin_image_tag.short_description = 'Image'
     admin_image_tag.allow_tags = True
+    class Meta:
+        ordering = ['match', 'competitionteam', 'teamplayer']
+        # no duplicate players or teams in match
+        unique_together = (('match', 'competitionteam'),
+                           ('match', 'teamplayer'))
     def clean(self):
-        if self.match.competition.pk != self.competitionteam.competition.pk:
+        if self.match.competition != self.competitionteam.competition:
             raise ValidationError(
                 ('Match Competition (%(matchcompetition)s) not equal to '
                  'CompetitionTeam Competition (%(teamcompetition)s)'),
                 params={'matchcompetition': self.match.competition,
                         'teamcompetition': self.competitionteam.competition}
             )
-        if self.teamplayer.team.pk != self.competitionteam.team.pk:
+        if self.teamplayer.team != self.competitionteam.team:
             raise ValidationError(
                 ('TeamPlayer Team (%(playerteam)s) not equal to '
                  'CompetitionTeam Team (%(teamteam)s)'),
                 params={'playerteam': self.teamplayer.team,
                         'teamteam': self.competitionteam.team}
             )
-    class Meta:
-        ordering = ['match', 'competitionteam', 'teamplayer']
-        # no duplicate players or teams in match
-        unique_together = (('match', 'competitionteam'),
-                           ('match', 'teamplayer'))
     

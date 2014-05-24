@@ -1,6 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
 
 class TourneysCommand(BaseCommand):
+    option_list = BaseCommand.option_list
+
     def get_command(self):
         return os.path.splitext(os.path.basename(__file__))[0]
 

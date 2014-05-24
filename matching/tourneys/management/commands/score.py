@@ -3,14 +3,9 @@ Compute all missing scores for finished matches and competitions.
 """
 
 from optparse import make_option
-import os
-import numpy as np
-
-from django.core.management.base import BaseCommand, CommandError
-
-from tourneys.models import *
 
 from TourneysCommand import TourneysCommand
+from tourneys.models import *
 
 class Command(TourneysCommand):
     args = '[options]'

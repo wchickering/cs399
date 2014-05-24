@@ -98,7 +98,7 @@ class PlayerAdmin(admin.ModelAdmin):
             if db_field.name == 'attribute':
                 player = Player.objects.get(pk=object_id)
                 kwargs['queryset'] =\
-                    Attribute.objects.filter(league__pk=player.league.pk)
+                    Attribute.objects.filter(league=player.league)
             return super(PlayerAttributeInline, self).formfield_for_foreignkey(
                 db_field, request=request, **kwargs)
         PlayerAttributeInline.formfield_for_foreignkey =\
@@ -134,7 +134,7 @@ class TeamAdmin(admin.ModelAdmin):
             if db_field.name == 'player':
                 team = Team.objects.get(pk=object_id)
                 kwargs['queryset'] = Player.objects\
-                    .filter(league__pk=team.attribute.league.pk)
+                    .filter(league=team.attribute.league)
             return super(TeamPlayerInline, self).formfield_for_foreignkey(
                 db_field, request=request, **kwargs)
         TeamPlayerInline.formfield_for_foreignkey =\
@@ -145,6 +145,10 @@ class TeamAdmin(admin.ModelAdmin):
 admin.site.register(Team, TeamAdmin)
 
 ### Tournament ###
+
+class TournamentTeamInline(admin.TabularInline):
+    model = TournamentTeam
+    extra = 0
 
 class CompetitionInline(LinkedInline):
     model = Competition
@@ -158,29 +162,38 @@ class TournamentAdmin(admin.ModelAdmin):
         ('',                {'fields': ['name']}),
         ('Target',          {'fields': ['targetleague',
                                         'targetattribute',
-                                        'team']}),
+                                        'targetteam']}),
         ('Parameters',      {'fields': ['num_players',
                                         'num_matches']}),
         ('State',           {'fields': ['round',
                                         'finished']}),
     ]
     readonly_fields = ('targetattribute', 'targetleague')
-    inlines = [CompetitionInline]
-    list_display = ('league', 'ttype', 'name', 'team', 'num_players',
+    inlines = [TournamentTeamInline, CompetitionInline]
+    list_display = ('league', 'ttype', 'name', 'targetteam', 'num_players',
                     'num_matches', 'round', 'finished')
     list_display_links = ('name',)
     list_filter = ['league', 'ttype', 'num_players', 'num_matches', 'finished']
-    search_fields = ['league__name', 'name', 'team__name']
+    search_fields = ['league__name', 'name', 'targetteam__name']
     # solution to FK filtering problem
     def change_view(self, request, object_id, extra_context=None):
-        def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
+        def tt_formfield_for_foreignkey(self, db_field, request=None, **kwargs):
+            if db_field.name == 'team':
+                tournament = Tournament.objects.get(pk=object_id)
+                kwargs['queryset'] = Team.objects\
+                    .filter(attribute__in=tournament.league.attribute_set.all())
+            return super(TournamentTeamInline, self).formfield_for_foreignkey(
+                db_field, request=request, **kwargs)
+        TournamentTeamInline.formfield_for_foreignkey =\
+            tt_formfield_for_foreignkey
+        def c_formfield_for_foreignkey(self, db_field, request=None, **kwargs):
             if db_field.name == 'next_competition':
                 tournament = Tournament.objects.get(pk=object_id)
                 kwargs['queryset'] = Competition.objects\
-                    .filter(tournament__pk=tournament.pk)
+                    .filter(tournament=tournament)
             return super(CompetitionInline, self).formfield_for_foreignkey(
                 db_field, request=request, **kwargs)
-        CompetitionInline.formfield_for_foreignkey = formfield_for_foreignkey
+        CompetitionInline.formfield_for_foreignkey = c_formfield_for_foreignkey
         return super(TournamentAdmin, self)\
             .change_view(request, object_id, extra_context=extra_context)
 
@@ -218,19 +231,20 @@ class CompetitionAdmin(admin.ModelAdmin):
         def ct_formfield_for_foreignkey(self, db_field, request=None, **kwargs):
             if db_field.name == 'team':
                 competition = Competition.objects.get(pk=object_id)
-                kwargs['queryset'] = Team.objects.filter(attribute__in=\
-                    competition.tournament.league.attribute_set.all())
+                kwargs['queryset'] = Team.objects.filter(
+                    tournamentteam__tournament=competition.tournament
+                )
             return super(CompetitionTeamInline, self).formfield_for_foreignkey(
                 db_field, request=request, **kwargs)
+        CompetitionTeamInline.formfield_for_foreignkey =\
+            ct_formfield_for_foreignkey
         def m_formfield_for_foreignkey(self, db_field, request=None, **kwargs):
             if db_field.name == 'teamplayer':
                 competition = Competition.objects.get(pk=object_id)
                 kwargs['queryset'] = TeamPlayer.objects\
-                    .filter(team__exact=competition.tournament.team)
+                    .filter(team__exact=competition.tournament.targetteam)
             return super(MatchInline, self).formfield_for_foreignkey(
                 db_field, request=request, **kwargs)
-        CompetitionTeamInline.formfield_for_foreignkey =\
-            ct_formfield_for_foreignkey
         MatchInline.formfield_for_foreignkey = m_formfield_for_foreignkey
         return super(CompetitionAdmin, self)\
             .change_view(request, object_id, extra_context=extra_context)

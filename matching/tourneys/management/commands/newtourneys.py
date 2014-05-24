@@ -3,21 +3,19 @@ Setup new tournaments or add a round to existing ones between two leagues.
 """
 
 from optparse import make_option
-import os
 import math
 import random
 
-from django.core.management.base import BaseCommand, CommandError
-
-from tourneys.models import *
+from django.core.management.base import CommandError
 
 from TourneysCommand import TourneysCommand
+from tourneys.models import *
 
 class Command(TourneysCommand):
     args = '[options] <targetleague sourceleague>'
     help = ('Setup new tournaments or add a round to existing ones between two '
             'leagues')
-    option_list = BaseCommand.option_list + (
+    option_list = TourneysCommand.option_list + (
         make_option('--newround', action='store_true', dest='newround',
                     default=False,
                     help='Add a new round to an existing tournament.'),
@@ -56,6 +54,9 @@ class Command(TourneysCommand):
                          '`%s` (must be one team per attribute per sign).') %\
                         league.name
                     )
+            # TODO: Perhaps remove this constraint. If so, need to be sure that
+            # competition/match creation can handle the num_matches > team_size
+            # scenario.
             for team in Team.objects\
                             .filter(attribute__in=league.attribute_set.all()):
                 if team.teamplayer_set.count() < num_matches:
@@ -76,47 +77,17 @@ class Command(TourneysCommand):
             except Tournament.DoesNotExist:
                 pass
 
-    def createCompetitions(self, tournament, round, num_players):
-        if round != 1:
-            raise CommandError(
-                'Creating competitions for rounds > 1 not implemented'
-            )
-        # get all league teams
-        teams = list(
-            Team.objects\
-                .filter(attribute__in=tournament.league.attribute_set.all())
-        )
-        # randomize teams
-        random.shuffle(teams)
-        # create competition objects
-        for i in range(len(teams)/num_players):
-            # create competition object
-            competition = Competition(tournament=tournament, round=round)
-            tournament.competition_set.add(competition)
-            # create competitionteam objects
-            for j in range(num_players):
-                team = teams.pop()
-                competitionteam = CompetitionTeam(competition=competition,
-                                                  team=team)
-                competition.competitionteam_set.add(competitionteam)
-
     def createMatches(self, tournament, round, num_matches):
-        if round != 1:
-            raise CommandError(
-                'Creating matches for rounds > 1 not implemented'
-            )
-        targetteamplayers = list(tournament.team.teamplayer_set.all())
-        # randomize targetteamplayers
+        targetteamplayers = list(tournament.targetteam.teamplayer_set.all())
+        # randomize target teamplayers
         random.shuffle(targetteamplayers)
-        teamplayer_lists = {}
-        for team in\
-            Team.objects\
-                .filter(attribute__in=tournament.league.attribute_set.all()):
-            teamplayers = list(team.teamplayer_set.all())
-            # randomize teamplayers
-            random.shuffle(teamplayers)
-            teamplayer_lists[team.pk] = teamplayers
         for competition in tournament.competition_set.all():
+            teamplayer_lists = {}
+            for competitionteam in competition.competitionteam_set.all():
+               teamplayers = list(competitionteam.team.teamplayer_set.all())
+               # randomize source teamplayers
+               random.shuffle(teamplayers)
+               teamplayer_lists[competitionteam.pk] = teamplayers
             for i in range(num_matches):
                 # create match object
                 match = Match(competition=competition,
@@ -124,11 +95,39 @@ class Command(TourneysCommand):
                 competition.match_set.add(match)
                 for competitionteam in competition.competitionteam_set.all():
                     # create competitor object
-                    teamplayer = teamplayer_lists[competitionteam.team.pk].pop()
+                    teamplayer = teamplayer_lists[competitionteam.pk].pop()
                     competitor = Competitor(match=match,
                                             competitionteam=competitionteam,
                                             teamplayer=teamplayer)
                     match.competitor_set.add(competitor)
+
+    def createCompetitions(self, tournament, round, num_players):
+        if round != 1:
+            raise CommandError(
+                'Creating competitions for rounds > 1 not implemented'
+            )
+        # randomize teams
+        tournamentteams = list(tournament.tournamentteam_set.all())
+        random.shuffle(tournamentteams)
+        # create competition objects
+        for i in range(len(tournamentteams)/num_players):
+            # create competition object
+            competition = Competition(tournament=tournament, round=round)
+            tournament.competition_set.add(competition)
+            # create competitionteam objects
+            for j in range(num_players):
+                tournamentteam = tournamentteams.pop()
+                competitionteam = CompetitionTeam(competition=competition,
+                                                  team=tournamentteam.team)
+                competition.competitionteam_set.add(competitionteam)
+
+    def createTournamentTeams(self, tournament):
+        for attribute in tournament.league.attribute_set.all():
+            for team in attribute.team_set.all():
+                # create tournamentteam object
+                tournamentteam = TournamentTeam(tournament=tournament,
+                                                team=team)
+                tournament.tournamentteam_set.add(tournamentteam)
 
     def createTournaments(self, targetleague_name, sourceleague_name,
                           num_players, num_matches):
@@ -154,11 +153,14 @@ class Command(TourneysCommand):
             # for now, all tournaments are single-elimination
             ttype = TournamentType.objects.get(name='single-elimination')
             self.stdout.write('Creating tournament: %s' % name)
-            tournament = Tournament(name=name, ttype=ttype, league=sourceleague,
-                                    team=targetteam, num_players=num_players,
-                                    num_matches=num_matches, round=1,
-                                    finished=False)
+            tournament = Tournament(
+                name=name, ttype=ttype, league=sourceleague,
+                targetteam=targetteam, num_players=num_players,
+                num_matches=num_matches, round=1, finished=False
+            )
             tournament.save()
+            # create tournament teams
+            self.createTournamentTeams(tournament)
             # create competitions
             self.createCompetitions(tournament, 1, num_players)
             # create matches
