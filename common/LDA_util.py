@@ -6,6 +6,12 @@ import math
 """
 Helper functions for use with gensim LdaModel.
 """
+def loadLDAModel(model):
+    dictionary = {}
+    for i, node in model.id2word.items():
+        dictionary[i] = int(node)
+    data = lda.getTopicGivenItemProbs(model).transpose()
+    return data, dictionary
 
 def getTopicProbs(model):
     return model.alpha/sum(model.alpha)

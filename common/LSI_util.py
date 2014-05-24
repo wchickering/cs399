@@ -8,9 +8,22 @@ Helper functions for use with Latent Semantic Indexing  via
 rank-reduced numpy.linalg.svd() products.
 """
 
+def loadLSIModel(npzfile):
+    u = npzfile['u']
+    s = npzfile['s']
+    v = npzfile['v']
+    nodes = npzfile['dictionary']
+    dictionary = {}
+    for i in range(len(nodes)):
+        dictionary[i] = int(nodes[i])
+    # data returned: each row is a product, each column is a topic
+    data = getTermConcepts(u, s).transpose()
+    return data, dictionary
+
 def getTermConcepts(u, s):
     # matrix returned: rows are topics, columns are products
-    return np.transpose(u.dot(np.diag(s)))
+    return np.transpose(u) # Don't weight topics differently
+    #return np.transpose(u.dot(np.diag(s))) # Weight by topic importance
 
 def showConcept(u, concept, topn=10, reverse=True, dictionary=None):
     termValues = u[:,concept]
