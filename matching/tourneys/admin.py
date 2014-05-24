@@ -6,10 +6,19 @@ from django.db.models import Q
 from tourneys.models import *
 
 class LinkedInline(admin.TabularInline):
+    module_name = None
+    property_name = ['id']
     def details(self, instance):
+        if self.module_name:
+            module_name = self.module_name
+        else:
+            module_name = instance._meta.module_name
+        ref = instance
+        for name in self.property_name:
+            ref = getattr(ref, name)
         url = reverse('admin:%s_%s_change' % (instance._meta.app_label,
-                                              instance._meta.module_name),
-                      args=(instance.id,))
+                                              module_name),
+                      args=(ref,))
         return format_html(u'<a href="{}">Details</a>', url)
     def has_delete_permission(self, request, obj=None):
         return False
@@ -71,9 +80,11 @@ admin.site.register(Attribute, AttributeAdmin)
 
 ### Player ###
 
-class PlayerAttributeInline(admin.TabularInline):
+class PlayerAttributeInline(LinkedInline):
     model = PlayerAttribute
     extra = 0
+    module_name = 'attribute'
+    property_name = ['attribute', 'id']
     def has_delete_permission(self, request, obj=None):
         return False
     def has_add_permission(self, request, obj=None):
@@ -146,9 +157,11 @@ admin.site.register(Team, TeamAdmin)
 
 ### Tournament ###
 
-class TournamentTeamInline(admin.TabularInline):
+class TournamentTeamInline(LinkedInline):
     model = TournamentTeam
     extra = 0
+    module_name = 'team'
+    property_name = ['team', 'id']
 
 class CompetitionInline(LinkedInline):
     model = Competition
@@ -201,9 +214,11 @@ admin.site.register(Tournament, TournamentAdmin)
 
 ### Competition ###
 
-class CompetitionTeamInline(admin.TabularInline):
+class CompetitionTeamInline(LinkedInline):
     model = CompetitionTeam
     extra = 0
+    module_name = 'team'
+    property_name = ['team', 'id']
 
 class MatchInline(LinkedInline):
     model = Match
