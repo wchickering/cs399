@@ -20,7 +20,8 @@ from Util import loadPickle, getAndCheckFilename
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('--savefile', dest='savefile', default='data/topic_map.pickle',
+    parser.add_option('--savefile', dest='savefile',
+        default='data/topic_map.pickle',
         help='Name of pickle to write topic map to.', metavar='FILE')
     parser.add_option('-n', '--topnwords', type=int, dest='topnwords', 
         default=1000, help='Number of top words per topic to compare.',
@@ -68,7 +69,8 @@ def topicDistance(topic1, topic2):
     return math.sqrt(sqr_distance)
 
 def transformMatrix(matrix):
-    matrix_t = [[0 for x in xrange(len(matrix))] for x in xrange(len(matrix[0]))]
+    matrix_t = [[0 for x in xrange(len(matrix))]\
+                for x in xrange(len(matrix[0]))]
     for i in range(len(matrix)):
         for j in range(len(matrix[i])):
             matrix_t[j][i] = matrix[i][j]
@@ -84,6 +86,9 @@ def getTopicMap(topics1, topics2, max_connections, by_distance):
             else:
                 similarity = topicSimilarity(topic1, topic2)
             topic_vector.append(similarity)
+        # if all similarities zero, then set all similarities to 1.0
+        if np.linalg.norm(topic_vector, 1) == 0.0:
+            topic_vector = [1.0 for x in topic_vector]
         # Limit number of connections
         queue = PriorityQueue() 
         for idx in range(len(topic_vector)):
@@ -103,7 +108,7 @@ def truncateTopics(topics, topnwords):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <topics1.pickle> <topics2.pickle>'
+    usage = 'Usage: %prog [options] <topics1.pickle topics2.pickle>'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 2:

@@ -36,9 +36,13 @@ def getParser(usage=None):
         default='data/stopwords.txt',
         help='File containing a comma separated list of stop words.',
         metavar='FILE')
+    parser.add_option('--brand-only', action='store_true', dest='brandOnly',
+        default=False,
+        help='Only consider brand (i.e. first term in description).')
     return parser
 
-def calculateIDFs(db_conn, parentCategory, category, stopwords=None):
+def calculateIDFs(db_conn, parentCategory, category, stopwords=None,
+                  brandOnly=False):
     db_curs = db_conn.cursor()
     print 'Reading category products. . .'
     db_curs.execute(selectCategoryProductsStmt, (parentCategory, category))
@@ -52,11 +56,18 @@ def calculateIDFs(db_conn, parentCategory, category, stopwords=None):
         # strip out punctuation
         description = ''.join(ch for ch in description\
                               if ch not in string.punctuation)
-        words = set([stem(w.lower()) for w in description.split()])
+        if brandOnly:
+            # Only consider first word of description if brandOnly=True
+            # must use a list to preserve word order
+            words = [stem(w.lower()) for w in description.split()]
+        else:
+            words = set([stem(w.lower()) for w in description.split()])
         for word in words:
             if stopwords is not None and word in stopwords:
                 continue
             wordDocCounts[word] += 1
+            if brandOnly:
+                break
     print 'Calculating IDFs. . .'
     idf = {}
     for word in wordDocCounts:
@@ -80,7 +91,8 @@ def main():
     stopwords = getStopwords(options.stopwords)
 
     # Calculate idfs over all products
-    idf = calculateIDFs(db_conn, parent, category, stopwords=stopwords)
+    idf = calculateIDFs(db_conn, parent, category, stopwords=stopwords,
+                        brandOnly=options.brandOnly)
     print 'Computed IDFs for %d terms.' % len(idf)
 
     # Dump results

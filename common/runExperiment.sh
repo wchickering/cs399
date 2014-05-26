@@ -30,6 +30,7 @@ while test $# -gt 0; do
             echo "--lda                     Use lda instead of lsi for latent"
             echo "                          space"
             echo "--no-partition-by-brand   Do not partition graph by brand"
+            echo "--brand-only              Only consider brand for TFIDF"
             echo "--zero-mean               Subtract mean before lsi"
             echo "--min-component-size=NUM  Specifiy minimum component size"
             echo "                          allowed in graph"
@@ -107,6 +108,10 @@ while test $# -gt 0; do
             export PARTITION_BY_BRAND_FLAG=0
             shift
             ;;
+        --brand-only)
+            export BRAND_ONLY="--brand-only"
+            shift
+            ;;
         --zero-mean)
             export PCA="--pca"
             shift
@@ -167,6 +172,10 @@ if [[ -z "$PARTITION_BY_BRAND_FLAG" ]]; then
     PARTITION_BY_BRAND='--partition-by-brand'
 else
     PARTITION_BY_BRAND=''
+fi
+
+if [[ -z "$BRAND_ONLY" ]]; then
+    BRAND_ONLY=''
 fi
 
 if [[ -z "$MIN_COMPONENT_SIZE" ]]; then
@@ -297,16 +306,16 @@ fi
 # Get idfs for category
 if [ $START_STAGE -le 6 -a $END_STAGE -ge 6 ]; then
     echo "=== 6. Calculate idfs for category ==="
-    python $SRC/idfsByCategory.py --savefile=$IDFS $PARENTCAT $CAT
+    python $SRC/idfsByCategory.py $BRAND_ONLY --savefile=$IDFS $PARENTCAT $CAT
 echo
 fi
 
 # Get tfidfs for each graph
 if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
     echo "=== 7. Calculate tfidfs for each graph ==="
-    python $SRC/topicWords.py --database=$DB --idfname=$IDFS\
+    python $SRC/topicWords.py $BRAND_ONLY --database=$DB --idfname=$IDFS\
         --savefile=$TFIDF1 $MODEL1
-    python $SRC/topicWords.py --database=$DB --idfname=$IDFS\
+    python $SRC/topicWords.py $BRAND_ONLY --database=$DB --idfname=$IDFS\
         --savefile=$TFIDF2 $MODEL2
 echo
 fi
@@ -333,8 +342,8 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     python $SRC/predictEdgesRandomly.py $SEED_OPT --savefile=$PREDICTED_RAND\
         $GRAPH1 $GRAPH2
     echo "Predicting using item-item tfidf. . ."
-    python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF --database=$DB\
-        --idfname=$IDFS $POP $GRAPH1 $GRAPH2
+    python $SRC/predictEdgesTfidf.py $BRAND_ONLY --savefile=$PREDICTED_TFIDF\
+        --database=$DB --idfname=$IDFS $POP $GRAPH1 $GRAPH2
     echo "Predicting using one model. . ."
     python $SRC/predictEdgesOneModel.py --savefile=$PREDICTED_ONE $POP $MODEL\
         $GRAPH1 $GRAPH2

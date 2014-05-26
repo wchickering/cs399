@@ -35,15 +35,20 @@ def getParser(usage=None):
     parser.add_option('-v', '--verbose', 
         action='store_true', dest='verbose', default=False,
         help='Print top words')
-    parser.add_option('--savefile', dest='savefile', default='data/tfidf.pickle',
+    parser.add_option('--savefile', dest='savefile',
+        default='data/tfidf.pickle',
         help='Name of pickle to save tfidfs per topic.', metavar='FILE')
     parser.add_option('--stopwords', dest='stopwords',
         default='data/stopwords.txt',
         help='File containing a comma separated list of stop words.',
         metavar='FILE')
+    parser.add_option('--brand-only', action='store_true', dest='brandOnly',
+        default=False,
+        help='Only consider brand (i.e. first term in description).')
     return parser
 
-def getTopWordsByTopic(db_conn, topicDists, idf, stopwords=None):
+def getTopWordsByTopic(db_conn, topicDists, idf, stopwords=None,
+                       brandOnly=False):
     db_curs = db_conn.cursor()
     tfidfPerTopic = []
     for topic in range(len(topicDists)):
@@ -62,10 +67,14 @@ def getTopWordsByTopic(db_conn, topicDists, idf, stopwords=None):
                 if stopwords is not None and word in stopwords:
                     continue
                 tf[word] += topicStrength
+                # Only consider first word of description if brandOnly=True
+                if brandOnly:
+                    break
         # Sort words by tfidf
         tfidfs = []
         for word in tf: 
             if word not in idf:
+                print >> sys.stderr, 'WARNING: No IDF for TF word: %s' % word
                 continue
             tfidfScore = tf[word] * idf[word]
             tfidf = (word, tfidfScore)
@@ -128,7 +137,8 @@ def main():
 
     # get top words for each topic 
     print 'Get top words. . .'
-    tfidf = getTopWordsByTopic(db_conn, topicDists, idf, stopwords=stopwords)
+    tfidf = getTopWordsByTopic(db_conn, topicDists, idf, stopwords=stopwords,
+                               brandOnly=options.brandOnly)
 
     # dump tf-idfs
     pickle.dump(tfidf, open(options.savefile, 'w'))

@@ -31,7 +31,8 @@ def getParser(usage=None):
         default='predictEdges.pickle', help='Pickle to dump predicted edges.',
         metavar='FILE')
     parser.add_option('--cosine', action='store_true', dest='cosine',
-        default=False, help='Make predictions based on item-item tfidf similarity.')
+        default=False,
+        help='Make predictions based on item-item tfidf similarity.')
     parser.add_option('-d', '--database', dest='dbname',
         default='data/macys.db', help='Database to pull descriptions from.')
     parser.add_option('-i', '--idfname', dest='idfname',
@@ -42,6 +43,9 @@ def getParser(usage=None):
         metavar='FILE')
     parser.add_option('--popgraph', dest='popgraph', default=None,
         help='Picked graph representing item "popularity".', metavar='FILE')
+    parser.add_option('--brand-only', action='store_true', dest='brandOnly',
+        default=False,
+        help='Only consider brand (i.e. first term in description).')
     return parser
 
 def tfidfSimilarity(tfidf1, tfidf2, cosine):
@@ -83,7 +87,7 @@ def predictEdges(tfidfs1, tfidfs2, k, cosine, popDictionary):
         predicted_edges += [(node1, n) for n in neighbors]
     return predicted_edges
 
-def calculateTfidfs(db_conn, graph, idf, stopwords=None):
+def calculateTfidfs(db_conn, graph, idf, stopwords=None, brandOnly=False):
     db_curs = db_conn.cursor()
     tfidfs = {}
     for item in graph:
@@ -97,6 +101,8 @@ def calculateTfidfs(db_conn, graph, idf, stopwords=None):
             if stopwords is not None and word in stopwords:
                 continue
             tfidf[word] += idf[word]
+            if brandOnly:
+                break
         tfidfs[item] = tfidf
     return tfidfs
 
@@ -139,8 +145,10 @@ def main():
 
     # calculate tfidfs for words of items in each graph
     print 'Calculating tfidfs. .'
-    tfidfs1 = calculateTfidfs(db_conn, graph1, idf, stopwords=stopwords)
-    tfidfs2 = calculateTfidfs(db_conn, graph2, idf, stopwords=stopwords)
+    tfidfs1 = calculateTfidfs(db_conn, graph1, idf, stopwords=stopwords,
+                              brandOnly=options.brandOnly)
+    tfidfs2 = calculateTfidfs(db_conn, graph2, idf, stopwords=stopwords,
+                              brandOnly=options.brandOnly)
 
     # predict edges
     print 'Predicting edges. .'
