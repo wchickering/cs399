@@ -34,8 +34,10 @@ while test $# -gt 0; do
             echo "--zero-mean               Subtract mean before lsi"
             echo "--min-component-size=NUM  Specifiy minimum component size"
             echo "                          allowed in graph"
-            echo "--max-mapping-connections=NUM   Specify the maximum number"
-            echo "                          of topics one topic can map to"
+            echo "--max-mapping-connections=NUM"  
+            echo "                          Specify the maximum number of"
+            echo "                          topics one topic can map to"
+            echo "--tourney-mapper=FILE     Use mapper created from tourney"  
             echo "--eval-k=NUM              Specify k for k-precision and"
             echo "                          k-recall in evaluation"
             exit 0
@@ -110,6 +112,10 @@ while test $# -gt 0; do
             ;;
         --brand-only)
             export BRAND_ONLY="--brand-only"
+            shift
+            ;;
+        --tourney-mapper*)
+            export TOURNEY_MAPPER=`echo $1 | sed -e 's/^[^=]*=//g'`
             shift
             ;;
         --zero-mean)
@@ -303,29 +309,34 @@ if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
 echo
 fi
 
-# Get idfs for category
-if [ $START_STAGE -le 6 -a $END_STAGE -ge 6 ]; then
-    echo "=== 6. Calculate idfs for category ==="
-    python $SRC/idfsByCategory.py $BRAND_ONLY --savefile=$IDFS $PARENTCAT $CAT
-echo
-fi
-
-# Get tfidfs for each graph
-if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
-    echo "=== 7. Calculate tfidfs for each graph ==="
-    python $SRC/topicWords.py $BRAND_ONLY --database=$DB --idfname=$IDFS\
-        --savefile=$TFIDF1 $MODEL1
-    python $SRC/topicWords.py $BRAND_ONLY --database=$DB --idfname=$IDFS\
-        --savefile=$TFIDF2 $MODEL2
-echo
-fi
-
-# Map tfidf topic spaces
-if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
-    echo "=== 8. Construct topic map from graph1 to graph2 ==="
-    python $SRC/mapTopics.py --max_connections $MAX_CONN --savefile=$MAP\
-        $TFIDF1 $TFIDF2
-echo
+# Use tourney map if given
+if [[ "$TOURNEY_MAPPER" ]]; then
+    MAP=$TOURNEY_MAPPER
+else
+    # Get idfs for category
+    if [ $START_STAGE -le 6 -a $END_STAGE -ge 6 ]; then
+        echo "=== 6. Calculate idfs for category ==="
+        python $SRC/idfsByCategory.py $BRAND_ONLY --savefile=$IDFS $PARENTCAT $CAT
+    echo
+    fi
+    
+    # Get tfidfs for each graph
+    if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
+        echo "=== 7. Calculate tfidfs for each graph ==="
+        python $SRC/topicWords.py $BRAND_ONLY --database=$DB --idfname=$IDFS\
+            --savefile=$TFIDF1 $MODEL1
+        python $SRC/topicWords.py $BRAND_ONLY --database=$DB --idfname=$IDFS\
+            --savefile=$TFIDF2 $MODEL2
+    echo
+    fi
+    
+    # Map tfidf topic spaces
+    if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
+        echo "=== 8. Construct topic map from graph1 to graph2 ==="
+        python $SRC/mapTopics.py --max_connections $MAX_CONN --savefile=$MAP\
+            $TFIDF1 $TFIDF2
+    echo
+    fi
 fi
 
 # Predict edges
