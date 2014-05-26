@@ -10,8 +10,8 @@ import sys
 import numpy as np
 
 # local modules
-import Util as util
-import Prediction_util as pred
+from Util import loadPickle, getAndCheckFilename, loadModel
+from Prediction_util import getNeighbors, makeEdges, getPopDictionary
 from KNNSearchEngine import KNNSearchEngine
 
 def getParser(usage=None):
@@ -33,28 +33,28 @@ def main():
     if len(args) != 3:
         parser.error('Wrong number of arguments') 
 
-    topic_map_filename = util.getAndCheckFilename(args[0])
-    model1_filename = util.getAndCheckFilename(args[1])
-    model2_filename = util.getAndCheckFilename(args[2])
+    topic_map_filename = getAndCheckFilename(args[0])
+    model1_filename = getAndCheckFilename(args[1])
+    model2_filename = getAndCheckFilename(args[2])
 
     # Get popularity
     if options.popgraph:
         print 'Loading "popularity" graph from %s. . .' % options.popgraph
-        popgraph_fname = util.getAndCheckFilename(options.popgraph)
-        popgraph = util.loadPickle(popgraph_fname)
-        popDictionary = pred.getPopDictionary(popgraph)
+        popgraph_fname = getAndCheckFilename(options.popgraph)
+        popgraph = loadPickle(popgraph_fname)
+        popDictionary = getPopDictionary(popgraph)
     else:
         popDictionary = None
 
     # load topic map
     print 'Loading topic map from %s. . .' % topic_map_filename
-    topic_map = util.loadPickle(topic_map_filename)
+    topic_map = loadPickle(topic_map_filename)
 
     # load models
     print 'Loading model1 from %s. . .' % model1_filename
-    data1, dictionary1 = util.loadModel(model1_filename)
+    data1, dictionary1 = loadModel(model1_filename)
     print 'Loading model2 from %s. . .' % model2_filename
-    data2, dictionary2 = util.loadModel(model2_filename)
+    data2, dictionary2 = loadModel(model2_filename)
 
     # transform to common topic space
     print 'Transforming topic space 1 to topic space 2. . .'
@@ -65,11 +65,11 @@ def main():
     searchEngine = KNNSearchEngine(data2, dictionary2)
 
     print 'Getting nearest neighbors. . .'
-    neighbors = pred.getNeighbors(transformed_data1, 
+    neighbors = getNeighbors(transformed_data1, 
             options.k, searchEngine, popDictionary=popDictionary)
 
     print 'Predicting edges. . .'
-    predicted_edges = pred.makeEdges(neighbors, dictionary1)
+    predicted_edges = makeEdges(neighbors, dictionary1)
 
     # save results
     print 'Saving results to %s. . .' % options.savefile

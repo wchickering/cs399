@@ -15,7 +15,7 @@ from random import shuffle
 from collections import deque
 
 # local modules
-from Graph_util import loadGraph
+from Util import loadPickle, getAndCheckFilename
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -186,9 +186,7 @@ def main():
     (options, args) = parser.parse_args()
     if len(args) != 1:
         parser.error('Wrong number of arguments')
-    graphfname = args[0]
-    if not os.path.isfile(graphfname):
-        parser.error('Cannot find %s' % graphfname)
+    graphfname = getAndCheckFilename(args[0])
 
     # seed rng
     if options.seed is not None:
@@ -196,7 +194,7 @@ def main():
 
     # load graph
     print 'Loading graph from %s. . .' % graphfname
-    graph = loadGraph(graphfname)
+    graph = loadPickle(graphfname)
 
     walkMatrix = None
     if options.type == 'random' or options.type == 'transition':

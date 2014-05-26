@@ -15,10 +15,12 @@ import sys
 import math
 import numpy as np
 
+# local modules
+from Util import loadPickle, getAndCheckFilename
+
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-o', '--outputpickle', dest='outputpickle',
-        default='data/topic_map.pickle',
+    parser.add_option('--savefile', dest='savefile', default='data/topic_map.pickle',
         help='Name of pickle to write topic map to.', metavar='FILE')
     parser.add_option('-n', '--topnwords', type=int, dest='topnwords', 
         default=1000, help='Number of top words per topic to compare.',
@@ -31,11 +33,6 @@ def getParser(usage=None):
         default=1000, help='Max number of topics a single topic can map to.', 
         metavar='NUM')
     return parser
-
-def loadPickle(fname):
-    with open(fname, 'r') as f:
-        obj = pickle.load(f)
-    return obj
 
 def topicSimilarity(topic1, topic2):
     similarity = 0.0
@@ -111,16 +108,10 @@ def main():
     (options, args) = parser.parse_args()
     if len(args) != 2:
         parser.error('Wrong number of arguments')
-    topics1_fname = args[0]
-    topics2_fname = args[1]
-    if not os.path.isfile(topics1_fname):
-        print >> sys.stderr, 'error: Cannot find %s' % topics1_fname
-        return
-    if not os.path.isfile(topics2_fname):
-        print >> sys.stderr, 'error: Cannot find %s' % topics2_fname
-        return
+    topics1_fname = getAndCheckFilename(args[0])
+    topics2_fname = getAndCheckFilename(args[1])
 
-        # load topics pickle
+    # load topics pickle
     print 'Loading topics of first catalogue from %s. . .' % topics1_fname
     topics1 = loadPickle(topics1_fname)
 
@@ -151,8 +142,8 @@ def main():
             np.ones((len(topic_map), 1)).all())
 
     # dump tf-idfs
-    print 'Saving topic map to %s. . .' % options.outputpickle
-    pickle.dump(topic_map, open(options.outputpickle, 'w'))
+    print 'Saving topic map to %s. . .' % options.savefile
+    pickle.dump(topic_map, open(options.savefile, 'w'))
 
     # print results
     if options.verbose:

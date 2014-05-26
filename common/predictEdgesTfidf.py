@@ -16,8 +16,8 @@ import string
 import math
 
 # local modules
-import Util as util
-import Prediction_util as pred
+from Util import loadPickle, getAndCheckFilename, getStopwords
+from Prediction_util import getPopDictionary
 
 # params
 selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
@@ -108,30 +108,30 @@ def main():
     if len(args) != 2:
         parser.error('Wrong number of arguments') 
 
-    graph1_filename = util.getAndCheckFilename(args[0])
-    graph2_filename = util.getAndCheckFilename(args[1])
-    idf_filename = util.getAndCheckFilename(options.idfname)
+    graph1_filename = getAndCheckFilename(args[0])
+    graph2_filename = getAndCheckFilename(args[1])
+    idf_filename = getAndCheckFilename(options.idfname)
 
     # get stop words
     print 'Loading Stopwords and IDFs. . .'
-    stopwords = util.getStopwords(options.stopwords)
+    stopwords = getStopwords(options.stopwords)
 
     # Get popularity
     if options.popgraph:
         print 'Loading "popularity" graph from %s. . .' % options.popgraph
-        popgraph_fname = util.getAndCheckFilename(options.popgraph)
-        popgraph = util.loadPickle(popgraph_fname)
-        popDictionary = pred.getPopDictionary(popgraph)
+        popgraph_fname = getAndCheckFilename(options.popgraph)
+        popgraph = loadPickle(popgraph_fname)
+        popDictionary = getPopDictionary(popgraph)
     else:
         popDictionary = None
 
     # load graphs
     print 'Loading graph1 from %s. . .' % graph1_filename
-    graph1 = util.loadPickle(graph1_filename)
+    graph1 = loadPickle(graph1_filename)
     print 'Loading graph2 from %s. . .' % graph2_filename
-    graph2 = util.loadPickle(graph2_filename)
+    graph2 = loadPickle(graph2_filename)
     print 'Loading idfs from %s. . .' % idf_filename
-    idf = util.loadPickle(idf_filename)
+    idf = loadPickle(idf_filename)
 
     # connect to database
     print 'Connecting to database. .'

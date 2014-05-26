@@ -285,7 +285,7 @@ fi
 # Get idfs for category
 if [ $START_STAGE -le 6 -a $END_STAGE -ge 6 ]; then
     echo "=== 6. Calculate idfs for category ==="
-    python $SRC/idfsByCategory.py -o $IDFS $PARENTCAT $CAT
+    python $SRC/idfsByCategory.py --savefile=$IDFS $PARENTCAT $CAT
 echo
 fi
 
@@ -293,16 +293,16 @@ fi
 if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
     echo "=== 7. Calculate tfidfs for each graph ==="
     python $SRC/topicWords.py --database=$DB --idfname=$IDFS\
-        --outputpickle=$TFIDF1 $MODEL1
+        --savefile=$TFIDF1 $MODEL1
     python $SRC/topicWords.py --database=$DB --idfname=$IDFS\
-        --outputpickle=$TFIDF2 $MODEL2
+        --savefile=$TFIDF2 $MODEL2
 echo
 fi
 
 # Map tfidf topic spaces
 if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
     echo "=== 8. Construct topic map from graph1 to graph2 ==="
-    python $SRC/mapTopics.py --max_connections $MAX_CONN --outputpickle=$MAP\
+    python $SRC/mapTopics.py --max_connections $MAX_CONN --savefile=$MAP\
         $TFIDF1 $TFIDF2
 echo
 fi
