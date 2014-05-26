@@ -15,7 +15,8 @@ import string
 import numpy as np
 
 # local modules
-import LSI_util as lsi
+from Util import loadPickle, getAndCheckFilename, getStopwords
+from LSI_util import showConcept
 
 # db params
 selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
@@ -34,8 +35,7 @@ def getParser(usage=None):
     parser.add_option('-v', '--verbose', 
         action='store_true', dest='verbose', default=False,
         help='Print top words')
-    parser.add_option('-o', '--outputpickle', dest='outputpickle',
-        default='data/tfidf.pickle',
+    parser.add_option('--savefile', dest='savefile', default='data/tfidf.pickle',
         help='Name of pickle to save tfidfs per topic.', metavar='FILE')
     parser.add_option('--stopwords', dest='stopwords',
         default='data/stopwords.txt',
@@ -81,10 +81,7 @@ def main():
     (options, args) = parser.parse_args()
     if len(args) != 1:
         parser.error('Wrong number of arguments')
-    filename = args[0]
-    if not os.path.isfile(filename):
-        print >> sys.stderr, 'error: Cannot find %s' % filename
-        return
+    filename = getAndCheckFilename(args[0])
 
     if filename.endswith('.pickle'):
         # load LDA model
@@ -102,12 +99,12 @@ def main():
         v = npzfile['v']
         dictionary = npzfile['dictionary']
         topicDists_top = [
-            lsi.showConcept(u, concept, topn=options.topn,
+            showConcept(u, concept, topn=options.topn,
                             dictionary=dictionary)\
             for concept in range(len(s))
         ]
         topicDists_bot = [
-            lsi.showConcept(u, concept, topn=options.topn,
+            showConcept(u, concept, topn=options.topn,
                             dictionary=dictionary, reverse=False)\
             for concept in range(len(s))
         ]
@@ -123,29 +120,18 @@ def main():
     db_conn = sqlite3.connect(options.dbname)
 
     # get stop words
-    if os.path.isfile(options.stopwords):
-        with open(options.stopwords, 'r') as f:
-            try:
-                stopwords = f.readline().split(',')
-            except:
-                print >> sys.stderr, 'error: Failed to parse stop words.'
-                return
-    else:
-        print >> sys.stderr,\
-            'warning: stop words file not found: %s' % options.stopwords
-        stopwords = None
+    stopwords = getStopwords(options.stopwords)
 
     # get IDFs
     print 'Load IDFs. . .'
-    with open(options.idfname, 'r') as f:
-        idf = pickle.load(f)
+    idf = loadPickle(options.idfname)
 
     # get top words for each topic 
     print 'Get top words. . .'
     tfidf = getTopWordsByTopic(db_conn, topicDists, idf, stopwords=stopwords)
 
     # dump tf-idfs
-    pickle.dump(tfidf, open(options.outputpickle, 'w'))
+    pickle.dump(tfidf, open(options.savefile, 'w'))
 
     # Print the topnWords
     if options.verbose:

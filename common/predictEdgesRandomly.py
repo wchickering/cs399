@@ -10,7 +10,7 @@ import sys
 import random
 
 # local modules
-import Util as util
+from Util import loadPickle, getAndCheckFilename
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -40,8 +40,8 @@ def main():
     if len(args) != 2:
         parser.error('Wrong number of arguments') 
 
-    graph1_filename = util.getAndCheckFilename(args[0])
-    graph2_filename = util.getAndCheckFilename(args[1])
+    graph1_filename = getAndCheckFilename(args[0])
+    graph2_filename = getAndCheckFilename(args[1])
 
     # seed rng
     if options.seed is not None:
@@ -49,9 +49,9 @@ def main():
 
     # load graphs
     print 'Loading graph1 from %s. . .' % graph1_filename
-    graph1 = util.loadPickle(graph1_filename)
+    graph1 = loadPickle(graph1_filename)
     print 'Loading graph2 from %s. . .' % graph2_filename
-    graph2 = util.loadPickle(graph2_filename)
+    graph2 = loadPickle(graph2_filename)
 
     # predict edges
     print 'Randomly predicting edges. . .'

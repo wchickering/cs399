@@ -10,7 +10,7 @@ def loadLDAModel(model):
     dictionary = {}
     for i, node in model.id2word.items():
         dictionary[i] = int(node)
-    data = lda.getTopicGivenItemProbs(model).transpose()
+    data = getTopicGivenItemProbs(model).transpose()
     return data, dictionary
 
 def getTopicProbs(model):

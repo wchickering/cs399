@@ -13,6 +13,9 @@ import csv
 import os
 import sys
 
+# local modules
+from Util import loadPickle, getAndCheckFilename
+
 # gensim params
 chunksize=100
 update_every=1
@@ -32,7 +35,7 @@ def getParser(usage=None):
         default='lda.pickle', help='Save file for LDA model.',
         metavar='FILE')
     parser.add_option('-t', '--num-topics', dest='num_topics', type='int',
-        default=10, help='Number of topics in LDA model.', metavar='NUM')
+        default=20, help='Number of topics in LDA model.', metavar='NUM')
     parser.add_option('-p', '--passes', dest='passes', type='int', default=1,
         help='Number of passes for training LDA model.', metavar='NUM')
     parser.add_option('--alpha', dest='alpha', default='symmetric',
@@ -93,13 +96,10 @@ def main():
     model = None
     dictionary = None
     if len(args) == 1:
-        modelfname = args[0]
-        if not os.path.isfile(modelfname):
-            parser.error('Cannot find %s' % modelfname)
+        modelfname = getAndCheckFilename(args[0])
         print 'Loading model from %s. . .' % modelfname
-        with open(modelfname, 'r') as f:
-            model = pickle.load(f)
-            dictionary = model.id2word
+        model = loadPickle(modelfname)
+        dictionary = model.id2word
 
     # Build dictionary
     if dictionary is None:

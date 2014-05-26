@@ -16,7 +16,8 @@ import sys
 import sqlite3
 
 # local modules
-from Graph_util import loadGraph, saveGraph, getComponentLists, extractNodes
+from Graph_util import saveGraph, getComponentLists, extractNodes
+from Util import loadPickle, getAndCheckFilename
 
 # db params
 selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
@@ -91,9 +92,7 @@ def main():
     (options, args) = parser.parse_args()
     if len(args) != 1:
         parser.error('Wrong number of arguments')
-    graphfname = args[0]
-    if not os.path.isfile(graphfname):
-        parser.error('Cannot find %s' % graphfname)
+    graphfname = getAndCheckFilename(args[0])
 
     # seed rng
     if options.seed is not None:
@@ -101,7 +100,7 @@ def main():
 
     # load graph
     print 'Loading graph from %s. . .' % graphfname
-    graph = loadGraph(graphfname)
+    graph = loadPickle(graphfname)
 
     # connect to database
     print 'Connecting to database. .'

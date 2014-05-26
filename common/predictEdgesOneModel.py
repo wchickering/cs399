@@ -11,8 +11,8 @@ import sys
 import numpy as np
 
 # local modules
-import Util as util
-import Prediction_util as pred
+from Util import loadPickle, getAndCheckFilename, loadModel
+from Prediction_util import getNeighbors, makeEdges, getPopDictionary
 from KNNSearchEngine import KNNSearchEngine
 
 def getParser(usage=None):
@@ -51,28 +51,28 @@ def main():
     if len(args) != 3:
         parser.error('Wrong number of arguments') 
 
-    model_filename = util.getAndCheckFilename(args[0])
-    graph1_filename = util.getAndCheckFilename(args[1])
-    graph2_filename = util.getAndCheckFilename(args[2])
+    model_filename = getAndCheckFilename(args[0])
+    graph1_filename = getAndCheckFilename(args[1])
+    graph2_filename = getAndCheckFilename(args[2])
 
     # load model
     print 'Loading model from %s. . .' % model_filename
-    data, dictionary = util.loadModel(model_filename)
+    data, dictionary = loadModel(model_filename)
 
     # Get popularity
     if options.popgraph:
         print 'Loading "popularity" graph from %s. . .' % options.popgraph
-        popgraph_fname = util.getAndCheckFilename(options.popgraph)
-        popgraph = util.loadPickle(popgraph_fname)
-        popDictionary = pred.getPopDictionary(popgraph)
+        popgraph_fname = getAndCheckFilename(options.popgraph)
+        popgraph = loadPickle(popgraph_fname)
+        popDictionary = getPopDictionary(popgraph)
     else:
         popDictionary = None
 
     # load graphs
     print 'Loading graph1 from %s. . .' % graph1_filename
-    graph1 = util.loadPickle(graph1_filename)
+    graph1 = loadPickle(graph1_filename)
     print 'Loading graph2 from %s. . .' % graph2_filename
-    graph2 = util.loadPickle(graph2_filename)
+    graph2 = loadPickle(graph2_filename)
 
     # partition data and dictionary
     print 'Partitioning data and directory. . . '
@@ -84,11 +84,11 @@ def main():
     searchEngine = KNNSearchEngine(data2, dictionary2)
 
     print 'Getting nearest neighbors. . .'
-    neighbors = pred.getNeighbors(data1, options.k, 
+    neighbors = getNeighbors(data1, options.k, 
             searchEngine, popDictionary=popDictionary)
 
     print 'Predicting edges. . .'
-    predicted_edges = pred.makeEdges(neighbors, dictionary1)
+    predicted_edges = makeEdges(neighbors, dictionary1)
     
     # save results
     print 'Saving results to %s. . .' % options.savefile

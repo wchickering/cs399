@@ -12,16 +12,14 @@ import sys
 import math
 import numpy as np
 
+# local modules
+from Util import loadPickle, getAndCheckFilename
+
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-k', dest='k', default=2, metavar='NUM',
         help='Distance away in original graph to consider correct')
     return parser
-
-def loadPickle(fname):
-    with open(fname, 'r') as f:
-        obj = pickle.load(f)
-    return obj
 
 def getMatrix(filename):
     npzfile = np.load(filename)
@@ -63,15 +61,9 @@ def main():
     (options, args) = parser.parse_args()
     if len(args) != 3:
         parser.error('Wrong number of arguments')
-    proximity_mat_fname = args[0]
-    predicted_edges_filename = args[1]
-    lost_edges_filename = args[2]
-    if not os.path.isfile(proximity_mat_fname):
-        parser.error('Cannot find %s' % proximity_mat_fname)
-    if not os.path.isfile(predicted_edges_filename):
-        parser.error('Cannot find %s' % predicted_edges_filename)
-    if not os.path.isfile(lost_edges_filename):
-        parser.error('Cannot find %s' % lost_edges_filename)
+    proximity_mat_fname = getAndCheckFilename(args[0])
+    predicted_edges_filename = getAndCheckFilename(args[1])
+    lost_edges_filename = getAndCheckFilename(args[2])
 
     # Load edges
     proximity_mat = getMatrix(proximity_mat_fname)

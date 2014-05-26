@@ -11,6 +11,7 @@ import sqlite3
 
 # local modules
 from Graph_util import saveGraph, getComponentLists, extractNodes
+from Util import loadPickle, getAndCheckFilename
 
 # db params
 selectRecommendsStmt =\
@@ -81,9 +82,7 @@ def main():
     (options, args) = parser.parse_args()
     if len(args) != 1:
         parser.error('Wrong number of arguments')
-    dbname = args[0]
-    if not os.path.isfile(dbname):
-        parser.error('Cannot find %s' % dbname)
+    dbname = getAndCheckFilename(args[0])
 
     print 'Connecting to %s. . .' % dbname
     db_conn = sqlite3.connect(dbname)
