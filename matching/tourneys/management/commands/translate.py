@@ -10,6 +10,7 @@ from django.core.management.base import CommandError
 from TourneysCommand import TourneysCommand
 from tourneys.models import *
 
+import pickle
 import numpy as np
 from sklearn.preprocessing import normalize
 
@@ -20,6 +21,10 @@ class Command(TourneysCommand):
     option_list = TourneysCommand.option_list + (
         make_option('--debug', dest='debug', action='store_true', 
             default=False, help='Output debugging information'
+        ),
+        make_option('--savefile', dest='savefile', 
+            default='tourney_topic_map.pickle',
+            help='Name of pickle to write topic map to.', metavar='FILE'
         ),
     )
 
@@ -75,6 +80,7 @@ class Command(TourneysCommand):
         targetleague_name = args[0]
         sourceleague_name = args[1]
         debug = options['debug']
+        savefile = options['savefile']
 
         # get targetleague
         try:
@@ -163,3 +169,4 @@ class Command(TourneysCommand):
         results = self.getAttributeMatrix(teamMapper, sourceTeamIdxs, targetTeamIdxs)
         topicMapper = results[0]
         np.savetxt(self.stdout, topicMapper)
+        pickle.dump(topicMapper, open(savefile, 'w'))
