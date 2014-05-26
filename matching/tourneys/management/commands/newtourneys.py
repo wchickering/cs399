@@ -11,7 +11,7 @@ from tourneys.models import *
 
 class Command(TourneysCommand):
     args = '[options] <targetleague sourceleague>'
-    help = ('Setup new tournaments between two leagues')
+    help = 'Setup new tournaments between two leagues'
     option_list = TourneysCommand.option_list + (
         make_option('--numplayers', type='int', dest='numplayers', default=4,
                     help='Number of players per match.'),
