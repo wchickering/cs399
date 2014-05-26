@@ -20,6 +20,19 @@ class Command(TourneysCommand):
                           'like.')),
     )
 
+    def getTournaments(self, targetleague, sourceleague):
+        for targetteam in Team.objects.filter(attribute__league=targetleague):
+            try:
+                tournament = Tournament.objects\
+                                       .filter(league=sourceleague)\
+                                       .filter(targetteam=targetteam).get()
+            except Tournament.DoesNotExist:
+                raise CommandError(
+                    ('Tournament not found for sourceleague=%s and '
+                     'targetteam=%s') % (sourceleague, targetteam)
+                )
+            yield tournament
+        
     def handle(self, *args, **options):
         # parse command line
         if len(args) != 2:
@@ -42,15 +55,7 @@ class Command(TourneysCommand):
                                sourceleague_name)
 
         # Get the tournaments
-        for targetteam in Team.objects.filter(attribute__league=targetleague):
-            try:
-                tournament = Tournament.objects\
-                                       .filter(targetteam=targetteam).get()
-            except Tournament.DoesNotExist:
-                raise CommandError(
-                    'Tournament not found for %(targetteam)s',
-                    params={'targetteam': targetteam}
-                )
+        for tournament in self.getTournaments(targetleague, sourceleague):
             self.stdout.write(
                 'DBG: Processing tournamet: %s' % tournament.name
             )
