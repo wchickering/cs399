@@ -22,17 +22,10 @@ class League(models.Model):
     ######
     def create_teams(self, teamsize):
         """Create two teams per attribute, one positive, the other negative."""
+        self.clean_teams()
         for attribute in self.attribute_set.all():
            for positive in [True, False]:
-               team_name = '%s_%s_team' %\
-                   (attribute.name, 'pos' if positive else 'neg')
-               # TODO: Change this--cascading delete here is too dangerous
-               # delete any preexisting team
-               try:
-                   team = Team.objects.get(name=team_name)
-                   team.delete() # cascading delete
-               except Team.DoesNotExist:
-                   pass
+               team_name = self.get_team_name(attribute, positive)
                # create new team object
                team = Team(name=team_name, attribute=attribute,
                            positive=positive)
@@ -44,6 +37,16 @@ class League(models.Model):
                    # create teamplayer object
                    teamplayer = TeamPlayer(team=team, player=top_pa.player)
                    team.teamplayer_set.add(teamplayer)
+    def get_team_name(self, attribute, positive):
+        """Generate a name for a new team."""
+        return '%s_%s_team' % (attribute.name, 'pos' if positive else 'neg')
+    def clean_teams(self):
+        """
+        Validate models prior to creating teams.
+        For now, simply require that no teams already exist for league.
+        """
+        if Team.objects.filter(attribute__league=self).exists():
+            raise ValidationError('Teams already exist for %s' % self)
     def create_tournaments(self, targetleague, tournamenttype, num_players,
                            num_matches):
         """Create tournaments targeting TARGETLEAGUE."""
@@ -65,7 +68,6 @@ class League(models.Model):
                 tournament.tournamentteam_set.add(tournamentteam)
             # create competitions
             tournament.create_competitions()
-
     def get_tournament_name(self, targetteam):
         """Generate a name for a new tournament."""
         return '%s_%s__%s_tourney' % (targetteam.attribute.name,
@@ -80,17 +82,15 @@ class League(models.Model):
             num_rounds = math.log(2*num_attributes)/math.log(num_players)
             if not num_rounds.is_integer():
                 raise ValidationError(
-                    ('Nonintegral number of rounds computed for league '
-                     '((league)%s). For single-elimination tournaments, number '
-                     'of attributes in league must equal (k^n)/2, where k > 2 '
-                     'is number of players per match and n > 2 is the number '
-                     'of rounds in the tournament.'),
-                    params={'league': self}
+                    ('Nonintegral number of rounds computed for %s. For '
+                     'single-elimination tournaments, number of attributes in '
+                     'league must equal (k^n)/2, where k > 2 is number of '
+                     'players per match and n > 2 is the number of rounds in '
+                     'the tournament.') % self
                 )
         else:
             raise ValidationError(
-                'Unsupported tournament type: (%(ttype)s)',
-                params={'ttype': tournamenttype}
+                'Unsupported tournament type: %s' % tournamenttype
             )
         # verify tournaments don't already exist
         for targetteam in Team.objects\
@@ -99,8 +99,7 @@ class League(models.Model):
             try:
                 tournament = Tournament.objects.get(name=tournament_name)
                 raise ValidationError(
-                    'Tournament ((tournament)%s) already exists.',
-                    params={'tournament': tournament}
+                    'Tournament `%s` already exists.' % tournament
                 )
             except Tournament.DoesNotExist:
                 pass
@@ -156,10 +155,10 @@ class PlayerAttribute(models.Model):
     def clean(self):
         if self.player.league != self.attribute.league:
             raise ValidationError(
-                ('Player League (%(playerleague)s) not equal to Attribute '
-                 'League (%(attributeleague)s)'),
-                params={'playerleague': self.player.league,
-                        'attributeleague': self.attribute.league}
+                'Player League `%s` not equal to Attribute League `%s`' % (
+                    self.player.league,
+                    self.attribute.league
+                )
             )
 
 # an attribute (i.e. concept) in the context of tournaments
@@ -199,10 +198,10 @@ class TeamPlayer(models.Model):
     def clean(self):
         if self.team.attribute.league != self.player.league:
             raise ValidationError(
-                ('Team League (%(teamleague)s) not equal to Player '
-                 'League (%(playerleague)s)'),
-                params={'teamleague': self.team.attribute.league,
-                        'playerleague': self.player.league}
+                'Team League `%s` not equal to Player League `%s`' % (
+                    self.team.attribute.league,
+                    self.player.league
+                )
             )
 
 class TournamentType(models.Model):
@@ -243,15 +242,13 @@ class Tournament(models.Model):
         """Create initial competitions for tournament."""
         if self.round != 1:
             raise ValidationError(
-                ('Call to crate initial competitions for tournament '
-                 '(%(tournament)s) with round != 1'),
-                params={'tournament': self}
+                ('Call to crate initial competitions for tournament `%s` with '
+                 'round != 1') % self
             )
         if self.competition_set.exists():
             raise ValidationError(
-                ('Duplicate call to create initial competitions for '
-                 'tournament (%(tournament)s)'),
-                params={'tournament': self}
+                ('Duplicate call to create initial competitions for tournament '
+                 '`%s`') % self
             )
         # randomize teams
         tournamentteams = list(self.tournamentteam_set.all())
@@ -273,8 +270,7 @@ class Tournament(models.Model):
                 competition.create_matches()
         else:
             raise ValidationError(
-                'Unsupported tournament type: (%(ttype)s)',
-                params={'ttype': self.ttype}
+                'Unsupported tournament type: `%s`' % self.ttype
             )
     def advance(self):
         """Advance to next round, creating new competitions, etc.."""
@@ -310,8 +306,7 @@ class Tournament(models.Model):
             self.save()
         else:
             raise ValidationError(
-                'Unsupported tournament type: (%(ttype)s)',
-                params={'ttype': self.ttype}
+                'Unsupported tournament type: `%s`' % self.ttype
             )
     #####
     # validation
@@ -323,9 +318,9 @@ class Tournament(models.Model):
         # which we match attributes against themselves
         if self.league == self.targetteam.attribute.league:
             raise ValidationError(
-                ('Source League (%(league)s) is equal to Target Team '
-                 'League'),
-                params={'league': self.league}
+                'Source League `%s` is equal to Target Team League' % (
+                    self.league,
+                )
             )
 
 # a team (i.e. concept) in the context of a tournament
@@ -340,10 +335,10 @@ class TournamentTeam(models.Model):
     def clean(self):
         if self.tournament.league != self.team.attribute.league:
             raise ValidationError(
-                ('Tournament League (%(tournamentleague)s) not equal to '
-                 'Team League (%(teamleague)s)'),
-                params={'tournamentleague': self.tournament.league,
-                        'teamleague': self.team.attribute.league}
+                'Tournament League `%s` not equal to Team League `%s`' % (
+                    self.tournament.league,
+                    self.team.attribute.league
+                )
             )
 
 # a competition between multiple source concepts to match a target concept
@@ -442,17 +437,19 @@ class Competition(models.Model):
         if self.next_competition is not None:
             if self.next_competition.tournament != self.tournament:
                 raise ValidationError(
-                    ('Next competition tournament (%(nexttournary)s) not equal '
-                     'to this competition tournament (%(thistourney)s)'),
-                    params={'nexttourney': self.next_competition.tournament,
-                            'thistourney': self.tournament}
+                    ('Next competition tournament `%s` not equal to this '
+                     'competition tournament `%s`') % (
+                        self.next_competition.tournament,
+                        self.tournament
+                    )
                 )
             if self.next_competition.round != self.round + 1:
                 raise ValidationError(
-                    ('Next competition round (%(nextround)u) not equal to '
-                     'this competition round (%(thisround)u) plus one'),
-                    params={'nextround': self.next_competition.round,
-                            'thisround': self.round}
+                    ('Next competition round %u not equal to this competition '
+                     'round %u plus one') % (
+                        self.next_competition.round,
+                        self.round
+                    )
                 )
         if self.finished:
             if self.competitionteam_set.count() != self.tournament.num_players:
@@ -481,9 +478,10 @@ class CompetitionTeam(models.Model):
         if not self.competition.tournament.tournamentteam_set\
                                           .filter(team=self.team).exists():
             raise ValidationError(
-                'Team (%(team)s) not in Tournament (%(tournament)s)',
-                params={'team': self.team,
-                        'tournament': self.competition.tournament}
+                'Team `%s` not in Tournament `%s`' % (
+                    self.team,
+                    self.competition.tournament
+                )
             )
 
 # analogous to a task in MTurk
@@ -522,12 +520,10 @@ class Match(models.Model):
     def clean(self):
         if self.competition.tournament.targetteam != self.teamplayer.team:
             raise ValidationError(
-                ('Competition Team (%(competitionteam)s) not equal to '
-                 'TeamPlayer Team (%(playerteam)s)'),
-                params={
-                    'competitionteam': self.competition.tournament.targetteam,
-                    'playerteam': self.teamplayer.team
-                }
+                'Competition Team `%s` not equal to TeamPlayer Team `%s`' % (
+                    self.competition.tournament.targetteam,
+                    self.teamplayer.team
+                )
             )
         if self.finished:
             if self.competitor_set.count() !=\
@@ -564,16 +560,18 @@ class Competitor(models.Model):
     def clean(self):
         if self.match.competition != self.competitionteam.competition:
             raise ValidationError(
-                ('Match Competition (%(matchcompetition)s) not equal to '
-                 'CompetitionTeam Competition (%(teamcompetition)s)'),
-                params={'matchcompetition': self.match.competition,
-                        'teamcompetition': self.competitionteam.competition}
+                ('Match Competition `%s` not equal to CompetitionTeam '
+                 'Competition `%s`') % (
+                    self.match.competition,
+                    self.competitionteam.competition
+                )
             )
         if self.teamplayer.team != self.competitionteam.team:
             raise ValidationError(
-                ('TeamPlayer Team (%(playerteam)s) not equal to '
-                 'CompetitionTeam Team (%(teamteam)s)'),
-                params={'playerteam': self.teamplayer.team,
-                        'teamteam': self.competitionteam.team}
+                ('TeamPlayer Team `%s` not equal to CompetitionTeam Team '
+                 '`%s`') % (
+                    self.teamplayer.team,
+                    self.competitionteam.team
+                )
             )
     

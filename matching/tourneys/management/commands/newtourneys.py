@@ -19,8 +19,15 @@ class Command(TourneysCommand):
                     help='Number of matches per competition.'),
     )
 
-    def createTournaments(self, targetleague_name, sourceleague_name,
-                          num_players, num_matches):
+    def handle(self, *args, **options):
+        # parse command line
+        if len(args) != 2:
+            raise CommandError('Must provide targetleague and sourceleague')
+        targetleague_name = args[0]
+        sourceleague_name = args[1]
+        num_players = options['numplayers']
+        num_matches = options['nummatches']
+
         # get targetleague
         try:
             targetleague = League.objects.get(name=targetleague_name)
@@ -33,20 +40,13 @@ class Command(TourneysCommand):
         except League.DoesNotExist:
             raise CommandError('Cannot find sourceleague: %s' %\
                                sourceleague_name)
+
         # for now, all tournaments are single-elimination
         tournamenttype = TournamentType.objects.get(name='single-elimination')
-        sourceleague.create_tournaments(targetleague, tournamenttype,
-                                        num_players, num_matches)
-
-    def handle(self, *args, **options):
-        # parse command line
-        if len(args) != 2:
-            raise CommandError('Must provide targetleague and sourceleague')
-        targetleague_name = args[0]
-        sourceleague_name = args[1]
-        num_players = options['numplayers']
-        num_matches = options['nummatches']
 
         # create new tournaments
-        self.createTournaments(targetleague_name, sourceleague_name,
-                               num_players, num_matches)
+        try:
+            sourceleague.create_tournaments(targetleague, tournamenttype,
+                                            num_players, num_matches)
+        except ValidationError as e:
+            raise CommandError(e.message)

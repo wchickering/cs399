@@ -11,11 +11,6 @@ class Command(TourneysCommand):
     args = '[options] <targetleague sourceleague>'
     help = 'Delete tournaments between two leagues'
 
-    def getTournamentName(self, targetteam, sourceleague):
-        return '%s_%s__%s_tourney' % (targetteam.attribute.name,
-                                      'pos' if targetteam.positive else 'neg',
-                                      sourceleague.name)
-
     def handle(self, *args, **options):
         # parse commandline
         if len(args) != 2:
@@ -40,12 +35,8 @@ class Command(TourneysCommand):
             )
 
         # retrieve and delete tournament objects
-        for targetteam in\
-            Team.objects.filter(attribute__in=targetleague.attribute_set.all()):
-            name = self.getTournamentName(targetteam, sourceleague)
-            try:
-                tournament = Tournament.objects.get(name=name)
-                self.stdout.write('Deleting `%s`' % tournament.name)
-                tournament.delete()
-            except Tournament.DoesNotExist:
-                self.stderr.write('Tournament `%s` does not exist' % name)
+        for tournament in\
+            sourceleague.tournament_set\
+                        .filter(targetteam__attribute__league=targetleague):
+            self.stdout.write('Deleting `%s`' % tournament.name)
+            tournament.delete()

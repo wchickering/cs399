@@ -32,5 +32,8 @@ class Command(TourneysCommand):
         # form teams
         for league in leagues:
             self.stdout.write('Forming teams for %s. . .' % league.name)
-            league.create_teams(teamsize)
+            try:
+                league.create_teams(teamsize)
+            except ValidationError as e:
+                raise CommandError(e.message)
 
