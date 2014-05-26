@@ -29,6 +29,7 @@ while test $# -gt 0; do
             echo "                          traversal"
             echo "--lda                     Use lda instead of lsi for latent"
             echo "                          space"
+            echo "--no-partition-by-brand   Do not partition graph by brand"
             echo "--zero-mean               Subtract mean before lsi"
             echo "--min-component-size=NUM  Specifiy minimum component size"
             echo "                          allowed in graph"
@@ -102,6 +103,10 @@ while test $# -gt 0; do
             export MODEL_TYPE="lda"
             shift
             ;;
+        --no-partition-by-brand)
+            export PARTITION_BY_BRAND_FLAG=0
+            shift
+            ;;
         --zero-mean)
             export PCA="--pca"
             shift
@@ -156,6 +161,12 @@ fi
 
 if [[ -z "$MODEL_TYPE" ]]; then
     MODEL_TYPE="lsi"
+fi
+
+if [[ -z "$PARTITION_BY_BRAND_FLAG" ]]; then
+    PARTITION_BY_BRAND='--partition-by-brand'
+else
+    PARTITION_BY_BRAND=''
 fi
 
 if [[ -z "$MIN_COMPONENT_SIZE" ]]; then
@@ -247,7 +258,8 @@ fi
 # Partition graph
 if [ $START_STAGE -le 3 -a $END_STAGE -ge 3 ]; then
     echo "=== 3. Partition category graph ==="
-    python $SRC/partitionGraph.py $SEED_OPT --graph1=$GRAPH1 --graph2=$GRAPH2\
+    python $SRC/partitionGraph.py $SEED_OPT $PARTITION_BY_BRAND\
+        --graph1=$GRAPH1 --graph2=$GRAPH2\
         --min-component-size=$MIN_COMPONENT_SIZE --lost_edges=$LOST_EDGES $GRAPH
 echo
 fi

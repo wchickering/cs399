@@ -35,6 +35,9 @@ def getParser(usage=None):
     parser.add_option('--lost_edges', dest='lostedgesfilename',
         default='lostEdges.pickle', help='Name of lost edges pickle.',
         metavar='FILE')
+    parser.add_option('--partition-by-brand', action='store_true',
+        dest='partitionByBrand', default=False,
+        help='Partition graph by brand name (i.e. first term in description).')
     parser.add_option('--min-component-size', type='int',
         dest='minComponentSize', default=10, help='Minimum component size.',
         metavar='NUM')
@@ -42,7 +45,7 @@ def getParser(usage=None):
         help='Seed for random number generator.', metavar='NUM')
     return parser
 
-def partitionNodesByBrand(db_conn, graph):
+def partitionNodes(db_conn, graph, partitionByBrand=False):
     db_curs = db_conn.cursor()
     itemMap = {}
     brandMap = {}
@@ -52,11 +55,15 @@ def partitionNodesByBrand(db_conn, graph):
         description = ''.join(ch for ch in description\
                               if ch not in string.punctuation)
         words = [stem(w.lower()) for w in description.split()]
-        brand = words[0]
-        if brand not in brandMap:
-            brandMap[brand] = random.choice([1,2])
-        itemMap[item] = brandMap[brand]
-    print 'Number of brands = %d' % len(brandMap)
+        if partitionByBrand:
+            brand = words[0]
+            if brand not in brandMap:
+                brandMap[brand] = random.choice([1,2])
+            itemMap[item] = brandMap[brand]
+        else:
+            itemMap[item] = random.choice([1,2])
+    if partitionByBrand:
+        print 'Number of brands = %d' % len(brandMap)
     return itemMap
 
 def buildGraphs(itemMap, graph):
@@ -108,7 +115,8 @@ def main():
 
     # partition graph
     print 'Partitioning graph. . .'
-    itemMap = partitionNodesByBrand(db_conn, graph)
+    itemMap = partitionNodes(db_conn, graph,
+                             partitionByBrand=options.partitionByBrand)
     graph1, graph2, lost_edges = buildGraphs(itemMap, graph)
 
     # Remove any components below minComponentSize
