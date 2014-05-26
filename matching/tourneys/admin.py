@@ -268,7 +268,7 @@ admin.site.register(Competition, CompetitionAdmin)
 
 ### Match ###
 
-class CompetitorInline(admin.TabularInline):
+class CompetitorInline(admin.StackedInline):
     model = Competitor
     extra = 0
     readonly_fields = ('admin_image_tag',)
