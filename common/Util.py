@@ -29,7 +29,7 @@ def loadModel(filename):
 
 def getAndCheckFilename(fname):
     if not os.path.isfile(fname):
-        parser.error('Cannot find %s' % fname)
+        print >> sys.stderr, 'Cannot find %s' % fname
     return fname
 
 def getStopwords(fname):
