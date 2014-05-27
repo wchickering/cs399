@@ -176,12 +176,6 @@ fi
 
 if [[ -z "$PARTITION_BY_BRAND_FLAG" ]]; then
     PARTITION_BY_BRAND='--partition-by-brand'
-else
-    PARTITION_BY_BRAND=''
-fi
-
-if [[ -z "$BRAND_ONLY" ]]; then
-    BRAND_ONLY=''
 fi
 
 if [[ -z "$MIN_COMPONENT_SIZE" ]]; then
@@ -257,38 +251,45 @@ fi
 # Construct recomendation graph from DB
 if [ $START_STAGE -le 1 -a $END_STAGE -ge 1 ]; then
     echo "=== 1. Build directed recommender graph for category from DB ==="
-    python $SRC/buildRecGraph.py $DIRECTED\
+    CMD="python $SRC/buildRecGraph.py $DIRECTED\
         --min-component-size=$MIN_COMPONENT_SIZE --savefile=$GRAPH\
-        --parent-category=$PARENTCAT --category=$CAT $DB
+        --parent-category=$PARENTCAT --category=$CAT $DB"
+    echo $CMD; eval $CMD
 echo
 fi
 
 # Construct proximity matrix for k-precision/recall evaluation
 if [ $START_STAGE -le 2 -a $END_STAGE -ge 2 ]; then
     echo "=== 2. Build proximity matrix from graph ==="
-    python $SRC/buildWalkMatrix.py $SEED_OPT --type=proximity\
-        --savefile=$PROX_MAT $GRAPH
+    CMD="python $SRC/buildWalkMatrix.py $SEED_OPT --type=proximity\
+        --savefile=$PROX_MAT $GRAPH"
+    echo $CMD; eval $CMD
 echo
 fi
 
 # Partition graph
 if [ $START_STAGE -le 3 -a $END_STAGE -ge 3 ]; then
     echo "=== 3. Partition category graph ==="
-    python $SRC/partitionGraph.py $SEED_OPT $PARTITION_BY_BRAND\
+    CMD="python $SRC/partitionGraph.py $SEED_OPT $PARTITION_BY_BRAND\
         --graph1=$GRAPH1 --graph2=$GRAPH2\
-        --min-component-size=$MIN_COMPONENT_SIZE --lost_edges=$LOST_EDGES $GRAPH
+        --min-component-size=$MIN_COMPONENT_SIZE --lost_edges=$LOST_EDGES\
+        $GRAPH"
+    echo $CMD; eval $CMD
 echo
 fi
 
 # Random walk
 if [ $START_STAGE -le 4 -a $END_STAGE -ge 4 ]; then
     echo "=== 4. Randomly walk each graph ==="
-    python $SRC/buildWalkMatrix.py --home=0.05 --steps=50 --savefile=$RWALK\
-        $REMOVE_POP $GRAPH
-    python $SRC/buildWalkMatrix.py --home=0.05 --steps=50 --savefile=$RWALK1\
-        $REMOVE_POP $GRAPH1
-    python $SRC/buildWalkMatrix.py --home=0.05 --steps=50 --savefile=$RWALK2\
-        $REMOVE_POP $GRAPH2
+    CMD="python $SRC/buildWalkMatrix.py --home=0.05 --steps=50\
+        --savefile=$RWALK $REMOVE_POP $GRAPH"
+    echo $CMD; eval $CMD
+    CMD="python $SRC/buildWalkMatrix.py --home=0.05 --steps=50\
+        --savefile=$RWALK1 $REMOVE_POP $GRAPH1"
+    echo $CMD; eval $CMD
+    CMD="python $SRC/buildWalkMatrix.py --home=0.05 --steps=50\
+        --savefile=$RWALK2 $REMOVE_POP $GRAPH2"
+    echo $CMD; eval $CMD
 echo
 fi
 
@@ -296,46 +297,58 @@ fi
 if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
     echo "=== 5. Train $MODEL_TYPE model for each graph ==="
     if [ "$MODEL_TYPE" = "lda" ]; then
-        python $SRC/buildLDAModel.py --num-topics=$NUM_TOPICS\
-            --matrixfile=$RWALK --lda-file=$MODEL
-        python $SRC/buildLDAModel.py --num-topics=$NUM_TOPICS\
-            --matrixfile=$RWALK1 --lda-file=$MODEL1
-        python $SRC/buildLDAModel.py --num-topics=$NUM_TOPICS\
-            --matrixfile=$RWALK2 --lda-file=$MODEL2
+        CMD="python $SRC/buildLDAModel.py --num-topics=$NUM_TOPICS\
+            --matrixfile=$RWALK --lda-file=$MODEL"
+        echo $CMD; eval $CMD
+        CMD="python $SRC/buildLDAModel.py --num-topics=$NUM_TOPICS\
+            --matrixfile=$RWALK1 --lda-file=$MODEL1"
+        echo $CMD; eval $CMD
+        CMD="python $SRC/buildLDAModel.py --num-topics=$NUM_TOPICS\
+            --matrixfile=$RWALK2 --lda-file=$MODEL2"
+        echo $CMD; eval $CMD
     else
-        python $SRC/svd.py -k $NUM_TOPICS $PCA --savefile=$MODEL $RWALK
-        python $SRC/svd.py -k $NUM_TOPICS $PCA --savefile=$MODEL1 $RWALK1
-        python $SRC/svd.py -k $NUM_TOPICS $PCA --savefile=$MODEL2 $RWALK2
+        CMD="python $SRC/svd.py -k $NUM_TOPICS $PCA --savefile=$MODEL $RWALK"
+        echo $CMD; eval $CMD
+        CMD="python $SRC/svd.py -k $NUM_TOPICS $PCA --savefile=$MODEL1 $RWALK1"
+        echo $CMD; eval $CMD
+        CMD="python $SRC/svd.py -k $NUM_TOPICS $PCA --savefile=$MODEL2 $RWALK2"
+        echo $CMD; eval $CMD
     fi
 echo
 fi
 
 # Use tourney map if given
 if [[ "$TOURNEY_MAPPER" ]]; then
+    echo "=== 6-8. Using provided topic map ==="
     MAP=$TOURNEY_MAPPER
 else
     # Get idfs for category
     if [ $START_STAGE -le 6 -a $END_STAGE -ge 6 ]; then
         echo "=== 6. Calculate idfs for category ==="
-        python $SRC/idfsByCategory.py $BRAND_ONLY --savefile=$IDFS $PARENTCAT $CAT
+        CMD="python $SRC/idfsByCategory.py $BRAND_ONLY --savefile=$IDFS\
+            $PARENTCAT $CAT"
+        echo $CMD; eval $CMD
     echo
     fi
     
     # Get tfidfs for each graph
     if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
         echo "=== 7. Calculate tfidfs for each graph ==="
-        python $SRC/topicWords.py $BRAND_ONLY --database=$DB --idfname=$IDFS\
-            --savefile=$TFIDF1 $MODEL1
-        python $SRC/topicWords.py $BRAND_ONLY --database=$DB --idfname=$IDFS\
-            --savefile=$TFIDF2 $MODEL2
+        CMD="python $SRC/topicWords.py $BRAND_ONLY --database=$DB\
+            --idfname=$IDFS --savefile=$TFIDF1 $MODEL1"
+        echo $CMD; eval $CMD
+        CMD="python $SRC/topicWords.py $BRAND_ONLY --database=$DB\
+            --idfname=$IDFS --savefile=$TFIDF2 $MODEL2"
+        echo $CMD; eval $CMD
     echo
     fi
     
     # Map tfidf topic spaces
     if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
         echo "=== 8. Construct topic map from graph1 to graph2 ==="
-        python $SRC/mapTopics.py -v --max_connections $MAX_CONN --savefile=$MAP\
-            $TFIDF1 $TFIDF2
+        CMD="python $SRC/mapTopics.py -v --max_connections $MAX_CONN\
+            --savefile=$MAP $TFIDF1 $TFIDF2"
+        echo $CMD; eval $CMD
     echo
     fi
 fi
@@ -345,23 +358,29 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     echo "=== 9. Predict edges ==="
     if [ "$POPULARITY" = "true" ]; then
         echo "Building directed popularity graph"
-        python $SRC/buildRecGraph.py $DIRECTED --savefile=$POP_GRAPH\
+        CMD="python $SRC/buildRecGraph.py $DIRECTED --savefile=$POP_GRAPH\
             --min-component-size=0 \
-            --parent-category=$PARENTCAT --category=$CAT $DB
+            --parent-category=$PARENTCAT --category=$CAT $DB"
+        echo $CMD; eval $CMD
         POP="--popgraph=$POP_GRAPH"
     fi
     echo "Predicting randomly. . ."
-    python $SRC/predictEdgesRandomly.py $SEED_OPT --savefile=$PREDICTED_RAND\
-        $GRAPH1 $GRAPH2
+    CMD="python $SRC/predictEdgesRandomly.py $SEED_OPT\
+        --savefile=$PREDICTED_RAND $GRAPH1 $GRAPH2"
+    echo $CMD; eval $CMD
     echo "Predicting using item-item tfidf. . ."
-    python $SRC/predictEdgesTfidf.py $BRAND_ONLY --savefile=$PREDICTED_TFIDF\
-        --database=$DB --idfname=$IDFS $POP $GRAPH1 $GRAPH2
+    CMD="python $SRC/predictEdgesTfidf.py $BRAND_ONLY\
+        --savefile=$PREDICTED_TFIDF --database=$DB --idfname=$IDFS $POP $GRAPH1\
+        $GRAPH2"
+    echo $CMD; eval $CMD
     echo "Predicting using one model. . ."
-    python $SRC/predictEdgesOneModel.py --savefile=$PREDICTED_ONE $POP $MODEL\
-        $GRAPH1 $GRAPH2
+    CMD="python $SRC/predictEdgesOneModel.py --savefile=$PREDICTED_ONE $POP\
+        $MODEL $GRAPH1 $GRAPH2"
+    echo $CMD; eval $CMD
     echo "Predicting with mapping between models. . ."
-    python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $POP $MAP $MODEL1\
-        $MODEL2
+    CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES $POP $MAP\
+        $MODEL1 $MODEL2"
+    echo $CMD; eval $CMD
 echo
 fi
 
@@ -370,18 +389,22 @@ if [ $START_STAGE -le 10 -a $END_STAGE -ge 10 ]; then
     echo "=== 10. Evaluate predictions ==="
     echo
     echo "  RANDOM PREDICTIONS "
-    python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_RAND\
-        $LOST_EDGES
+    CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_RAND\
+        $LOST_EDGES"
+    echo $CMD; eval $CMD
     echo
     echo "  TFIDF PREDICTIONS "
-    python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_TFIDF\
-        $LOST_EDGES
+    CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT\
+        $PREDICTED_TFIDF $LOST_EDGES"
+    echo $CMD; eval $CMD
     echo
     echo "  ONE MODEL PREDICTIONS "
-    python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_ONE\
-        $LOST_EDGES
+    CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_ONE\
+        $LOST_EDGES"
+    echo $CMD; eval $CMD
     echo
     echo "  MAPPING MODEL PREDICTIONS "
-    python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_EDGES\
-        $LOST_EDGES
+    CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT\
+        $PREDICTED_EDGES $LOST_EDGES"
+    echo $CMD; eval $CMD
 fi
