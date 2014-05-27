@@ -210,32 +210,33 @@ fi
 # Setup environment
 SRC=../common
 DATA=data
-EXPMT=${MODEL_TYPE}_${NUM_TOPICS}_${CAT}
+SEED_EXT=Seed${SEED}
+EXPMT=${MODEL_TYPE}_${NUM_TOPICS}_${CAT}_$SEED_EXT
 DB=$DATA/macys.db
 PROX_MAT=$DATA/proxMat${CAT}.npz
 GRAPH_BASE=$DATA/graph${CAT}
 GRAPH=${GRAPH_BASE}.pickle
-GRAPH1=${GRAPH_BASE}1.pickle
-GRAPH2=${GRAPH_BASE}2.pickle
+GRAPH1=${GRAPH_BASE}${SEED_EXT}1.pickle
+GRAPH2=${GRAPH_BASE}${SEED_EXT}2.pickle
 POP_GRAPH=${GRAPH_BASE}Pop.pickle
-LOST_EDGES=$DATA/lostEdges${CAT}.pickle
+LOST_EDGES=$DATA/lostEdges${CAT}${SEED_EXT}.pickle
 RWALK_BASE=$DATA/randomWalk${CAT}
 RWALK=${RWALK_BASE}.npz
-RWALK1=${RWALK_BASE}1.npz
-RWALK2=${RWALK_BASE}2.npz
+RWALK1=${RWALK_BASE}${SEED_EXT}1.npz
+RWALK2=${RWALK_BASE}${SEED_EXT}2.npz
 LDA_BASE=$DATA/$EXPMT
 LDA=${LDA_BASE}.pickle
-LDA1=${LDA_BASE}1.pickle
-LDA2=${LDA_BASE}2.pickle
+LDA1=${LDA_BASE}${SEED_EXT}1.pickle
+LDA2=${LDA_BASE}${SEED_EXT}2.pickle
 LSI_BASE=$DATA/$EXPMT
 LSI=${LSI_BASE}.npz
-LSI1=${LSI_BASE}1.npz
-LSI2=${LSI_BASE}2.npz
+LSI1=${LSI_BASE}${SEED_EXT}1.npz
+LSI2=${LSI_BASE}${SEED_EXT}2.npz
 IDFS=$DATA/idfs${CAT}.pickle
 TFIDF_BASE=$DATA/tfidf_${EXPMT}
 TFIDF=${TFIDF_BASE}.pickle
-TFIDF1=${TFIDF_BASE}1.pickle
-TFIDF2=${TFIDF_BASE}2.pickle
+TFIDF1=${TFIDF_BASE}${SEED_EXT}1.pickle
+TFIDF2=${TFIDF_BASE}${SEED_EXT}2.pickle
 MAP=$DATA/topicMap_${EXPMT}.pickle
 PREDICTED_RAND=$DATA/predictedEdgesRand_${EXPMT}.pickle
 PREDICTED_TFIDF=$DATA/predictedEdgesTfidf_${EXPMT}.pickle
@@ -333,7 +334,7 @@ else
     # Map tfidf topic spaces
     if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
         echo "=== 8. Construct topic map from graph1 to graph2 ==="
-        python $SRC/mapTopics.py --max_connections $MAX_CONN --savefile=$MAP\
+        python $SRC/mapTopics.py -v --max_connections $MAX_CONN --savefile=$MAP\
             $TFIDF1 $TFIDF2
     echo
     fi
