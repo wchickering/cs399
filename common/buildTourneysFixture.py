@@ -23,6 +23,8 @@ selectProductStmt =\
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
+    parser.add_option('--domain', dest='domain', default=None,
+        help='URL domain name (e.g. www1.macys.com).')
     parser.add_option('--prefix', dest='prefix', default=None,
         help='Prefix (e.g. category name) to prepend to league name.')
     return parser
@@ -53,7 +55,8 @@ def genRecord(pk, model, **kwargs):
     record['fields'] = kwargs
     return record
 
-def genData(mediadir, item_lists, db_conn, matrices, dictionaries, prefix=None):
+def genData(mediadir, item_lists, db_conn, matrices, dictionaries,
+            domain=None, prefix=None):
     db_curs = db_conn.cursor()
     # initialize PKs
     league_id = 0
@@ -88,14 +91,18 @@ def genData(mediadir, item_lists, db_conn, matrices, dictionaries, prefix=None):
             if not row:
                 print >> sys.stderr, 'WARNING: %d not found in db' % item_id
                 continue
-            url = row[0]
+            if domain is not None:
+                url = domain + row[0]
+            else:
+                url = row[0]
             description = row[1]
             # generate player record
             player_id += 1
             image = os.path.join(mediadir, '%s.jpg' % item_id)
             data.append(genRecord(player_id, 'tourneys.player',
                                   league=league_id, code=item_id,
-                                  description=description, image=image))
+                                  url=url, description=description,
+                                  image=image))
             for attribute in range(matrix.shape[0]):
                 # generate playerattribute record
                 playerattribute_id += 1
@@ -137,7 +144,7 @@ def main():
     # generate data
     print >> sys.stderr, 'Generating data. . .'
     data = genData(mediadir, item_lists, db_conn, matrices, dictionaries,
-                   prefix=options.prefix)
+                   domain=options.domain, prefix=options.prefix)
 
     # dump data
     print >> sys.stderr, 'Dumping data. . .'

@@ -10,7 +10,7 @@
       <tr>
         <td>
           <table>
-            <tr><td> {{ match.teamplayer.image_tag|safe }} </td></tr>
+            <tr><td> {{ match.teamplayer.admin_image_tag|safe }} </td></tr>
             <tr><td><p>{{ match.teamplayer.player.description }}</p></td></tr>
           </table>
         <td>
@@ -22,7 +22,7 @@
             <tr>
               <td>
                 <table>
-                  <tr><td>{{ competitor.image_tag|safe  }}</td></tr>
+                  <tr><td>{{ competitor.admin_image_tag|safe  }}</td></tr>
                   <tr><td>
                     <p>{{ competitor.teamplayer.player.description }}</p>
                   </td></tr>

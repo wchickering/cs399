@@ -94,12 +94,14 @@ class PlayerAdmin(admin.ModelAdmin):
     fieldsets = [
         ('',                {'fields': ['league']}),
         ('',                {'fields': ['code']}),
+        ('URL',             {'fields': ['url', 'url_tag']}),
         ('',                {'fields': ['description']}),
         ('',                {'fields': ['image', 'admin_image_tag']}),
     ]
-    readonly_fields = ('admin_image_tag',)
+    readonly_fields = ('url_tag', 'admin_image_tag',)
     inlines = [PlayerAttributeInline]
-    list_display = ('league', 'code', 'description', 'admin_image_tag')
+    list_display = ('league', 'code', 'url_tag', 'description',
+                    'admin_image_tag')
     list_display_links = ('description',)
     list_filter = ['league']
     search_fields = ['code', 'description']

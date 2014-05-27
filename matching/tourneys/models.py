@@ -118,12 +118,17 @@ class Attribute(models.Model):
 class Player(models.Model):
     league = models.ForeignKey(League)
     code = models.CharField(max_length=100)
+    url = models.CharField(max_length=200, verbose_name='URL')
     description = models.TextField()
     def image_path(instance, filename):
        return os.path.join(instance.league.mediadir, filename)
     image = models.ImageField(upload_to=image_path)
     def __unicode__(self):
         return self.description
+    def url_tag(self):
+        return '<a href="http://%s">Web Link</a>' % self.url
+    url_tag.short_description = 'URL'
+    url_tag.allow_tags = True
     def image_tag(self):
         return '<img src="%s"/>' % self.image.url
     image_tag.short_description = 'Image'
