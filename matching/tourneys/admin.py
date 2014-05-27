@@ -178,17 +178,19 @@ class TournamentAdmin(admin.ModelAdmin):
         ('Target',          {'fields': ['targetleague',
                                         'targetattribute',
                                         'targetteam']}),
-        ('Parameters',      {'fields': ['num_players',
+        ('Parameters',      {'fields': ['num_targets',
+                                        'num_players',
                                         'num_matches']}),
         ('State',           {'fields': ['round',
                                         'finished']}),
     ]
     readonly_fields = ('targetattribute', 'targetleague')
     inlines = [TournamentTeamInline, CompetitionInline]
-    list_display = ('league', 'ttype', 'name', 'targetteam', 'num_players',
-                    'num_matches', 'round', 'finished')
+    list_display = ('league', 'ttype', 'name', 'targetteam', 'num_targets',
+                    'num_players', 'num_matches', 'round', 'finished')
     list_display_links = ('name',)
-    list_filter = ['league', 'ttype', 'num_players', 'num_matches', 'finished']
+    list_filter = ['league', 'ttype', 'num_targets', 'num_players',
+                   'num_matches', 'finished']
     search_fields = ['league__name', 'name', 'targetteam__name']
     # solution to FK filtering problem
     def change_view(self, request, object_id, extra_context=None):
@@ -225,7 +227,6 @@ class CompetitionTeamInline(LinkedInline):
 class MatchInline(LinkedInline):
     model = Match
     extra = 0
-    readonly_fields = ('admin_image_tag',) + LinkedInline.readonly_fields
 
 class CompetitionAdmin(admin.ModelAdmin):
     fieldsets = [
@@ -270,6 +271,11 @@ admin.site.register(Competition, CompetitionAdmin)
 
 ### Match ###
 
+class TargetPlayerInline(admin.StackedInline):
+    model = TargetPlayer
+    extra = 0
+    readonly_fields = ('admin_image_tag',)
+
 class CompetitorInline(admin.StackedInline):
     model = Competitor
     extra = 0
@@ -278,14 +284,10 @@ class CompetitorInline(admin.StackedInline):
 class MatchAdmin(admin.ModelAdmin):
     fieldsets = [
         ('',                {'fields': ['competition']}),
-        ('',                {'fields': ['teamplayer']}),
-        ('',                {'fields': ['admin_image_tag']}),
         ('',                {'fields': ['finished']}),
     ]
-    readonly_fields = ('admin_image_tag',)
-    inlines = [CompetitorInline]
-    list_display = ('competition', 'teamplayer', 'admin_image_tag', 'finished')
-    list_display_links = ('teamplayer',)
+    inlines = [TargetPlayerInline, CompetitorInline]
+    list_display = ('competition', 'finished')
     search_fields = ['competition__tournament__name', 'teamplayer__team__name',
                      'teamplayer__player__description']
     # solution to FK filtering problem

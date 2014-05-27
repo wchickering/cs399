@@ -47,8 +47,8 @@ class League(models.Model):
         """
         if Team.objects.filter(attribute__league=self).exists():
             raise ValidationError('Teams already exist for %s' % self)
-    def create_tournaments(self, targetleague, tournamenttype, num_players,
-                           num_matches):
+    def create_tournaments(self, targetleague, tournamenttype, num_targets,
+                           num_players, num_matches):
         """Create tournaments targeting TARGETLEAGUE."""
         self.clean_tournaments(targetleague, tournamenttype, num_players,
                                num_matches)
@@ -57,8 +57,9 @@ class League(models.Model):
             name = self.get_tournament_name(targetteam)
             tournament = Tournament(
                 name=name, ttype=tournamenttype, league=self,
-                targetteam=targetteam, num_players=num_players,
-                num_matches=num_matches, round=1, finished=False
+                targetteam=targetteam, num_targets=num_targets,
+                num_players=num_players, num_matches=num_matches, round=1,
+                finished=False
             )
             self.tournament_set.add(tournament)
             # create tournament teams
@@ -226,6 +227,7 @@ class Tournament(models.Model):
     # target team being matched to
     targetteam = models.ForeignKey(Team, related_name='targetteam',
                                    verbose_name='Target Team')
+    num_targets = models.PositiveSmallIntegerField()
     num_players = models.PositiveSmallIntegerField()
     num_matches = models.PositiveSmallIntegerField()
     round = models.PositiveSmallIntegerField(default=1)
@@ -374,8 +376,6 @@ class Competition(models.Model):
         """Create matches between competitionteams."""
         targetteamplayers =\
             list(self.tournament.targetteam.teamplayer_set.all())
-        # randomize target teamplayers
-        random.shuffle(targetteamplayers)
         teamplayer_lists = {}
         for competitionteam in self.competitionteam_set.all():
            teamplayers = list(competitionteam.team.teamplayer_set.all())
@@ -384,9 +384,17 @@ class Competition(models.Model):
            teamplayer_lists[competitionteam.pk] = teamplayers
         for i in range(self.tournament.num_matches):
             # create match object
-            match = Match(competition=self,
-                          teamplayer=targetteamplayers[i%len(targetteamplayers)])
+            match = Match(competition=self)
             self.match_set.add(match)
+            # randomize target teamplayers
+            random.shuffle(targetteamplayers)
+            for j in range(self.tournament.num_targets):
+                # create targetplayer object
+                targetplayer = TargetPlayer(
+                    match=match,
+                    teamplayer=targetteamplayers[j%len(targetteamplayers)]
+                )
+                match.targetplayer_set.add(targetplayer)
             for competitionteam in self.competitionteam_set.all():
                 # create competitor object
                 teamplayer = teamplayer_lists[competitionteam.pk].pop()
@@ -493,21 +501,11 @@ class CompetitionTeam(models.Model):
 # a competition consists of several matches
 class Match(models.Model):
     competition = models.ForeignKey(Competition)
-    teamplayer = models.ForeignKey(TeamPlayer,
-                                   verbose_name='Target Team Player')
     finished = models.BooleanField(default=False, verbose_name='Finished?')
     def __unicode__(self):
-        return '%s : %s' % (unicode(self.competition), unicode(self.teamplayer))
-    def image_tag(self):
-        return self.teamplayer.image_tag()
-    image_tag.short_description = 'Target Image'
-    image_tag.allow_tags = True
-    def admin_image_tag(self):
-        return self.teamplayer.admin_image_tag()
-    admin_image_tag.short_description = 'Target Image'
-    admin_image_tag.allow_tags = True
+        return unicode(self.competition)
     class Meta:
-        ordering = ['competition', 'teamplayer']
+        ordering = ['competition', 'finished']
     def score(self):
         """Determine and set scores for match."""
         competitors = self.competitor_set.all()
@@ -523,14 +521,13 @@ class Match(models.Model):
                 competitor.score = 0.0
             competitor.save()
     def clean(self):
-        if self.competition.tournament.targetteam != self.teamplayer.team:
-            raise ValidationError(
-                'Competition Team `%s` not equal to TeamPlayer Team `%s`' % (
-                    self.competition.tournament.targetteam,
-                    self.teamplayer.team
-                )
-            )
         if self.finished:
+            if self.targetplayer_set.count() !=\
+               self.competition.tournament.num_targets:
+                raise ValidationError(
+                    ('Number of target players not equal to '
+                     'tournament.num_targets for finished match %d') % self.pk
+                )
             if self.competitor_set.count() !=\
                self.competition.tournament.num_players:
                 raise ValidationError(
@@ -538,7 +535,35 @@ class Match(models.Model):
                      'for finished match %d') % self.pk
                 )
 
-# a player (i.e. product) in the context of a match
+# a player (i.e. product) as a target of a match
+class TargetPlayer(models.Model):
+    match = models.ForeignKey(Match)
+    teamplayer = models.ForeignKey(TeamPlayer,
+                                   verbose_name='Target Team Player')
+    def __unicode__(self):
+        return unicode(self.teamplayer)
+    def image_tag(self):
+        return self.teamplayer.image_tag()
+    image_tag.short_description = 'Image'
+    image_tag.allow_tags = True
+    def admin_image_tag(self):
+        return self.teamplayer.admin_image_tag()
+    admin_image_tag.short_description = 'Image'
+    admin_image_tag.allow_tags = True
+    class Meta:
+        ordering = ['match', 'teamplayer']
+        unique_together = ('match', 'teamplayer')
+    def clean(self):
+        if self.match.competition.tournament.targetteam != self.teamplayer.team:
+            raise ValidationError(
+                ('Match target team `%s` not equal to target player team '
+                 '`%s`') % (
+                    self.match.competition.tournament.targetteam,
+                    self.teamplayer.team
+                )
+            )
+
+# a player (i.e. product) in the context of competing in a match
 class Competitor(models.Model):
     match = models.ForeignKey(Match)
     competitionteam = models.ForeignKey(CompetitionTeam,
@@ -579,4 +604,3 @@ class Competitor(models.Model):
                     self.competitionteam.team
                 )
             )
-    

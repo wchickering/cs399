@@ -8,12 +8,16 @@
     {% csrf_token %}
     <table>
       <tr>
+      {% for targetplayer in match.targetplayer_set.all %}
         <td>
           <table>
-            <tr><td> {{ match.teamplayer.admin_image_tag|safe }} </td></tr>
-            <tr><td><p>{{ match.teamplayer.player.description }}</p></td></tr>
+            <tr><td>{{ targetplayer.teamplayer.admin_image_tag|safe }}</td></tr>
+            <tr><td>
+              <p>{{ targetplayer.teamplayer.player.description }}</p>
+            </td></tr>
           </table>
-        <td>
+        </td>
+      {% endfor %}
       </tr>
       <tr>
       {% for competitor in match.competitor_set.all %}

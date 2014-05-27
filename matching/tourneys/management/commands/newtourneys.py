@@ -13,6 +13,8 @@ class Command(TourneysCommand):
     args = '[options] <targetleague sourceleague>'
     help = 'Setup new tournaments between two leagues'
     option_list = TourneysCommand.option_list + (
+        make_option('--numtargets', type='int', dest='numtargets', default=4,
+                    help='Number of targets per match.'),
         make_option('--numplayers', type='int', dest='numplayers', default=4,
                     help='Number of players per match.'),
         make_option('--nummatches', type='int', dest='nummatches', default=5,
@@ -25,6 +27,7 @@ class Command(TourneysCommand):
             raise CommandError('Must provide targetleague and sourceleague')
         targetleague_name = args[0]
         sourceleague_name = args[1]
+        num_targets = options['numtargets']
         num_players = options['numplayers']
         num_matches = options['nummatches']
 
@@ -46,7 +49,9 @@ class Command(TourneysCommand):
 
         # create new tournaments
         try:
-            sourceleague.create_tournaments(targetleague, tournamenttype,
-                                            num_players, num_matches)
+            sourceleague.create_tournaments(
+                targetleague, tournamenttype, num_targets, num_players,
+                num_matches
+            )
         except ValidationError as e:
             raise CommandError(e.message)
