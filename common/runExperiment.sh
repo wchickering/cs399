@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# exit script if a command returns nonzero exit value
+set -e
+
 die () {
     echo >&2 "$@"
     exit 1
@@ -31,7 +34,7 @@ while test $# -gt 0; do
             echo "                          space"
             echo "--no-partition-by-brand   Do not partition graph by brand"
             echo "--brand-only              Only consider brand for TFIDF"
-            echo "--zero-mean               Subtract mean before lsi"
+            echo "--no-zero-mean            Do not subtract mean before SVD"
             echo "--min-component-size=NUM  Specifiy minimum component size"
             echo "                          allowed in graph"
             echo "--max-mapping-connections=NUM"  
@@ -118,8 +121,8 @@ while test $# -gt 0; do
             export TOURNEY_MAPPER=`echo $1 | sed -e 's/^[^=]*=//g'`
             shift
             ;;
-        --zero-mean)
-            export PCA="--pca"
+        --no-zero-mean)
+            export ZERO_MEAN_FLAG=0
             shift
             ;;
         --min-component-size*)
@@ -176,6 +179,10 @@ fi
 
 if [[ -z "$PARTITION_BY_BRAND_FLAG" ]]; then
     PARTITION_BY_BRAND='--partition-by-brand'
+fi
+
+if [[ -z "$ZERO_MEAN_FLAG" ]]; then
+    ZERO_MEAN='--zero-mean'
 fi
 
 if [[ -z "$MIN_COMPONENT_SIZE" ]]; then
@@ -335,11 +342,14 @@ if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
             --matrixfile=$RWALK2 --lda-file=$MODEL2"
         echo $CMD; eval $CMD
     else
-        CMD="python $SRC/svd.py -k $NUM_TOPICS $PCA --savefile=$MODEL $RWALK"
+        CMD="python $SRC/svd.py -k $NUM_TOPICS $ZERO_MEAN --savefile=$MODEL\
+            $RWALK"
         echo $CMD; eval $CMD
-        CMD="python $SRC/svd.py -k $NUM_TOPICS $PCA --savefile=$MODEL1 $RWALK1"
+        CMD="python $SRC/svd.py -k $NUM_TOPICS $ZERO_MEAN --savefile=$MODEL1\
+            $RWALK1"
         echo $CMD; eval $CMD
-        CMD="python $SRC/svd.py -k $NUM_TOPICS $PCA --savefile=$MODEL2 $RWALK2"
+        CMD="python $SRC/svd.py -k $NUM_TOPICS $ZERO_MEAN --savefile=$MODEL2\
+            $RWALK2"
         echo $CMD; eval $CMD
     fi
 echo

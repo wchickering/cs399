@@ -17,9 +17,10 @@ def getParser(usage=None):
     parser.add_option('-s', '--savefile', dest='savefile', default='svd.npz',
         help='Save file for SVD products.', metavar='FILE')
     parser.add_option('--documents', action='store_true', dest='documents',
-        default=False, help='Learn topics of documents for comparison')
-    parser.add_option('--pca', action='store_true', dest='pca',
-        default=False, help='Subtract mean before SVD, as in PCA')
+        default=False, help='Learn topics of documents for comparison.')
+    parser.add_option('--zero-mean', action='store_true',
+        dest='zeroMean', default=False,
+        help='Subtract mean before doing SVD.')
     return parser
 
 def loadMatrices(args):
@@ -69,7 +70,7 @@ def main():
 
     # load matrices: rows = documents, cols = products
     matrix, dictionary = loadMatrices(args) 
-    if (options.pca):
+    if (options.zeroMean):
         # subtract mean of each product
         matrix = np.array(matrix)
         matrix = matrix - matrix.mean(0)
