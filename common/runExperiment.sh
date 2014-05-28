@@ -201,41 +201,69 @@ else
 fi
 
 
+######
 # Setup environment
+##############
 SRC=../common
 DATA=data
 SEED_EXT=Seed${SEED}
 EXPMT=${MODEL_TYPE}_${NUM_TOPICS}_${CAT}_$SEED_EXT
 DB=$DATA/macys.db
-PROX_MAT=$DATA/proxMat${CAT}${SEED_EXT}.npz
+
+# proximity matrices
+PROX_MAT_BASE=$DATA/proxMat${CAT}K${EVAL_K}${SEED_EXT}
+TARGET_PROX_MAT=${PROX_MAT_BASE}_tgt.npz
+RAND_PROX_MAT=${PROX_MAT_BASE}_rand.npz
+TFIDF_PROX_MAT=${PROX_MAT_BASE}_tfidf.npz
+ONE_PROX_MAT=${PROX_MAT_BASE}_one.npz
+SOURCE_PROX_MAT=${PROX_MAT_BASE}_src.npz
+
+# graphs
 GRAPH_BASE=$DATA/graph${CAT}
 GRAPH=${GRAPH_BASE}.pickle
 GRAPH1=${GRAPH_BASE}${SEED_EXT}_1.pickle
 GRAPH2=${GRAPH_BASE}${SEED_EXT}_2.pickle
 POP_GRAPH=${GRAPH_BASE}Pop.pickle
+RAND_GRAPH=${GRAPH_BASE}${SEED_EXT}_rand.pickle
+TFIDF_GRAPH=${GRAPH_BASE}${SEED_EXT}_tfidf.pickle
+ONE_GRAPH=${GRAPH_BASE}${SEED_EXT}_one.pickle
+SOURCE_GRAPH=${GRAPH_BASE}${SEED_EXT}_src.pickle
+
 LOST_EDGES=$DATA/lostEdges${CAT}${SEED_EXT}.pickle
+
+# random walks
 RWALK_BASE=$DATA/randomWalk${CAT}
 RWALK=${RWALK_BASE}.npz
 RWALK1=${RWALK_BASE}${SEED_EXT}_1.npz
 RWALK2=${RWALK_BASE}${SEED_EXT}_2.npz
+
+# lda models
 LDA_BASE=$DATA/$EXPMT
 LDA=${LDA_BASE}.pickle
 LDA1=${LDA_BASE}_1.pickle
 LDA2=${LDA_BASE}_2.pickle
+
+# lsi models
 LSI_BASE=$DATA/$EXPMT
 LSI=${LSI_BASE}.npz
 LSI1=${LSI_BASE}_1.npz
 LSI2=${LSI_BASE}_2.npz
+
+# tfidf
 IDFS=$DATA/idfs${CAT}.pickle
 TFIDF_BASE=$DATA/tfidf_${EXPMT}
 TFIDF=${TFIDF_BASE}.pickle
 TFIDF1=${TFIDF_BASE}_1.pickle
 TFIDF2=${TFIDF_BASE}_2.pickle
+
 MAP=$DATA/topicMap_${EXPMT}.pickle
-PREDICTED_RAND=$DATA/predictedEdgesRand_${EXPMT}.pickle
-PREDICTED_TFIDF=$DATA/predictedEdgesTfidf_${EXPMT}.pickle
-PREDICTED_ONE=$DATA/predictedEdgesOneModel_${EXPMT}.pickle
-PREDICTED_EDGES=$DATA/predictedEdges_${EXPMT}.pickle
+
+# predicted edges
+PREDICTED_BASE=$DATA/predictedEdges_${EXPMT}
+PREDICTED_RAND=${PREDICTED_BASE}_rand.pickle
+PREDICTED_TFIDF=${PREDICTED_BASE}_tfidf.pickle
+PREDICTED_ONE=${PREDICTED_BASE}_one.pickle
+PREDICTED_EDGES=${PREDICTED_BASE}.pickle
 
 if [ "$MODEL_TYPE" = "lda" ]; then
     MODEL=$LDA
@@ -262,7 +290,7 @@ fi
 if [ $START_STAGE -le 2 -a $END_STAGE -ge 2 ]; then
     echo "=== 2. Build proximity matrix from graph ==="
     CMD="python $SRC/buildWalkMatrix.py $SEED_OPT --type=proximity\
-        --savefile=$PROX_MAT $GRAPH"
+        --maxdist=$EVAL_K --savefile=$TARGET_PROX_MAT $GRAPH"
     echo $CMD; eval $CMD
 echo
 fi
@@ -384,27 +412,64 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
 echo
 fi
 
-# Evaluate predictions
+# Construct source graphs
 if [ $START_STAGE -le 10 -a $END_STAGE -ge 10 ]; then
-    echo "=== 10. Evaluate predictions ==="
+    echo "=== 10. Construct source graphs ==="
+    CMD="python $SRC/augmentGraph.py --savefile=$RAND_GRAPH\
+        --edges=$PREDICTED_RAND $GRAPH1 $GRAPH2"
+    echo $CMD; eval $CMD
+    CMD="python $SRC/augmentGraph.py --savefile=$TFIDF_GRAPH\
+        --edges=$PREDICTED_TFIDF $GRAPH1 $GRAPH2"
+    echo $CMD; eval $CMD
+    CMD="python $SRC/augmentGraph.py --savefile=$ONE_GRAPH\
+        --edges=$PREDICTED_ONE $GRAPH1 $GRAPH2"
+    echo $CMD; eval $CMD
+    CMD="python $SRC/augmentGraph.py --savefile=$SOURCE_GRAPH\
+        --edges=$PREDICTED_EDGES $GRAPH1 $GRAPH2"
+    echo $CMD; eval $CMD
+    echo
+fi
+
+# Construct source proximity matrices
+if [ $START_STAGE -le 11 -a $END_STAGE -ge 11 ]; then
+    echo "=== 11. Construct source proximity matrices ==="
+    CMD="python $SRC/buildWalkMatrix.py $SEED_OPT --type=proximity\
+        --maxdist=$EVAL_K --savefile=$RAND_PROX_MAT $RAND_GRAPH"
+    echo $CMD; eval $CMD
+    CMD="python $SRC/buildWalkMatrix.py $SEED_OPT --type=proximity\
+        --maxdist=$EVAL_K --savefile=$TFIDF_PROX_MAT $TFIDF_GRAPH"
+    echo $CMD; eval $CMD
+    CMD="python $SRC/buildWalkMatrix.py $SEED_OPT --type=proximity\
+        --maxdist=$EVAL_K --savefile=$ONE_PROX_MAT $ONE_GRAPH"
+    echo $CMD; eval $CMD
+    CMD="python $SRC/buildWalkMatrix.py $SEED_OPT --type=proximity\
+        --maxdist=$EVAL_K --savefile=$SOURCE_PROX_MAT $SOURCE_GRAPH"
+    echo $CMD; eval $CMD
+    echo
+fi
+
+# Evaluate predictions
+if [ $START_STAGE -le 12 -a $END_STAGE -ge 12 ]; then
+    echo "=== 12. Evaluate predictions ==="
     echo
     echo "  RANDOM PREDICTIONS "
-    CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_RAND\
-        $LOST_EDGES"
+    CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
+        $RAND_PROX_MAT $LOST_EDGES $PREDICTED_RAND"
     echo $CMD; eval $CMD
     echo
     echo "  TFIDF PREDICTIONS "
-    CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT\
-        $PREDICTED_TFIDF $LOST_EDGES"
+    CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
+        $TFIDF_PROX_MAT $LOST_EDGES $PREDICTED_TFIDF"
     echo $CMD; eval $CMD
     echo
     echo "  ONE MODEL PREDICTIONS "
-    CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT $PREDICTED_ONE\
-        $LOST_EDGES"
+    CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
+        $ONE_PROX_MAT $LOST_EDGES $PREDICTED_ONE"
     echo $CMD; eval $CMD
     echo
     echo "  MAPPING MODEL PREDICTIONS "
-    CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $PROX_MAT\
-        $PREDICTED_EDGES $LOST_EDGES"
+    CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
+        $SOURCE_PROX_MAT $LOST_EDGES $PREDICTED_EDGES"
     echo $CMD; eval $CMD
+    echo
 fi

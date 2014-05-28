@@ -95,9 +95,16 @@ def main():
 
     # Remove any components below minComponentSize
     component_lists = getComponentLists(graph)
+    extractedCnt = 0
     for component in component_lists:
         if len(component) < options.minComponentSize:
+            extractedCnt += len(component)
             extractNodes(graph, component)
+    if extractedCnt > 0:
+        print >> sys.stderr, 'WARNING: %d/%d nodes excluded from graph.' % (
+            extractedCnt,
+            len(graph) + extractedCnt
+        )
 
     # save graph
     print 'Saving graph to %s. . .' % options.savefile

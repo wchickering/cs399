@@ -122,9 +122,17 @@ def main():
     # Remove any components below minComponentSize
     for partGraph in [graph1, graph2]:
         component_lists = getComponentLists(partGraph)
+        extractedCnt = 0
         for component in component_lists:
             if len(component) < options.minComponentSize:
+                extractedCnt += len(component)
                 extractNodes(partGraph, component)
+        if extractedCnt > 0:
+            print >> sys.stderr, 'WARNING: %d/%d nodes excluded from %s.' % (
+                extractedCnt,
+                len(partGraph) + extractedCnt,
+                ('graph1' if partGraph == graph1 else 'graph2')
+            )
     
     # dump results
     print 'Saving graph1 to %s. . .' % options.graph1filename

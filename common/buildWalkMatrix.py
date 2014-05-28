@@ -37,6 +37,9 @@ def getParser(usage=None):
         metavar='FLOAT')
     parser.add_option('--reverse', action='store_true', dest='reverse',
         default=False, help='Follow incoming edges.')
+    parser.add_option('--maxdist', type='int', dest='maxDist', default=None,
+        help='Maximum distance considering when computing a proximity matrix.',
+        metavar='NUM')
     parser.add_option('--decay', type='float', dest='decay', default=1.0,
         help='Decay constant for proximity matrix.', metavar='FLOAT')
     parser.add_option('--epsilon', type='float', dest='epsilon', default=0.1,
@@ -114,7 +117,7 @@ def buildAdjacencyMatrix(graph, reverse=False):
             adjacencyMatrix[node2id[source],node2id[neighbor]] = 1
     return adjacencyMatrix
 
-def buildProximityMatrix(graph, decay=1.0, reverse=False):
+def buildProximityMatrix(graph, maxDist=None, decay=1.0, reverse=False):
     """
     Performs a breadth-first-search starting from each node to construct a
     matrix of proximities/closeness from each node i to each node j.
@@ -138,7 +141,8 @@ def buildProximityMatrix(graph, decay=1.0, reverse=False):
             shuffle(graph[n][1 if reverse else 0])
             for neighbor in graph[n][1 if reverse else 0]:
                 if neighbor in visited: continue
-                q.appendleft((neighbor, x+1))
+                if maxDist is None or maxDist > x:
+                    q.appendleft((neighbor, x+1))
     return proxMatrix
 
 def buildNeighborMatrix(graph, epsilon=0.1, reverse=False):
@@ -220,7 +224,8 @@ def main():
     elif options.type == 'proximity':
         # build proximity matrix
         print 'Building proximity matrix. . .'
-        walkMatrix = buildProximityMatrix(graph, decay=options.decay,
+        walkMatrix = buildProximityMatrix(graph, maxDist=options.maxDist,
+                                          decay=options.decay,
                                           reverse=options.reverse)
     elif options.type == 'neighbor':
         # build neighbor matrix

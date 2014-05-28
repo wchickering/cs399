@@ -7,6 +7,12 @@ Helper functions for working with graphs.
 from collections import deque
 import pickle
 
+class GraphError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+
 def loadGraph(fname):
     with open(fname, 'r') as f:
         graph = pickle.load(f)
@@ -24,6 +30,30 @@ def extractNodes(graph, nodes):
         for neighbor in graph[node][1]:
             graph[neighbor][0].remove(node)
         del graph[node]
+
+def addNodes(graph, nodes):
+    for node in nodes:
+        if node in graph:
+            raise GraphError('Node %d already exists' % node)
+        graph[node] = ([], [])
+
+def addEdges(graph, edges):
+    for edge in edges:
+        if edge[0] not in graph:
+            raise GraphError('Node %d not in graph' % edge[0])
+        if edge[1] not in graph:
+            raise GraphError('Node %d not in graph' % edge[1])
+        graph[edge[0]][0].append(edge[1])
+
+def mergeGraphs(graph1, graph2):
+    """Assumes graph1 and graph2 are disjoint."""
+    graph = {}
+    for g in [graph1, graph2]:
+        addNodes(graph, g.keys())
+        for node in g:
+            graph[node][0].extend(g[node][0])
+            graph[node][1].extend(g[node][1])
+    return graph
 
 def getComponents(graph):
     comps = {}
