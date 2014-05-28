@@ -29,4 +29,4 @@ def getNeighbors(data, k, searchEngine, popDictionary):
         distances, neighbors =\
             searchEngine.kneighborsWeighted(data, popDictionary,
                   topn, alpha, basePop, n_neighbors=k)
-    return neighbors
+    return distances, neighbors

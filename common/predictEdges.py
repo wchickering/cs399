@@ -65,7 +65,7 @@ def main():
     searchEngine = KNNSearchEngine(data2, dictionary2)
 
     print 'Getting nearest neighbors. . .'
-    neighbors = getNeighbors(transformed_data1, 
+    distances, neighbors = getNeighbors(transformed_data1, 
             options.k, searchEngine, popDictionary=popDictionary)
 
     print 'Predicting edges. . .'

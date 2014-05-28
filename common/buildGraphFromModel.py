@@ -15,6 +15,7 @@ from Graph_util import loadGraph, saveGraph
 import LDA_util as lda
 import LSI_util as lsi
 from KNNSearchEngine import KNNSearchEngine
+from Prediction_util import getNeighbors, getPopDictionary
 
 # params
 topn = 100
@@ -37,51 +38,11 @@ def getParser(usage=None):
         help='NPZ file of "popularity" random walk.', metavar='FILE')
     parser.add_option('--popgraph', dest='popgraph', default=None,
         help='Picked graph representing item "popularity".', metavar='FILE')
-    parser.add_option('--alpha', type='float', dest='alpha', default=1.0,
-        help='Exponent applied to "popularity".', metavar='FLOAT')
     parser.add_option('-o', '--output', dest='outfilename',
         default='graphFromModel.pickle',
         help='Output pickle file containing re-constructed graph.',
         metavar='FILE')
     return parser
-
-# TODO: Clean up this function!
-def getNeighbors(data, dictionary, numEdges, searchEngine, popDictionary=None,
-                 basePop=0.1, alpha=1.0):
-    if popDictionary is None:
-        distances, neighbors =\
-            searchEngine.kneighbors(data, n_neighbors=numEdges+1)
-    else:
-        distances, origNeighbors =\
-            searchEngine.kneighbors(data, n_neighbors=topn)
-
-        # weight distances by "popularity"
-        newDistances = np.zeros(distances.shape)
-        for i in range(distances.shape[0]):
-            for j in range(distances.shape[1]):
-                newDistances[i][j] = distances[i][j]/\
-                    (basePop + popDictionary[origNeighbors[i][j]]**alpha)
-
-        # re-sort neighbors by weighted distance
-        neighborDistances = np.dstack((newDistances, origNeighbors))
-        h, w = neighborDistances.shape[0], neighborDistances.shape[1]
-        mappedNeighborDistances = map(tuple, neighborDistances\
-                                             .reshape((h*w, 2)))
-        structMappedNeighborDistances =\
-            np.array(mappedNeighborDistances,
-                     dtype={'names':['distance', 'neighbor'],\
-                            'formats':['f4', 'i4']}).reshape((h, w))
-        sortedNeighborDistances = np.sort(structMappedNeighborDistances, axis=1,
-                                          order='distance')
-        neighbors = sortedNeighborDistances['neighbor'][:,0:numEdges+1]
-
-    # Preclude self-loops
-    filteredNeighbors = []
-    for i in range(len(neighbors)):
-        filtNbrs = [n for n in neighbors[i] if n != dictionary[i]]
-        filteredNeighbors.append(filtNbrs[0:numEdges])
-
-    return np.array(filteredNeighbors)
 
 def makeGraph(dictionary, neighbors, directed=False):
     graph = {}
@@ -161,10 +122,7 @@ def main():
     if options.popgraph:
         print 'Loading "popularity" graph from %s. . .' % options.popgraph
         popgraph = loadGraph(options.popgraph)
-        popDictionary = {}
-        for item in popgraph:
-            # set popularity equal to in-degree
-            popDictionary[item] = len(popgraph[item][1])
+        popDictionary = getPopDictionary(popgraph)
     elif options.popmatrix:
         print 'Loading "popularity" matrix from %s. . .' % options.popmatrix
         npzfile = np.load(options.popmatrix)
@@ -182,8 +140,16 @@ def main():
 
     # find neighbors
     print 'Determining neighbors. . .'
-    neighbors = getNeighbors(data, dictionary, options.numedges, searchEngine,
-                             popDictionary=popDictionary, alpha=options.alpha)
+    _, raw_neighbors = getNeighbors(data, options.numedges, searchEngine,
+                                    popDictionary)
+
+    # Preclude self-loops
+    filteredNeighbors = []
+    for i in range(len(raw_neighbors)):
+        filtNbrs = [n for n in raw_neighbors[i] if n != dictionary[i]]
+        filteredNeighbors.append(filtNbrs[0:options.numedges])
+
+    neighbors =  np.array(filteredNeighbors)
 
     # make graph
     print 'Constructing graph. . .'
