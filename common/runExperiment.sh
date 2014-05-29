@@ -271,6 +271,8 @@ PREDICTED_TFIDF=${PREDICTED_BASE}_tfidf.pickle
 PREDICTED_ONE=${PREDICTED_BASE}_one.pickle
 PREDICTED_EDGES=${PREDICTED_BASE}.pickle
 
+RESULTS=$DATA/results_${EXPMT}_K${EVAL_K}.txt
+
 if [ "$MODEL_TYPE" = "lda" ]; then
     MODEL=$LDA
     MODEL1=$LDA1
@@ -455,26 +457,26 @@ fi
 
 # Evaluate predictions
 if [ $START_STAGE -le 12 -a $END_STAGE -ge 12 ]; then
-    echo "=== 12. Evaluate predictions ==="
-    echo
-    echo "  RANDOM PREDICTIONS "
+    echo "=== 12. Evaluate predictions ===" | tee $RESULTS
+    echo | tee -a $RESULTS
+    echo "  RANDOM PREDICTIONS " | tee -a $RESULTS
     CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
         $RAND_PROX_MAT $LOST_EDGES $PREDICTED_RAND"
-    echo $CMD; eval $CMD
-    echo
-    echo "  TFIDF PREDICTIONS "
+    echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
+    echo | tee -a $RESULTS
+    echo "  TFIDF PREDICTIONS " | tee -a $RESULTS
     CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
         $TFIDF_PROX_MAT $LOST_EDGES $PREDICTED_TFIDF"
-    echo $CMD; eval $CMD
-    echo
-    echo "  ONE MODEL PREDICTIONS "
+    echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
+    echo | tee -a $RESULTS
+    echo "  ONE MODEL PREDICTIONS " | tee -a $RESULTS
     CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
         $ONE_PROX_MAT $LOST_EDGES $PREDICTED_ONE"
-    echo $CMD; eval $CMD
-    echo
-    echo "  MAPPING MODEL PREDICTIONS "
+    echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
+    echo | tee -a $RESULTS
+    echo "  MAPPING MODEL PREDICTIONS " | tee -a $RESULTS
     CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
         $SOURCE_PROX_MAT $LOST_EDGES $PREDICTED_EDGES"
-    echo $CMD; eval $CMD
-    echo
+    echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
+    echo | tee -a $RESULTS
 fi
