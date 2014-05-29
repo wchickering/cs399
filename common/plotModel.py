@@ -7,6 +7,7 @@ Produce a variety of plots for the purpose of analyzing a latent variable model.
 from optparse import OptionParser
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 import pickle
 import os
 import sys
@@ -30,6 +31,8 @@ def getParser(usage=None):
         help='Pickled recommendation graph.', metavar='FILE')
     parser.add_option('--bins', type='int', dest='bins', default=100,
         help='Number of bins in histograms.', metavar='NUM')
+    parser.add_option('--3sigma', action='store_true', dest='threeSigma',
+        default=False, help='For LSI, use 3 sigma for domain of topic plots.')
     parser.add_option('--savedir', dest='savedir', default=None,
         help='Directory to save figures in.', metavar='DIR')
     parser.add_option('--show', action='store_true', dest='show', default=False,
@@ -46,7 +49,7 @@ def plotModelTopics(data, numBins, savedir, xlim=None, show=False):
         else:
             plt.figure()
         values = data[topic,:]
-        n, bins, patches = plt.hist(values, numBins)
+        n, bins, patches = plt.hist(values, bins=numBins, range=xlim)
         plt.title('Topic %d Distribution' % topic)
         plt.ylabel('Number of Items (out of %d)' % data.shape[1])
         plt.xlabel('Topic Amount')
@@ -136,6 +139,9 @@ def main():
 
     # generate plots
     if not options.notopicplots:
+        if options.threeSigma:
+            xmax = 3*math.sqrt(1.0/data.shape[1])
+            xlim = (-xmax, xmax)
         print 'Plotting topic distributions. . .'
         plotModelTopics(data, options.bins, savedir, xlim=xlim,
                         show=options.show)
