@@ -133,29 +133,32 @@ def main():
             dictionary[i] = int(items[i])
         data = lsi.getTermConcepts(u, s)
         xlim = None
+        print 'Singular Values =', s
 
-    # build search engine
-    searchEngine = KNNSearchEngine(data.transpose(), dictionary)
+    if options.show or savedir is not None:
+        # build search engine
+        searchEngine = KNNSearchEngine(data.transpose(), dictionary)
 
-    # generate plots
-    if not options.notopicplots:
-        if options.threeSigma:
-            xmax = 3*math.sqrt(1.0/data.shape[1])
-            xlim = (-xmax, xmax)
-        print 'Plotting topic distributions. . .'
-        plotModelTopics(data, options.bins, savedir, xlim=xlim,
-                        show=options.show)
+        # generate plots
+        if not options.notopicplots:
+            if options.threeSigma:
+                xmax = 3*math.sqrt(1.0/data.shape[1])
+                xlim = (-xmax, xmax)
+            print 'Plotting topic distributions. . .'
+            plotModelTopics(data, options.bins, savedir, xlim=xlim,
+                            show=options.show)
 
-    # analyze relation to original graph
-    if options.graphfile is not None:
-        if not os.path.isfile(options.graphfile):
-            print >> sys.stdeerr, 'warning: Cannot find %s' % options.graphfile
-        else:
-            print 'Loading graph from %s. . .' % options.graphfile
-            graph = loadGraph(options.graphfile)
-            print 'Plotting graph analysis. . .'
-            plotGraphAnalysis(graph, searchEngine, savedir,
-                              numBins=options.bins, show=options.show)
+        # analyze relation to original graph
+        if options.graphfile is not None:
+            if not os.path.isfile(options.graphfile):
+                print >> sys.stdeerr,\
+                    'warning: Cannot find %s' % options.graphfile
+            else:
+                print 'Loading graph from %s. . .' % options.graphfile
+                graph = loadGraph(options.graphfile)
+                print 'Plotting graph analysis. . .'
+                plotGraphAnalysis(graph, searchEngine, savedir,
+                                  numBins=options.bins, show=options.show)
 
 if __name__ == '__main__':
     main()
