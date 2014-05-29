@@ -44,6 +44,7 @@ def addEdges(graph, edges):
         if edge[1] not in graph:
             raise GraphError('Node %d not in graph' % edge[1])
         graph[edge[0]][0].append(edge[1])
+        graph[edge[1]][1].append(edge[0])
 
 def mergeGraphs(graph1, graph2):
     """Assumes graph1 and graph2 are disjoint."""

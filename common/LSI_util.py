@@ -17,7 +17,7 @@ def loadLSIModel(npzfile):
     for i in range(len(nodes)):
         dictionary[i] = int(nodes[i])
     # data returned: each row is a product, each column is a topic
-    data = getTermConcepts(u, s).transpose()
+    data = u
     return data, dictionary
 
 def getTermConcepts(u, s):

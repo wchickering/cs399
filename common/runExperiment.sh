@@ -142,9 +142,8 @@ while test $# -gt 0; do
             ;;
         --seed*)
             # this should be left undefined by default
-            SEED=`echo $1 | sed -e 's/^[^=]*=//g'`
+            export SEED=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_number $SEED
-            export SEED_OPT="--seed=$SEED"
             shift
             ;;
         *)
@@ -200,6 +199,11 @@ fi
 if [[ -z "$POPULARITY" ]]; then
     POPULARITY='true'
 fi
+
+if [[ -z "$SEED" ]]; then
+    SEED=0
+fi
+SEED_OPT="--seed=$SEED"
 
 if [ "$REMOVE_POP" = "false" ]; then
     REMOVE_POP=''
