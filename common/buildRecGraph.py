@@ -93,6 +93,10 @@ def main():
                       parentCategory=options.parentCategory,
                       category=options.category)
 
+    if len(graph.keys()) == 0:
+        print >> sys.stderr, 'error: Zero node graph.'
+        sys.exit(-1)
+
     # Remove any components below minComponentSize
     component_lists = getComponentLists(graph)
     extractedCnt = 0
