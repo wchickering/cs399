@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+"""
+Computes IDFs for terms in product descriptions, treating each product as a
+"document".
+"""
+
 from optparse import OptionParser
 from collections import defaultdict
 from stemming.porter2 import stem

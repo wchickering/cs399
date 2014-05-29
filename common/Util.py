@@ -25,23 +25,23 @@ def loadModel(filename):
     else:
         print >> sys.stderr,\
             'error: Model file must be either a .pickle or .npz file.'
+        sys.exit(-1)
         return None
 
 def getAndCheckFilename(fname):
     if not os.path.isfile(fname):
-        print >> sys.stderr, 'Cannot find %s' % fname
+        print >> sys.stderr, 'error: Cannot find %s' % fname
+        sys.exit(-1)
     return fname
 
 def getStopwords(fname):
-    if os.path.isfile(fname):
-        with open(fname, 'r') as f:
-            try:
-                stopwords = f.readline().split(',')
-            except:
-                print >> sys.stderr, 'Failed to parse stop words.'
-                return
-    else:
-        print >> sys.stderr,\
-            'WARNING: stop words file not found: %s' % options.stopwords
-        stopwords = None
+    if not os.path.isfile(fname):
+        print >> sys.stderr, 'error: Stop words file not found: %s' % fname
+        sys.exit(-1)
+    with open(fname, 'r') as f:
+        try:
+            stopwords = f.readline().split(',')
+        except:
+            print >> sys.stderr, 'error: Failed to parse stop words.'
+            sys.exit(-1)
     return stopwords

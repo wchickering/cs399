@@ -215,6 +215,7 @@ DATA=data
 SEED_EXT=Seed${SEED}
 EXPMT=${MODEL_TYPE}_${NUM_TOPICS}_${CAT}_$SEED_EXT
 DB=$DATA/macys.db
+STOPWORDS=$DATA/stopwords.txt
 
 # proximity matrices
 PROX_MAT_BASE=$DATA/proxMat${CAT}K${EVAL_K}${SEED_EXT}
@@ -377,11 +378,11 @@ else
     # Get tfidfs for each graph
     if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
         echo "=== 7. Calculate tfidfs for each graph ==="
-        CMD="python $SRC/topicWords.py $BRAND_ONLY --database=$DB\
-            --idfname=$IDFS --savefile=$TFIDF1 $MODEL1"
+        CMD="python $SRC/topicWords.py $BRAND_ONLY --stopwords=$STOPWORDS\
+            --idfname=$IDFS --savefile=$TFIDF1 $DB $MODEL1"
         echo $CMD; eval $CMD
-        CMD="python $SRC/topicWords.py $BRAND_ONLY --database=$DB\
-            --idfname=$IDFS --savefile=$TFIDF2 $MODEL2"
+        CMD="python $SRC/topicWords.py $BRAND_ONLY --stopwords=$STOPWORDS\
+            --idfname=$IDFS --savefile=$TFIDF2 $DB $MODEL2"
         echo $CMD; eval $CMD
     echo
     fi
