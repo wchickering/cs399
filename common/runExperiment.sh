@@ -26,6 +26,7 @@ while test $# -gt 0; do
             echo "-h, --help                Show brief help"
             echo "-s, --start-stage=NUM     Specify the starting stage"
             echo "-e, --end-stage=NUM       Specify the ending stage"
+            echo "-k, --numtopics=NUM       Number of topics/concepts"
             echo "--directed                Run experiment on directed graphs"
             echo "--no-popularity-added     Don't add popularity back into graph"
             echo "--no-popularity-removed   Don't remove popularity in graph"
@@ -227,7 +228,7 @@ TARGET_PROX_MAT=${PROX_MAT_BASE}_tgt.npz
 RAND_PROX_MAT=${PROX_MAT_BASE}_rand.npz
 TFIDF_PROX_MAT=${PROX_MAT_BASE}_tfidf.npz
 ONE_PROX_MAT=${PROX_MAT_BASE}_one.npz
-SOURCE_PROX_MAT=${PROX_MAT_BASE}_src.npz
+SOURCE_PROX_MAT=${PROX_MAT_BASE}_${NUM_TOPICS}_src.npz
 
 # graphs
 GRAPH_BASE=$DATA/graph${CAT}
@@ -238,7 +239,7 @@ POP_GRAPH=${GRAPH_BASE}Pop.pickle
 RAND_GRAPH=${GRAPH_BASE}${SEED_EXT}_rand.pickle
 TFIDF_GRAPH=${GRAPH_BASE}${SEED_EXT}_tfidf.pickle
 ONE_GRAPH=${GRAPH_BASE}${SEED_EXT}_one.pickle
-SOURCE_GRAPH=${GRAPH_BASE}${SEED_EXT}_src.pickle
+SOURCE_GRAPH=${GRAPH_BASE}${SEED_EXT}_${NUM_TOPICS}_src.pickle
 
 LOST_EDGES=$DATA/lostEdges${CAT}${SEED_EXT}.pickle
 
