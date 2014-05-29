@@ -97,12 +97,12 @@ while test $# -gt 0; do
             ;;
         --no-popularity-added)
             # this should be left undefined by default
-            export POPULARITY='false'
+            export POPULARITY_FLAG=0
             shift
             ;;
         --no-popularity-removed)
             # this should be left undefined by default
-            export REMOVE_POP='false'
+            export REMOVE_POP_FLAG=0
             shift
             ;;
         --lda)
@@ -169,7 +169,7 @@ if [[ -z "$END_STAGE" ]]; then
 fi
 
 if [[ -z "$NUM_TOPICS" ]]; then
-    NUM_TOPICS=8
+    NUM_TOPICS=32
 fi
 
 if [[ -z "$MODEL_TYPE" ]]; then
@@ -184,6 +184,10 @@ if [[ -z "$ZERO_MEAN_FLAG" ]]; then
     ZERO_MEAN='--zero-mean'
 fi
 
+if [[ -z "$REMOVE_POP_FLAG" ]]; then
+    REMOVE_POP='--tran2'
+fi
+
 if [[ -z "$MIN_COMPONENT_SIZE" ]]; then
     MIN_COMPONENT_SIZE=100
 fi
@@ -196,20 +200,10 @@ if [[ -z "$EVAL_K" ]]; then
     EVAL_K=2
 fi
 
-if [[ -z "$POPULARITY" ]]; then
-    POPULARITY='true'
-fi
-
 if [[ -z "$SEED" ]]; then
     SEED=0
 fi
 SEED_OPT="--seed=$SEED"
-
-if [ "$REMOVE_POP" = "false" ]; then
-    REMOVE_POP=''
-else
-    REMOVE_POP='--tran2'
-fi
 
 
 ######
@@ -284,6 +278,10 @@ else
     MODEL=$LSI
     MODEL1=$LSI1
     MODEL2=$LSI2
+fi
+
+if [[ -z "$POPULARITY_FLAG" ]]; then
+    POP="--popgraph=$GRAPH"
 fi
 
 
@@ -398,14 +396,6 @@ fi
 # Predict edges
 if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     echo "=== 9. Predict edges ==="
-    if [ "$POPULARITY" = "true" ]; then
-        echo "Building directed popularity graph"
-        CMD="python $SRC/buildRecGraph.py $DIRECTED --savefile=$POP_GRAPH\
-            --min-component-size=0 \
-            --parent-category=$PARENTCAT --category=$CAT $DB"
-        echo $CMD; eval $CMD
-        POP="--popgraph=$POP_GRAPH"
-    fi
     echo "Predicting randomly. . ."
     CMD="python $SRC/predictEdgesRandomly.py $SEED_OPT\
         --savefile=$PREDICTED_RAND $GRAPH1 $GRAPH2"

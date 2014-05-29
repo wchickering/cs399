@@ -4,9 +4,9 @@ Helper functions for prediction and evaluation scripts
 """
 
 # params
-topn = 100
+topn = 300
 basePop = 0.000001
-alpha = 500.0
+alpha = 50.0
 import numpy as np
 
 def getPopDictionary(popgraph):

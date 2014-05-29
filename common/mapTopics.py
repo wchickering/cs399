@@ -94,7 +94,7 @@ def getTopicMap(topics1, topics2, max_connections, by_distance, by_cosine):
                 (similarity, idx) = queue.get()
                 topic_vector[idx] = 0.0
         topic_map.append(topic_vector)
-    return normalize(topic_map, 'l2', axis=0)
+    return np.array(topic_map).transpose()
 
 def main():
     # Parse options

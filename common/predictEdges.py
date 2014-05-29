@@ -13,6 +13,7 @@ import numpy as np
 from Util import loadPickle, getAndCheckFilename, loadModel
 from Prediction_util import getNeighbors, makeEdges, getPopDictionary
 from KNNSearchEngine import KNNSearchEngine
+from sklearn.preprocessing import normalize
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -55,10 +56,12 @@ def main():
     data1, dictionary1 = loadModel(model1_filename)
     print 'Loading model2 from %s. . .' % model2_filename
     data2, dictionary2 = loadModel(model2_filename)
+    data2 = normalize(data2, 'l2', axis=1)
 
     # transform to common topic space
     print 'Transforming topic space 1 to topic space 2. . .'
     transformed_data1 = np.dot(data1, np.array(topic_map).transpose())
+    transformed_data1 = normalize(transformed_data1, 'l2', axis=1)
 
     # create search engine
     print 'Creating KNN search engine from model2. . .'
