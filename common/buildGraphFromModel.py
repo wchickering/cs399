@@ -38,10 +38,12 @@ def getParser(usage=None):
         help='NPZ file of "popularity" random walk.', metavar='FILE')
     parser.add_option('--popgraph', dest='popgraph', default=None,
         help='Picked graph representing item "popularity".', metavar='FILE')
-    parser.add_option('-o', '--output', dest='outfilename',
+    parser.add_option('--amplify', type='float', dest='amplify', default=1.0,
+        help='Scalar by which to multiply latent space query points.',
+        metavar='FLOAT')
+    parser.add_option('--savefile', dest='savefile',
         default='graphFromModel.pickle',
-        help='Output pickle file containing re-constructed graph.',
-        metavar='FILE')
+        help='Save file for re-constructed graph.', metavar='FILE')
     return parser
 
 def makeGraph(dictionary, neighbors, directed=False):
@@ -140,8 +142,8 @@ def main():
 
     # find neighbors
     print 'Determining neighbors. . .'
-    _, raw_neighbors = getNeighbors(data, options.numedges, searchEngine,
-                                    popDictionary)
+    _, raw_neighbors = getNeighbors(options.amplify*data, options.numedges,
+                                    searchEngine, popDictionary)
 
     # Preclude self-loops
     filteredNeighbors = []
@@ -156,8 +158,8 @@ def main():
     graph = makeGraph(dictionary, neighbors, options.directed)
 
     # save graph
-    print 'Saving graph to %s. . .' % options.outfilename
-    saveGraph(graph, options.outfilename)
+    print 'Saving graph to %s. . .' % options.savefile
+    saveGraph(graph, options.savefile)
 
 if __name__ == '__main__':
     main()
