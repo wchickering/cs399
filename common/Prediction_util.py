@@ -5,8 +5,9 @@ Helper functions for prediction and evaluation scripts
 
 # params
 topn = 100
-basePop = 0.1
-alpha = 1.0
+basePop = 0.000001
+alpha = 500.0
+import numpy as np
 
 def getPopDictionary(popgraph):
     popDictionary = {}
@@ -29,4 +30,5 @@ def getNeighbors(data, k, searchEngine, popDictionary):
         distances, neighbors =\
             searchEngine.kneighborsWeighted(data, popDictionary,
                   topn, alpha, basePop, n_neighbors=k)
+
     return distances, neighbors
