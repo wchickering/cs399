@@ -17,7 +17,9 @@ import numpy as np
 
 # local modules
 from Util import loadPickle, getAndCheckFilename
+from sklearn.preprocessing import normalize
 
+# params
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('--savefile', dest='savefile',
@@ -27,17 +29,31 @@ def getParser(usage=None):
         default=False, help='Print top words')
     parser.add_option('-d', '--by_distance', action='store_true',
         dest='by_distance', default=False, help='determine mapping by distance')
+    parser.add_option('-c', '--by_cosine', action='store_true',
+        dest='by_cosine', default=False, help='determine mapping by cosine')
     parser.add_option('--max_connections', type='int', dest='max_connections',
         default=1000, help='Max number of topics a single topic can map to.', 
         metavar='NUM')
     return parser
 
-def topicSimilarity(topic1, topic2):
-    similarity = 0.0
+def topicInnerProduct(topic1, topic2):
+    inner_product = 0.0
     for word in topic1:
         if word in topic2:
+            inner_product += float(topic1[word])*float(topic2[word])
+    return inner_product
+
+def topicCosineSimilarity(topic1, topic2):
+    similarity = 0.0
+    topic1_len = 0.0
+    topic2_len = 0.0
+    for word in topic1:
+        topic1_len += float(topic1[word])*float(topic1[word])
+        if word in topic2:
             similarity += float(topic1[word])*float(topic2[word])
-    return similarity
+    for word in topic2:
+        topic2_len += float(topic2[word])*float(topic2[word])
+    return similarity/(math.sqrt(topic1_len)*math.sqrt(topic2_len))
 
 def topicDistance(topic1, topic2):
     sqr_distance = 0.0
@@ -54,15 +70,17 @@ def topicDistance(topic1, topic2):
             sqr_distance += p2*p2
     return math.sqrt(sqr_distance)
 
-def getTopicMap(topics1, topics2, max_connections, by_distance):
+def getTopicMap(topics1, topics2, max_connections, by_distance, by_cosine):
     topic_map = [] 
     for topic1 in topics1:
         topic_vector = []
         for topic2 in topics2:
             if by_distance:
                 similarity = 1.0/topicDistance(dict(topic1), dict(topic2))
+            elif by_cosine:
+                similarity = topicCosineSimilarity(dict(topic1), dict(topic2))
             else:
-                similarity = topicSimilarity(dict(topic1), dict(topic2))
+                similarity = topicInnerProduct(dict(topic1), dict(topic2))
             topic_vector.append(similarity)
         # if all similarities zero, then set all similarities to 1.0
         if np.linalg.norm(topic_vector, 1) == 0.0:
@@ -75,7 +93,6 @@ def getTopicMap(topics1, topics2, max_connections, by_distance):
             if queue.qsize() > max_connections:
                 (similarity, idx) = queue.get()
                 topic_vector[idx] = 0.0
-        #topic_map.append(topic_vector/np.linalg.norm(topic_vector, 0))
         topic_map.append(topic_vector)
     return np.array(topic_map).transpose()
 
@@ -100,7 +117,7 @@ def main():
     # get matrix mapping topics from space 1 to topics of space 2
     print 'Mapping topics between catalogues. . .'
     topic_map = getTopicMap(topics1, topics2, options.max_connections,
-            options.by_distance)
+            options.by_distance, options.by_cosine)
 
     # dump tf-idfs
     print 'Saving topic map to %s. . .' % options.savefile

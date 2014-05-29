@@ -31,7 +31,7 @@ class KNNSearchEngine:
         for i in range(origDistances.shape[0]):
             for j in range(origDistances.shape[1]):
                 newDistances[i][j] = origDistances[i][j]/\
-                    (baseWeight + weights[origNeighbors[i][j]]**alpha)
+                    (baseWeight + alpha*weights[origNeighbors[i][j]])
 
         # re-sort neighbors by weighted distance
         neighborDistances = np.dstack((newDistances, origNeighbors))
