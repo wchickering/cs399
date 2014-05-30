@@ -299,7 +299,7 @@ PREDICTED_EDGES=${PREDICTED_BASE}.pickle
 RESULTS=$DATA/results_${EXPMT}_K${EVAL_K}.txt
 
 if [[ -z "$POPULARITY_FLAG" ]]; then
-    POP_OPT="--popgraph=$GRAPH"
+    POP_OPT="--popgraph=$GRAPH2"
 fi
 
 # Construct recomendation graph from DB
