@@ -110,7 +110,7 @@ def getTopicTFIDFs(topicTFs):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <database modelfile>'
+    usage = 'Usage: %prog [options] database modelfile'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 2:

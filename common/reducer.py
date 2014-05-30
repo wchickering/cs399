@@ -21,7 +21,7 @@ def getParser(usage=None):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <csvfile>'
+    usage = 'Usage: %prog [options] csvfile'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 1:

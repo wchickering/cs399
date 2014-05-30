@@ -98,7 +98,7 @@ def getTopicMap(topics1, topics2, max_connections, by_distance, by_cosine):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <topics1.pickle topics2.pickle>'
+    usage = 'Usage: %prog [options] topics1.pickle topics2.pickle'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 2:

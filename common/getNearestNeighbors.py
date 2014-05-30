@@ -22,7 +22,7 @@ def getParser(usage=None):
         help='Name of Sqlite3 product database.', metavar='DBNAME')
     parser.add_option('--ldafile', dest='ldafile', default=None,
         help='Pickled LDA model.', metavar='FILE')
-    parser.add_option('--svdfile', dest='svdfile', default=None,
+    parser.add_option('--lsifile', dest='lsifile', default=None,
         help='NPZ file of SVD products.', metavar='FILE')
     parser.add_option('-n', '--topn', type='int', dest='topn', default=10,
         help='Number of nearest neighbors to display.', metavar='NUM')
@@ -30,14 +30,15 @@ def getParser(usage=None):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <item>'
+    usage = 'Usage: %prog [options] <--ldafile=FILE | --lsifile=FILE> item'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 1:
         parser.error('Wrong number of arguments')
     item = int(args[0])
-    if options.ldafile is None and options.svdfile is None:
-        parser.error('Must provide either an LDA model or SVD products.')
+    if options.ldafile is None and options.lsifile is None:
+        parser.error(('Must provide either an LDA (--ldafile) or LSI '
+                      '(--lsifile) model.'))
 
     # load model
     if options.ldafile is not None:
@@ -53,10 +54,10 @@ def main():
         data = lda.getTopicGivenItemProbs(ldamodel).transpose()
     else:
         # process LSI model
-        if not os.path.isfile(options.svdfile):
-            parser.error('Cannot find %s' % options.svdfile)
-        print >> sys.stderr, 'Load LSI model from %s. . .' % options.svdfile
-        npzfile = np.load(options.svdfile)
+        if not os.path.isfile(options.lsifile):
+            parser.error('Cannot find %s' % options.lsifile)
+        print >> sys.stderr, 'Load LSI model from %s. . .' % options.lsifile
+        npzfile = np.load(options.lsifile)
         u = npzfile['u']
         s = npzfile['s']
         v = npzfile['v']

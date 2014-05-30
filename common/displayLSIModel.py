@@ -140,7 +140,7 @@ def genHtml(u, s, dictionary, translator, topn, tfidf=None, compare=False,
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <svd.npz>'
+    usage = 'Usage: %prog [options] lsi.npz'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 1:

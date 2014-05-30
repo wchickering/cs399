@@ -22,7 +22,7 @@ def linesLessThan(n, fullpath):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] N <dir>'
+    usage = 'Usage: %prog [options] N dir'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 2:

@@ -116,7 +116,7 @@ def genData(mediadir, item_lists, db_conn, matrices, dictionaries,
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] database svd1.npz svd2.npz'
+    usage = 'Usage: %prog [options] database lsi1.npz lsi2.npz'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 3:

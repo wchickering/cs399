@@ -18,7 +18,7 @@ def getCorpus(model, filename):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <model.pickle> <testdocs>'
+    usage = 'Usage: %prog [options] lda.pickle testdocs'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 2:

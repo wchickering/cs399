@@ -16,7 +16,7 @@ def getParser(usage=None):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <pattern> <dir>'
+    usage = 'Usage: %prog [options] pattern dir'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 2:

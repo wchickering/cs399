@@ -13,13 +13,15 @@ from optparse import OptionParser
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-m', '--max-num', type='int', dest='max_num', default=sys.maxint,
-        help='Maximum number of files to copy.', metavar='MAX-NUM')
+    parser.add_option('-m', '--max-num', type='int', dest='max_num',
+        default=sys.maxint, help='Maximum number of files to copy.',
+        metavar='NUM')
     return parser
 
 def main():
     # Setup logging
-    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
+                        level=logging.INFO)
 
     # Parse options
     usage = 'Usage: %prog [options] from-dir to-dir'

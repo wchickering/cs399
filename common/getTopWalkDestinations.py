@@ -38,7 +38,7 @@ def getDestinations(item, matrix, dictionary):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <randomWalk.npz> <item>'
+    usage = 'Usage: %prog [options] randomWalk.npz item'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 2:

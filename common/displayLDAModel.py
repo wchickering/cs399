@@ -153,7 +153,7 @@ def genHtml(model, translator, topn, test_corpus=None, tfidf=None,
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <lda.pickle>'
+    usage = 'Usage: %prog [options] lda.pickle'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 1:

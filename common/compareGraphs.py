@@ -132,7 +132,7 @@ def plotDistanceDist(target, source, savedir, title=None, numBins=10,
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] <targetGraph.pickle> <sourceGraph.pickle>'
+    usage = 'Usage: %prog [options] targetGraph.pickle sourceGraph.pickle'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 2:

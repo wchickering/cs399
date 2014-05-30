@@ -66,8 +66,8 @@ def evalEdges(predicted_edges, prox_mat, dictionary, k):
 
 def main():
     # Parse options
-    usage = ('Usage: %prog [options] <target_prox_mat.npz source_prox_mat.npz '
-             'lost_edges.pickle predicted_edges.pickle>')
+    usage = ('Usage: %prog [options] target_prox_mat.npz source_prox_mat.npz '
+             'lost_edges.pickle predicted_edges.pickle')
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 4:
