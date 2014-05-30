@@ -378,10 +378,10 @@ else
     # Get tfidfs for each graph
     if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
         echo "=== 7. Calculate tfidfs for each graph ==="
-        CMD="python $SRC/topicWords.py $BRAND_ONLY --stopwords=$STOPWORDS\
+        CMD="python $SRC/buildTFIDF.py $BRAND_ONLY --stopwords=$STOPWORDS\
             --idfname=$IDFS --savefile=$TFIDF1 $DB $MODEL1"
         echo $CMD; eval $CMD
-        CMD="python $SRC/topicWords.py $BRAND_ONLY --stopwords=$STOPWORDS\
+        CMD="python $SRC/buildTFIDF.py $BRAND_ONLY --stopwords=$STOPWORDS\
             --idfname=$IDFS --savefile=$TFIDF2 $DB $MODEL2"
         echo $CMD; eval $CMD
     echo
