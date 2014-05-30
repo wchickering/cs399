@@ -11,7 +11,7 @@ import numpy as np
 
 # local modules
 from Util import loadPickle, getAndCheckFilename, loadModel
-from Prediction_util import getNeighbors, makeEdges, getPopDictionary
+from Prediction_util import makeEdges, getPopDictionary
 from KNNSearchEngine import KNNSearchEngine
 from sklearn.preprocessing import normalize
 
@@ -24,6 +24,18 @@ def getParser(usage=None):
         metavar='FILE')
     parser.add_option('--popgraph', dest='popgraph', default=None,
         help='Picked graph representing item "popularity".', metavar='FILE')
+    parser.add_option('--min-pop', type='int', dest='minPop',
+        default=0, help='Minimum popularity to be included in search engine.',
+        metavar='NUM')
+    parser.add_option('--weight', action='store_true', dest='weight',
+        default=False,
+        help='Weight KNN search engine results using popDictionary.')
+    parser.add_option('--sphere', action='store_true', dest='sphere',
+        default=False,
+        help='Project items in latent spaces onto surface of sphere.')
+    parser.add_option('--topn', type='int', dest='topn', default=None,
+        help=('Number of nearest neighbors in latent space to consider before '
+              'applying popularity weighting.'), metavar='NUM')
     return parser
 
 def main():
@@ -56,22 +68,51 @@ def main():
     data1, dictionary1 = loadModel(model1_filename)
     print 'Loading model2 from %s. . .' % model2_filename
     data2, dictionary2 = loadModel(model2_filename)
-    data2 = normalize(data2, 'l2', axis=1)
+
+    if popDictionary is not None and options.minPop > 0:
+        # filter items in target space by popularity
+        print 'Filtering target space such that popularity >= %d. . .' %\
+              options.minPop
+        data2_new = None
+        dictionary2_new = {}
+        j = 0
+        for i in range(data2.shape[0]):
+            if popDictionary[dictionary2[i]] >= options.minPop:
+                if data2_new is None:
+                    data2_new = data2[i,:].reshape(1, data2.shape[1])
+                else:
+                    data2_new = np.concatenate(
+                        (data2_new, data2[i,:].reshape(1, data2.shape[1]))
+                    )
+                dictionary2_new[j] = dictionary2[i]
+                j += 1
+        data2 = data2_new
+        dictionary2 = dictionary2_new
+        print 'Filtered target space with %d items.' % data2.shape[0]
 
     # transform to common topic space
     print 'Transforming topic space 1 to topic space 2. . .'
     transformed_data1 = np.dot(data1, np.array(topic_map).transpose())
-    transformed_data1 = normalize(transformed_data1, 'l2', axis=1)
+
+    if options.sphere:
+        # place all items in latent space on surface of sphere
+        data2 = normalize(data2, 'l2', axis=1)
+        transformed_data1 = normalize(transformed_data1, 'l2', axis=1)
 
     # create search engine
-    print 'Creating KNN search engine from model2. . .'
+    print 'Creating KNN search engine with model2. . .'
     searchEngine = KNNSearchEngine(data2, dictionary2)
 
-    print 'Getting nearest neighbors. . .'
-    distances, neighbors = getNeighbors(transformed_data1, 
-            options.k, searchEngine, popDictionary=popDictionary)
-
+    # search for neighbors of model1 items within model2
     print 'Predicting edges. . .'
+    distances, neighbors = searchEngine.kneighbors(
+        transformed_data1,
+        options.k,
+        weights=popDictionary if options.weight else None,
+        topn=options.topn
+    )
+
+    # translate neighbors into edge predictions
     predicted_edges = makeEdges(neighbors, dictionary1)
 
     # save results

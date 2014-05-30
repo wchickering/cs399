@@ -15,7 +15,7 @@ from Graph_util import loadGraph, saveGraph
 import LDA_util as lda
 import LSI_util as lsi
 from KNNSearchEngine import KNNSearchEngine
-from Prediction_util import getNeighbors, getPopDictionary
+from Prediction_util import getPopDictionary
 
 # params
 topn = 100
@@ -142,8 +142,11 @@ def main():
 
     # find neighbors
     print 'Determining neighbors. . .'
-    _, raw_neighbors = getNeighbors(options.amplify*data, options.numedges,
-                                    searchEngine, popDictionary)
+    distances, raw_neighbors = searchEngine.kneighbors(
+        options.amplify*data,
+        options.numedges,
+        weights=popDictionary
+    )
 
     # Preclude self-loops
     filteredNeighbors = []

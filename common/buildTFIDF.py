@@ -26,7 +26,7 @@ def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-i', '--idfname', dest='idfname', default=None,
         help='Name of pickle with saved idfs', metavar='FILE')
-    parser.add_option('-n', '--topn', type='int', dest='topn', default=100,
+    parser.add_option('-n', '--topn', type='int', dest='topn', default=None,
         help='Number of items per topic to consider.', metavar='NUM')
     parser.add_option('-k', '--topnPrint', type='int', dest='topnPrint',
         default=10, help='Number of words per topic to print.', metavar='NUM')
@@ -38,10 +38,61 @@ def getParser(usage=None):
     parser.add_option('--stopwords', dest='stopwords', default=None,
         help='File containing a comma separated list of stop words.',
         metavar='FILE')
+    parser.add_option('--no-idf', action='store_true', dest='noIDF',
+        default=False, help='Set IDF=1 for all terms.')
     parser.add_option('--brand-only', action='store_true', dest='brandOnly',
         default=False,
         help='Only consider brand (i.e. first term in description).')
     return parser
+
+def getTopicDists(filenames, topn=None):
+    topicDists = []
+    for filename in filenames:
+        if filename.endswith('.pickle'):
+            # load LDA model
+            print 'Loading LDA model from %s. . .' % filename
+            with open(filename, 'r') as f:
+                model = pickle.load(f)
+            topicDists += [model.show_topic(
+                    topic,
+                    topn=(topn if topn is not None else len(model.id2word))
+                ) for topic in range(model.num_topics)]
+        elif filename.endswith('.npz'):
+            # load LSI model
+            print 'Loading LSI model from %s. . .' % filename
+            npzfile = np.load(filename)
+            u = npzfile['u']
+            s = npzfile['s']
+            v = npzfile['v']
+            dictionary = npzfile['dictionary']
+            if topn is not None and topn < u.shape[0]/2:
+                topicDists_top = [showConcept(
+                        u,
+                        concept,
+                        topn=topn,
+                        dictionary=dictionary
+                    ) for concept in range(len(s))]
+                topicDists_bot = [showConcept(
+                        u,
+                        concept,
+                        topn=topn,
+                        dictionary=dictionary,
+                        reverse=False
+                    ) for concept in range(len(s))]
+                for i in range(len(s)):
+                    topicDists.append(topicDists_top[i] + topicDists_bot[i])
+            else:
+                topicDists += [showConcept(
+                        u,
+                        concept,
+                        topn=u.shape[0],
+                        dictionary=dictionary
+                    ) for concept in range(len(s))]
+        else:
+            print >> sys.stderr,\
+                'error: Input must be either a .pickle or .npz file.'
+            sys.exit(-1)
+    return topicDists
 
 def getTopicTFs(db_conn, topicDists, stopwords=None, brandOnly=False):
     db_curs = db_conn.cursor()
@@ -96,13 +147,23 @@ def getTermDFs(topicTFs):
             df[term] += 1
     return df
 
-def getTopicTFIDFs(topicTFs):
+def getTopicTFIDFs(topicTFs, allTopicTFs):
     """Get sparse TF-IDF vector for each topic, where "documents" are topics"""
+    df = getTermDFs(allTopicTFs)
     topicTFIDFs = []
-    df = getTermDFs(topicTFs)
     for tf in topicTFs:
-        tfidf = [(term, tf[term] * math.log(len(topicTFs) / df[term]))\
+        tfidf = [(term, tf[term] * math.log(len(allTopicTFs) / df[term]))\
                  for term, tf_val in tf.items()]
+        # Sort terms by tfidf
+        tfidf.sort(key=lambda tup: tup[1], reverse=True)
+        topicTFIDFs.append(tfidf)
+    return topicTFIDFs
+
+def getTFIDFSansIDF(topicTFs):
+    """Get sparse TF-IDF vector in which IDF=1 for all terms"""
+    topicTFIDFs = []
+    for tf in topicTFs:
+        tfidf = [(term, tf[term]) for term, tf_val in tf.items()]
         # Sort terms by tfidf
         tfidf.sort(key=lambda tup: tup[1], reverse=True)
         topicTFIDFs.append(tfidf)
@@ -110,76 +171,70 @@ def getTopicTFIDFs(topicTFs):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] database modelfile'
+    usage = 'Usage: %prog [options] database modelfile1 [modelfile2] [...]'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
-    if len(args) != 2:
+    if len(args) < 2:
         parser.error('Wrong number of arguments')
     dbFilename = getAndCheckFilename(args[0])
-    modelFilename = getAndCheckFilename(args[1])
+    modelFilenames = args[1:]
 
     # connect to db
     print 'Connecting to database %s. . .' % dbFilename
     db_conn = sqlite3.connect(dbFilename)
 
-    if modelFilename.endswith('.pickle'):
-        # load LDA model
-        print 'Loading LDA model. . .'
-        with open(modelFilename, 'r') as f:
-            model = pickle.load(f)
-        topicDists = [model.show_topic(topic, topn=options.topn)\
-                      for topic in range(model.num_topics)]
-    elif modelFilename.endswith('.npz'):
-        # load LSI model
-        print 'Loading LSI model. . .'
-        npzfile = np.load(modelFilename)
-        u = npzfile['u']
-        s = npzfile['s']
-        v = npzfile['v']
-        dictionary = npzfile['dictionary']
-        topicDists_top = [
-            showConcept(u, concept, topn=options.topn,
-                            dictionary=dictionary)\
-            for concept in range(len(s))
-        ]
-        topicDists_bot = [
-            showConcept(u, concept, topn=options.topn,
-                            dictionary=dictionary, reverse=False)\
-            for concept in range(len(s))
-        ]
-        topicDists = []
-        for i in range(len(s)):
-            topicDists.append(topicDists_top[i] + topicDists_bot[i])
+    # get topic distributions
+    # Multiple (e.g. 2) models can be given such that IDF may be
+    # computed considering ALL topics as the documents in a corpus.
+    topicDists = getTopicDists([modelFilenames[0]], topn=options.topn)
+    if len(modelFilenames) > 1:
+        allTopicDists = getTopicDists(modelFilenames, options.topn)
     else:
-        print >> sys.stderr,\
-            'error: Input must be either a .pickle or .npz file.'
-        sys.exit(-1)
+        allTopicDists = None
 
     # get stop words
     print 'Loading stopwords form %s. . .' % options.stopwords
     stopwords = getStopwords(options.stopwords)
 
     # get TFs
+    print 'Computing term frequencies. . .'
     topicTFs = getTopicTFs(db_conn, topicDists, stopwords=stopwords,
                            brandOnly=options.brandOnly)
+    if allTopicDists is not None:
+        allTopicTFs = getTopicTFs(db_conn, allTopicDists, stopwords=stopwords,
+                                  brandOnly=options.brandOnly)
+    else:
+        alltopicTFs = None
 
     # get TF-IDFs
-    if options.idfname is not None:
-        print 'Loadng IDFs from %s. . .' % options.idfname
-        termIDFs = loadPickle(options.idfname)
-        topicTFIDFs = combineTFandIDF(topicTFs, termIDFs)
+    if options.noIDF:
+        topicTFIDFs = getTFIDFSansIDF(topicTFs)
     else:
-        print 'Computing IDFs with topics as documents. . .'
-        topicTFIDFs = getTopicTFIDFs(topicTFs)
+        if options.idfname is not None:
+            print 'Loadng IDFs from %s. . .' % options.idfname
+            termIDFs = loadPickle(options.idfname)
+            topicTFIDFs = combineTFandIDF(topicTFs, termIDFs)
+        else:
+            print 'Computing IDFs with topics as documents. . .'
+            if allTopicTFs is not None:
+                topicTFIDFs = getTopicTFIDFs(topicTFs, allTopicTFs)
+            else:
+                topicTFIDFs = getTopicTFIDFs(topicTFs, topicTFs)
 
     # dump TF-IDFS
+    print 'Saving TF-IDFs to %s. . .' % options.savefile
     pickle.dump(topicTFIDFs, open(options.savefile, 'w'))
 
     # Print the `topnPrint` terms for each topic
     if options.verbose:
         for topic in range(len(topicDists)):
+            tfidfs = [tup[1] for tup in topicTFIDFs[topic]]
             print ''
-            print 'Top words for topic %d' % topic
+            print 'Top words for topic %d (num terms = %d, l2 norm = %0.3f)' % (
+                topic,
+                len(tfidfs),
+                np.linalg.norm(tfidfs)
+            )
             print '======================='
             for i in range(options.topnPrint):
                 print '%s : %.3f' % (

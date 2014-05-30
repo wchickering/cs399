@@ -16,22 +16,30 @@ class KNNSearchEngine:
         self.nbrs = NearestNeighbors(algorithm=algorithm, leaf_size=leaf_size)
         self.nbrs.fit(data)
 
-    def kneighbors(self, query, n_neighbors=10):
-        distances, indexes =\
-            self.nbrs.kneighbors(query, n_neighbors=n_neighbors)
-        neighbors = [[self.dictionary[i] for i in index] for index in indexes]
-        return distances, neighbors
+    def kneighbors(self, query, n_neighbors=10, weights=None, topn=None,
+                   alpha=1.0, baseWeight=0.000001):
+        ### unweighted search ###
+        if weights is None:
+            distances, indexes =\
+                self.nbrs.kneighbors(query, n_neighbors=n_neighbors)
+            neighbors = [[self.dictionary[i] for i in index]\
+                         for index in indexes]
+            return distances, neighbors
 
-    def kneighborsWeighted(self, query, weights, topn, alpha, baseWeight,
-                           n_neighbors=10):
-        origDistances, origNeighbors = self.kneighbors(query, topn)
+        ### weighted search ###
+
+        # recursive call without weights to get candidates
+        origDistances, origNeighbors = self.kneighbors(
+            query,
+            topn if topn is not None else len(self.dictionary)
+        )
  
         # weight distances by "popularity"
         newDistances = np.zeros(origDistances.shape)
         for i in range(origDistances.shape[0]):
             for j in range(origDistances.shape[1]):
                 newDistances[i][j] = origDistances[i][j]/\
-                    (baseWeight + alpha*weights[origNeighbors[i][j]])
+                    (baseWeight + weights[origNeighbors[i][j]]**alpha)
 
         # re-sort neighbors by weighted distance
         neighborDistances = np.dstack((newDistances, origNeighbors))

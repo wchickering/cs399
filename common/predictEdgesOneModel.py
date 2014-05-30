@@ -12,7 +12,7 @@ import numpy as np
 
 # local modules
 from Util import loadPickle, getAndCheckFilename, loadModel
-from Prediction_util import getNeighbors, makeEdges, getPopDictionary
+from Prediction_util import makeEdges, getPopDictionary
 from KNNSearchEngine import KNNSearchEngine
 
 def getParser(usage=None):
@@ -24,6 +24,9 @@ def getParser(usage=None):
         metavar='FILE')
     parser.add_option('--popgraph', dest='popgraph', default=None,
         help='Picked graph representing item "popularity".', metavar='FILE')
+    parser.add_option('--topn', type='int', dest='topn', default=None,
+        help=('Number of nearest neighbors in latent space to consider before '
+              'applying popularity weighting.'), metavar='NUM')
     return parser
 
 def partitionModel(data, dictionary, graph_part):
@@ -84,8 +87,12 @@ def main():
     searchEngine = KNNSearchEngine(data2, dictionary2)
 
     print 'Getting nearest neighbors. . .'
-    distances, neighbors = getNeighbors(data1, options.k, 
-            searchEngine, popDictionary=popDictionary)
+    distances, neighbors = searchEngine.kneighbors(
+        data1,
+        options.k,
+        weights=popDictionary,
+        topn=options.topn
+    )
 
     print 'Predicting edges. . .'
     predicted_edges = makeEdges(neighbors, dictionary1)

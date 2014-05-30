@@ -32,6 +32,9 @@ def getParser(usage=None):
         dest='by_distance', default=False, help='determine mapping by distance')
     parser.add_option('-c', '--by_cosine', action='store_true',
         dest='by_cosine', default=False, help='determine mapping by cosine')
+    parser.add_option('--normalize', action='store_true', dest='normalize',
+        default=False,
+        help='Normalize column vectors of transformation matrix.')
     parser.add_option('--max_connections', type='int', dest='max_connections',
         default=None, help='Max number of topics a single topic can map to.', 
         metavar='NUM')
@@ -71,8 +74,8 @@ def topicDistance(tfidf1, tfidf2):
             sqr_distance += p2*p2
     return math.sqrt(sqr_distance)
 
-def getTopicMap(topicTFIDFs1, topicTFIDFs2, max_connections,
-                by_distance, by_cosine):
+def getTopicMap(topicTFIDFs1, topicTFIDFs2, max_connections=None,
+                normalize=False, by_distance=False, by_cosine=False):
     topic_map = [] 
     for tfidf1 in topicTFIDFs1:
         topic_vector = []
@@ -88,7 +91,7 @@ def getTopicMap(topicTFIDFs1, topicTFIDFs2, max_connections,
         # 1.0/len(topic_vector)
         if np.linalg.norm(topic_vector, 1) == 0.0:
             topic_vector = [1.0/len(topic_vector) for x in topic_vector]
-        if max_connections < len(topic_vector):
+        if max_connections is not None and max_connections < len(topic_vector):
             # Limit number of connections
             queue = PriorityQueue()
             for idx in range(len(topic_vector)):
@@ -97,7 +100,10 @@ def getTopicMap(topicTFIDFs1, topicTFIDFs2, max_connections,
                 if queue.qsize() > max_connections:
                     (similarity, idx) = queue.get()
                     topic_vector[idx] = 0.0
-        topic_map.append(topic_vector)
+        if normalize:
+            topic_map.append(topic_vector/np.linalg.norm(topic_vector))
+        else:
+            topic_map.append(topic_vector)
     return np.array(topic_map).transpose()
 
 def main():
@@ -118,16 +124,16 @@ def main():
     print 'Loading topics of first catalogue from %s. . .' % topicTFIDFs2_fname
     topicTFIDFs2 = loadPickle(topicTFIDFs2_fname)
 
-    # determine max connections
-    if options.max_connections is not None:
-        max_connections = options.max_connections
-    else:
-        max_connections = len(topicTFIDFs2)
-
     # get matrix mapping topics from space 1 to topics of space 2
     print 'Mapping topics between catalogues. . .'
-    topic_map = getTopicMap(topicTFIDFs1, topicTFIDFs2, max_connections,
-            options.by_distance, options.by_cosine)
+    topic_map = getTopicMap(
+        topicTFIDFs1,
+        topicTFIDFs2,
+        max_connections=options.max_connections,
+        normalize=options.normalize,
+        by_distance=options.by_distance,
+        by_cosine=options.by_cosine
+    )
 
     # dump tf-idfs
     print 'Saving topic map to %s. . .' % options.savefile

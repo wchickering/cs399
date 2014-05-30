@@ -3,10 +3,6 @@
 Helper functions for prediction and evaluation scripts
 """
 
-# params
-topn = 300
-basePop = 0.000001
-alpha = 50.0
 import numpy as np
 
 def getPopDictionary(popgraph):
@@ -21,14 +17,3 @@ def makeEdges(neighbors, dictionary):
     for index, node in dictionary.items():
         predicted_edges += [(node, int(n)) for n in neighbors[index]]
     return predicted_edges
-
-def getNeighbors(data, k, searchEngine, popDictionary):
-    if popDictionary is None:
-        distances, neighbors =\
-            searchEngine.kneighbors(data, n_neighbors=k)
-    else:
-        distances, neighbors =\
-            searchEngine.kneighborsWeighted(data, popDictionary,
-                  topn, alpha, basePop, n_neighbors=k)
-
-    return distances, neighbors
