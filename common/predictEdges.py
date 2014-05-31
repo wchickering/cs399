@@ -38,6 +38,22 @@ def getParser(usage=None):
               'applying popularity weighting.'), metavar='NUM')
     return parser
 
+def filterByPopularity(data, dictionary, popDictionary, minPop):
+    data_new = None
+    dictionary_new = {}
+    j = 0
+    for i in range(data.shape[0]):
+        if popDictionary[dictionary[i]] >= minPop:
+            if data_new is None:
+                data_new = data[i,:].reshape(1, data.shape[1])
+            else:
+                data_new = np.concatenate(
+                    (data_new, data[i,:].reshape(1, data.shape[1]))
+                )
+            dictionary_new[j] = dictionary[i]
+            j += 1
+    return data_new, dictionary_new
+
 def main():
     # Parse options
     usage = 'Usage: %prog [options] topicMap.pickle modelfile1 modelfile2'
@@ -73,21 +89,8 @@ def main():
         # filter items in target space by popularity
         print 'Filtering target space such that popularity >= %d. . .' %\
               options.minPop
-        data2_new = None
-        dictionary2_new = {}
-        j = 0
-        for i in range(data2.shape[0]):
-            if popDictionary[dictionary2[i]] >= options.minPop:
-                if data2_new is None:
-                    data2_new = data2[i,:].reshape(1, data2.shape[1])
-                else:
-                    data2_new = np.concatenate(
-                        (data2_new, data2[i,:].reshape(1, data2.shape[1]))
-                    )
-                dictionary2_new[j] = dictionary2[i]
-                j += 1
-        data2 = data2_new
-        dictionary2 = dictionary2_new
+        data2, dictionary2 = filterByPopularity(data2, dictionary2,
+                                                popDictionary, options.minPop)
         print 'Filtered target space with %d items.' % data2.shape[0]
 
     # transform to common topic space
