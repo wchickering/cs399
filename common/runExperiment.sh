@@ -235,6 +235,7 @@ STOPWORDS=$DATA/stopwords.txt
 PROX_MAT_BASE=$DATA/proxMat${CAT}K${EVAL_K}${SEED_EXT}
 TARGET_PROX_MAT=${PROX_MAT_BASE}_tgt.npz
 RAND_PROX_MAT=${PROX_MAT_BASE}_rand.npz
+POP_PROX_MAT=${PROX_MAT_BASE}_pop.npz
 TFIDF_PROX_MAT=${PROX_MAT_BASE}_tfidf.npz
 ONE_PROX_MAT=${PROX_MAT_BASE}_one.npz
 SOURCE_PROX_MAT=${PROX_MAT_BASE}_${NUM_TOPICS}_src.npz
@@ -244,8 +245,8 @@ GRAPH_BASE=$DATA/graph${CAT}
 GRAPH=${GRAPH_BASE}.pickle
 GRAPH1=${GRAPH_BASE}${SEED_EXT}_1.pickle
 GRAPH2=${GRAPH_BASE}${SEED_EXT}_2.pickle
-POP_GRAPH=${GRAPH_BASE}Pop.pickle
 RAND_GRAPH=${GRAPH_BASE}${SEED_EXT}_rand.pickle
+POP_GRAPH=${GRAPH_BASE}${SEED_EXT}_pop.pickle
 TFIDF_GRAPH=${GRAPH_BASE}${SEED_EXT}_tfidf.pickle
 ONE_GRAPH=${GRAPH_BASE}${SEED_EXT}_one.pickle
 SOURCE_GRAPH=${GRAPH_BASE}${SEED_EXT}_${NUM_TOPICS}_src.pickle
@@ -292,6 +293,7 @@ MAP=$DATA/topicMap_${EXPMT}.pickle
 # predicted edges
 PREDICTED_BASE=$DATA/predictedEdges_${EXPMT}
 PREDICTED_RAND=${PREDICTED_BASE}_rand.pickle
+PREDICTED_POP=${PREDICTED_BASE}_pop.pickle
 PREDICTED_TFIDF=${PREDICTED_BASE}_tfidf.pickle
 PREDICTED_ONE=${PREDICTED_BASE}_one.pickle
 PREDICTED_EDGES=${PREDICTED_BASE}.pickle
@@ -418,6 +420,10 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
         CMD="python $SRC/predictEdgesRandomly.py $SEED_OPT\
             --savefile=$PREDICTED_RAND $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD
+        echo "Predicting based on popularity. . ."
+        CMD="python $SRC/predictEdgesPopular.py $SEED_OPT -v --topn=3\
+            --savefile=$PREDICTED_POP $GRAPH2 $GRAPH1 $GRAPH2"
+        echo $CMD; eval $CMD
         echo "Predicting using item-item tfidf. . ."
         CMD="python $SRC/predictEdgesTfidf.py $BRAND_ONLY_OPT\
             --savefile=$PREDICTED_TFIDF $POP_OPT --idfname=$IDFS
@@ -442,6 +448,9 @@ if [ $START_STAGE -le 10 -a $END_STAGE -ge 10 ]; then
         CMD="python $SRC/augmentGraph.py --savefile=$RAND_GRAPH\
             --edges=$PREDICTED_RAND $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD
+        CMD="python $SRC/augmentGraph.py --savefile=$POP_GRAPH\
+            --edges=$PREDICTED_POP $GRAPH1 $GRAPH2"
+        echo $CMD; eval $CMD
         CMD="python $SRC/augmentGraph.py --savefile=$TFIDF_GRAPH\
             --edges=$PREDICTED_TFIDF $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD
@@ -461,6 +470,9 @@ if [ $START_STAGE -le 11 -a $END_STAGE -ge 11 ]; then
     if [ $BENCHMARKS -eq 1 ]; then
         CMD="python $SRC/buildWalkMatrix.py $SEED_OPT --type=proximity\
             --maxdist=$EVAL_K --savefile=$RAND_PROX_MAT $RAND_GRAPH"
+        echo $CMD; eval $CMD
+        CMD="python $SRC/buildWalkMatrix.py $SEED_OPT --type=proximity\
+            --maxdist=$EVAL_K --savefile=$POP_PROX_MAT $POP_GRAPH"
         echo $CMD; eval $CMD
         CMD="python $SRC/buildWalkMatrix.py $SEED_OPT --type=proximity\
             --maxdist=$EVAL_K --savefile=$TFIDF_PROX_MAT $TFIDF_GRAPH"
@@ -483,6 +495,11 @@ if [ $START_STAGE -le 12 -a $END_STAGE -ge 12 ]; then
         echo "  RANDOM PREDICTIONS " | tee -a $RESULTS
         CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
             $RAND_PROX_MAT $LOST_EDGES $PREDICTED_RAND"
+        echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
+        echo | tee -a $RESULTS
+        echo "  POPULAR PREDICTIONS " | tee -a $RESULTS
+        CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
+            $POP_PROX_MAT $LOST_EDGES $PREDICTED_POP"
         echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
         echo | tee -a $RESULTS
         echo "  TFIDF PREDICTIONS " | tee -a $RESULTS
