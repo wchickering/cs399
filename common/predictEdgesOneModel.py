@@ -12,7 +12,7 @@ import numpy as np
 
 # local modules
 from Util import loadPickle, getAndCheckFilename, loadModel
-from Prediction_util import makeEdges, getPopDictionary
+from Prediction_util import makeEdges, getPopDictionary, filterByPopularity
 from KNNSearchEngine import KNNSearchEngine
 
 def getParser(usage=None):
@@ -24,6 +24,9 @@ def getParser(usage=None):
         metavar='FILE')
     parser.add_option('--popgraph', dest='popgraph', default=None,
         help='Picked graph representing item "popularity".', metavar='FILE')
+    parser.add_option('--min-pop', type='int', dest='minPop',
+        default=0, help='Minimum popularity to be included in search engine.',
+        metavar='NUM')
     parser.add_option('--topn', type='int', dest='topn', default=None,
         help=('Number of nearest neighbors in latent space to consider before '
               'applying popularity weighting.'), metavar='NUM')
@@ -81,6 +84,14 @@ def main():
     print 'Partitioning data and directory. . . '
     data1, dictionary1 = partitionModel(data, dictionary, graph1)
     data2, dictionary2 = partitionModel(data, dictionary, graph2)
+
+    if popDictionary is not None and options.minPop > 0:
+        # filter items in target space by popularity
+        print 'Filtering target space such that popularity >= %d. . .' %\
+              options.minPop
+        data2, dictionary2 = filterByPopularity(data2, dictionary2,
+                                                popDictionary, options.minPop)
+        print 'Filtered target space with %d items.' % data2.shape[0]
 
     # create search engine
     print 'Creating KNN search engine of graph2 from model. . .'

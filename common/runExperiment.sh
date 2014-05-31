@@ -430,7 +430,7 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
             --stopwords=$STOPWORDS $DB $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD
         echo "Predicting using one model. . ."
-        CMD="python $SRC/predictEdgesOneModel.py $POP_OPT\
+        CMD="python $SRC/predictEdgesOneModel.py $POP_OPT --min-pop=0\
             --topn=300 --savefile=$PREDICTED_ONE $MODEL $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD
     fi
