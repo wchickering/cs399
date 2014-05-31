@@ -394,10 +394,10 @@ else
     if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
         echo "=== 7. Calculate tfidfs for each graph ==="
         CMD="python $SRC/buildTFIDF.py $BRAND_ONLY_OPT --stopwords=$STOPWORDS\
-            --idfname=$IDFS --topn=100 --savefile=$TFIDF1 $DB $MODEL1"
+            --idfname=$IDFS --savefile=$TFIDF1 $DB $MODEL1"
         echo $CMD; eval $CMD
         CMD="python $SRC/buildTFIDF.py $BRAND_ONLY_OPT --stopwords=$STOPWORDS\
-            --idfname=$IDFS --topn=100 --savefile=$TFIDF2 $DB $MODEL2"
+            --idfname=$IDFS --savefile=$TFIDF2 $DB $MODEL2"
         echo $CMD; eval $CMD
     echo
     fi
@@ -431,12 +431,12 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
         echo $CMD; eval $CMD
         echo "Predicting using one model. . ."
         CMD="python $SRC/predictEdgesOneModel.py $POP_OPT --min-pop=0\
-            --topn=300 --savefile=$PREDICTED_ONE $MODEL $GRAPH1 $GRAPH2"
+            --savefile=$PREDICTED_ONE $MODEL $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD
     fi
     echo "Predicting with mapping between models. . ."
     CMD="python $SRC/predictEdges.py $POP_OPT --min-pop=0 --weight --sphere\
-        --topn=300 --savefile=$PREDICTED_EDGES $MAP $MODEL1 $MODEL2"
+        --savefile=$PREDICTED_EDGES $MAP $MODEL1 $MODEL2"
     echo $CMD; eval $CMD
 echo
 fi
