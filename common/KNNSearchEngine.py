@@ -2,6 +2,7 @@
 
 from sklearn.neighbors import NearestNeighbors
 import numpy as np
+import math
 
 class KNNSearchEngine:
     """
@@ -16,8 +17,7 @@ class KNNSearchEngine:
         self.nbrs = NearestNeighbors(algorithm=algorithm, leaf_size=leaf_size)
         self.nbrs.fit(data)
 
-    def kneighbors(self, query, n_neighbors=10, weights=None, topn=None,
-                   alpha=1.0, baseWeight=0.000001):
+    def kneighbors(self, query, n_neighbors=10, weights=None, topn=None, alpha=1.0):
 
         ### unweighted search ###
 
@@ -38,12 +38,12 @@ class KNNSearchEngine:
             n_neighbors=topn if topn is not None else len(self.dictionary)
         )
  
-        # weight distances by "popularity"
+        # apply weights to distances
         newDistances = np.zeros(origDistances.shape)
         for i in range(origDistances.shape[0]):
             for j in range(origDistances.shape[1]):
-                newDistances[i][j] = origDistances[i][j]/\
-                    (baseWeight + weights[origNeighbors[i][j]]**alpha)
+                w = math.log(1.0 + weights[origNeighbors[i][j]]/alpha)
+                newDistances[i][j] = origDistances[i][j]/w
 
         # re-sort neighbors by weighted distance
         neighborDistances = np.dstack((newDistances, origNeighbors))
