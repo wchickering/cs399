@@ -104,18 +104,18 @@ def getTopicTFs(db_conn, topicDists, stopwords=None, brandOnly=False):
             item = topicDists[topic][i][1]
             db_curs.execute(selectDescriptionStmt, (item,))
             description = db_curs.fetchone()[0]
-            # Remove punctuation
+            # remove punctuation
             description = ''.join(ch for ch in description\
                                   if ch not in string.punctuation)
-            # Stem terms
+            # stem terms
             terms = [stem(term.lower()) for term in description.split()]
             for term in terms:
-                # Skip stopwords
+                # skip stopwords
                 if stopwords is not None and term in stopwords:
                     continue
-                # Interpret sum of topicStrengths as term frequency
+                # interpret sum of topicStrengths as term frequency
                 tf[term] += topicStrength
-                # Only consider first term in description if brandOnly=True
+                # only consider first term in description if brandOnly=True
                 if brandOnly:
                     break
         topicTFs.append(tf)
@@ -159,8 +159,8 @@ def getTopicTFIDFs(topicTFs, allTopicTFs):
         topicTFIDFs.append(tfidf)
     return topicTFIDFs
 
-def getTFIDFSansIDF(topicTFs):
-    """Get sparse TF-IDF vector in which IDF=1 for all terms"""
+def getTFIDFsansIDF(topicTFs):
+    """Get sparse TF-IDF vectors in which IDF=1 for all terms"""
     topicTFIDFs = []
     for tf in topicTFs:
         tfidf = [(term, tf[term]) for term, tf_val in tf.items()]
@@ -208,7 +208,7 @@ def main():
 
     # get TF-IDFs
     if options.noIDF:
-        topicTFIDFs = getTFIDFSansIDF(topicTFs)
+        topicTFIDFs = getTFIDFsansIDF(topicTFs)
     else:
         if options.idfname is not None:
             print 'Loadng IDFs from %s. . .' % options.idfname

@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 """
-Predicts the edges across two graphs using tfidf of descriptions.
+Predicts the edges across two graphs using TF-IDF of item descriptions.
 """
 
-from stemming.porter2 import stem
 from optparse import OptionParser
 from collections import defaultdict
+from stemming.porter2 import stem
 from Queue import PriorityQueue
 import pickle
 import os
@@ -33,12 +33,9 @@ def getParser(usage=None):
     parser.add_option('--cosine', action='store_true', dest='cosine',
         default=False,
         help='Make predictions based on item-item tfidf similarity.')
-    parser.add_option('-d', '--database', dest='dbname',
-        default='data/macys.db', help='Database to pull descriptions from.')
-    parser.add_option('-i', '--idfname', dest='idfname',
+    parser.add_option('-i', '--idfname', dest='idfname', default=None,
         help='Name of pickle with saved idfs', metavar='FILE')
-    parser.add_option('--stopwords', dest='stopwords',
-        default='data/stopwords.txt',
+    parser.add_option('--stopwords', dest='stopwords', default=None,
         help='File containing a comma separated list of stop words.',
         metavar='FILE')
     parser.add_option('--popgraph', dest='popgraph', default=None,
@@ -48,112 +45,142 @@ def getParser(usage=None):
         help='Only consider brand (i.e. first term in description).')
     return parser
 
-def tfidfSimilarity(tfidf1, tfidf2, cosine):
+def TFIDFsimilarity(tfidf1, tfidf2, cosineSim=False):
     score = 0.0
     for word1 in tfidf1:
         if word1 in tfidf2:
             score += tfidf1[word1]*tfidf2[word1]
-    if cosine:
+    if cosineSim:
         weight1 = sum([tfidf1[word]*tfidf1[word] for word in tfidf1])
         weight2 = sum([tfidf2[word]*tfidf2[word] for word in tfidf2])
         return (score / math.sqrt(weight1 * weight2))
     else:
         return score
 
-def tfidfNeighbors(tfidf1, tfidfs2, k, cosine, popDictionary):
+def getTFIDFneighbors(queryTFIDF, itemTFIDFs, k, weights=None, cosineSim=False):
     queue = PriorityQueue() 
-    for node2 in tfidfs2:
-        similarity = tfidfSimilarity(tfidf1, tfidfs2[node2], cosine)
-        if popDictionary is not None:
-            similarity *= popDictionary[node2]
-        queue.put((similarity, node2))
+    for item in itemTFIDFs:
+        similarity = TFIDFsimilarity(
+            queryTFIDF, itemTFIDFs[item], cosineSim=cosineSim
+        )
+        if weights is not None:
+            similarity *= weights[item]
+        queue.put((similarity, item))
         if queue.qsize() > k:
             queue.get()
     neighbors = []
     while not queue.empty():
-        (similarity, node2) = queue.get()
-        neighbors.append(node2)
+        (similarity, item) = queue.get()
+        neighbors.append(item)
     return neighbors
 
-def predictEdges(tfidfs1, tfidfs2, k, cosine, popDictionary):
+def predictEdges(itemTFIDFs1, itemTFIDFs2, k, weights=None, cosineSim=False):
     predicted_edges = []
     count = 0
-    for node1 in tfidfs1:
+    for node1 in itemTFIDFs1:
         if count % displayInterval == 0:
-            print 'Getting neighbors of %d / %d nodes' % (count, len(tfidfs1.keys()))
+            print 'Getting neighbors of %d / %d nodes' % (
+                count, len(itemTFIDFs1.keys())
+            )
         count += 1
-        neighbors = tfidfNeighbors(tfidfs1[node1], tfidfs2, k, cosine,
-                popDictionary)
+        neighbors = getTFIDFneighbors(itemTFIDFs1[node1], itemTFIDFs2, k,
+                                      weights=weights, cosineSim=cosineSim)
         predicted_edges += [(node1, n) for n in neighbors]
     return predicted_edges
 
-def calculateTfidfs(db_conn, graph, idf, stopwords=None, brandOnly=False):
+def getItemTFs(db_conn, graph, stopwords=None, brandOnly=False):
     db_curs = db_conn.cursor()
-    tfidfs = {}
+    itemTFs = {}
     for item in graph:
-        tfidf = defaultdict(float)
+        tf = defaultdict(int)
         db_curs.execute(selectDescriptionStmt, (item,))
         description = db_curs.fetchone()[0]
+        # remove punctuation
         description = ''.join(ch for ch in description\
                               if ch not in string.punctuation)
-        words = [stem(w.lower()) for w in description.split()]
-        for word in words:
-            if stopwords is not None and word in stopwords:
+        # stem terms
+        terms = [stem(term.lower()) for term in description.split()]
+        for term in terms:
+            if stopwords is not None and term in stopwords:
                 continue
-            tfidf[word] += idf[word]
+            tf[term] += 1
+            # only consider first term in description if brandOnly=True
             if brandOnly:
                 break
-        tfidfs[item] = tfidf
-    return tfidfs
+        itemTFs[item] = tf
+    return itemTFs
+
+def combineTFandIDF(itemTFs, termIDFs):
+    """
+    Get sparse TF-IDF vector for each topic by combining TFs with externally
+    supplied IDFs.
+    """
+    itemTFIDFs = defaultdict(float)
+    for item in itemTFs:
+        itemTFIDFs[item] = dict(
+            [(term, tf*termIDFs[term]) for (term, tf) in itemTFs[item].items()]
+        )
+    return itemTFIDFs
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] graph1 graph2'
+    usage = 'Usage: %prog [options] database graph1 graph2'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
-    if len(args) != 2:
+    if len(args) != 3:
         parser.error('Wrong number of arguments') 
+    dbFilename = getAndCheckFilename(args[0])
+    graph1_filename = getAndCheckFilename(args[1])
+    graph2_filename = getAndCheckFilename(args[2])
 
-    graph1_filename = getAndCheckFilename(args[0])
-    graph2_filename = getAndCheckFilename(args[1])
-    idf_filename = getAndCheckFilename(options.idfname)
-
-    # get stop words
-    print 'Loading Stopwords and IDFs. . .'
-    stopwords = getStopwords(options.stopwords)
-
-    # Get popularity
-    if options.popgraph:
-        print 'Loading "popularity" graph from %s. . .' % options.popgraph
-        popgraph_fname = getAndCheckFilename(options.popgraph)
-        popgraph = loadPickle(popgraph_fname)
-        popDictionary = getPopDictionary(popgraph)
-    else:
-        popDictionary = None
+    # connect to database
+    print 'Connecting to database %s. . .' % dbFilename
+    db_conn = sqlite3.connect(dbFilename)
 
     # load graphs
     print 'Loading graph1 from %s. . .' % graph1_filename
     graph1 = loadPickle(graph1_filename)
     print 'Loading graph2 from %s. . .' % graph2_filename
     graph2 = loadPickle(graph2_filename)
-    print 'Loading idfs from %s. . .' % idf_filename
-    idf = loadPickle(idf_filename)
 
-    # connect to database
-    print 'Connecting to database. .'
-    db_conn = sqlite3.connect(options.dbname)
+    # get stop words
+    print 'Loading Stopwords and IDFs. . .'
+    stopwords = getStopwords(options.stopwords)
 
-    # calculate tfidfs for words of items in each graph
-    print 'Calculating tfidfs. .'
-    tfidfs1 = calculateTfidfs(db_conn, graph1, idf, stopwords=stopwords,
-                              brandOnly=options.brandOnly)
-    tfidfs2 = calculateTfidfs(db_conn, graph2, idf, stopwords=stopwords,
-                              brandOnly=options.brandOnly)
+    # get TFs
+    print 'Computing term frequencies. . .'
+    itemTFs1 = getItemTFs(db_conn, graph1, stopwords=stopwords,
+                          brandOnly=options.brandOnly)
+    itemTFs2 = getItemTFs(db_conn, graph2, stopwords=stopwords,
+                          brandOnly=options.brandOnly)
+
+    # get TF-IDFs
+    if options.idfname is not None:
+        print 'Loading IDFs from %s. . .' % options.idfname
+        termIDFs = loadPickle(options.idfname)
+        itemTFIDFs1 = combineTFandIDF(itemTFs1, termIDFs)
+        itemTFIDFs2 = combineTFandIDF(itemTFs2, termIDFs)
+    else:
+        itemTFIDFs1 = itemTFs1
+        itemTFIDFs2 = itemTFs2
+
+    # get popularity
+    if options.popgraph:
+        print 'Loading "popularity" graph from %s. . .' % options.popgraph
+        popgraph = loadPickle(options.popgraph)
+        popDictionary = getPopDictionary(popgraph)
+    else:
+        popDictionary = None
 
     # predict edges
-    print 'Predicting edges. .'
-    predicted_edges = predictEdges(tfidfs1, tfidfs2, options.k,
-            options.cosine, popDictionary=popDictionary)
+    print 'Predicting edges. . .'
+    predicted_edges = predictEdges(
+        itemTFIDFs1,
+        itemTFIDFs2,
+        options.k,
+        weights=popDictionary,
+        cosineSim=options.cosine
+    )
 
     # save results
     print 'Saving results to %s. . .' % options.savefile
