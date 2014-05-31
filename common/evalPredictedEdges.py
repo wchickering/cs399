@@ -11,6 +11,7 @@ import os
 import sys
 import math
 import numpy as np
+from collections import defaultdict
 
 # local modules
 from Util import loadPickle, getAndCheckFilename
@@ -64,6 +65,14 @@ def evalEdges(predicted_edges, prox_mat, dictionary, k):
         )
     return correct
 
+def getItem2Dist(predicted_edges):
+    item2Cnts = defaultdict(int)
+    for item1, item2 in predicted_edges:
+        item2Cnts[item2] += 1
+    item2Dist = [(item, cnt) for item, cnt in item2Cnts.items()]
+    item2Dist.sort(key=lambda tup: tup[1], reverse=True)
+    return item2Dist
+
 def main():
     # Parse options
     usage = ('Usage: %prog [options] target_prox_mat.npz source_prox_mat.npz '
@@ -92,6 +101,8 @@ def main():
     relevant_lost_edges = getRelevantEdges(lost_edges, predicted_nodes)
     recalled_edges = evalEdges(relevant_lost_edges, source_prox_mat,
                                source_dict, options.k)
+    item2_dist_src = getItem2Dist(predicted_edges)
+    item2_dist_tgt = getItem2Dist(relevant_lost_edges)
 
     # print evaluation results
     print '==============================================='
@@ -121,6 +132,14 @@ def main():
     )
     print 'Guesses per item \t : %d' % (
         len(predicted_edges)/len(predicted_nodes),
+    )
+    print 'Distinct item2 (src) \t : %d (%s)' % (
+        len(item2_dist_src),
+        str([cnt for item, cnt in item2_dist_src[0:5]])
+    )
+    print 'Distinct item2 (tgt) \t : %d (%s)' % (
+        len(item2_dist_tgt),
+        str([cnt for item, cnt in item2_dist_tgt[0:5]])
     )
 
 if __name__ == '__main__':
