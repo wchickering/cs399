@@ -40,6 +40,9 @@ def getParser(usage=None):
         metavar='FILE')
     parser.add_option('--popgraph', dest='popgraph', default=None,
         help='Picked graph representing item "popularity".', metavar='FILE')
+    parser.add_option('--min-pop', type='int', dest='minPop',
+        default=0, help='Minimum popularity to be included in search engine.',
+        metavar='NUM')
     parser.add_option('--brand-only', action='store_true', dest='brandOnly',
         default=False,
         help='Only consider brand (i.e. first term in description).')
@@ -57,9 +60,13 @@ def TFIDFsimilarity(tfidf1, tfidf2, cosineSim=False):
     else:
         return score
 
-def getTFIDFneighbors(queryTFIDF, itemTFIDFs, k, weights=None, cosineSim=False):
+def getTFIDFneighbors(queryTFIDF, itemTFIDFs, k, weights=None, minPop=0,
+                      cosineSim=False):
     queue = PriorityQueue() 
     for item in itemTFIDFs:
+        if weights is not None and minPop > 0:
+            if weights[item] < minPop:
+                continue
         similarity = TFIDFsimilarity(
             queryTFIDF, itemTFIDFs[item], cosineSim=cosineSim
         )
@@ -74,7 +81,8 @@ def getTFIDFneighbors(queryTFIDF, itemTFIDFs, k, weights=None, cosineSim=False):
         neighbors.append(item)
     return neighbors
 
-def predictEdges(itemTFIDFs1, itemTFIDFs2, k, weights=None, cosineSim=False):
+def predictEdges(itemTFIDFs1, itemTFIDFs2, k, weights=None, minPop=0,
+                 cosineSim=False):
     predicted_edges = []
     count = 0
     for node1 in itemTFIDFs1:
@@ -84,7 +92,8 @@ def predictEdges(itemTFIDFs1, itemTFIDFs2, k, weights=None, cosineSim=False):
             )
         count += 1
         neighbors = getTFIDFneighbors(itemTFIDFs1[node1], itemTFIDFs2, k,
-                                      weights=weights, cosineSim=cosineSim)
+                                      weights=weights, minPop=minPop,
+                                      cosineSim=cosineSim)
         predicted_edges += [(node1, n) for n in neighbors]
     return predicted_edges
 
@@ -179,6 +188,7 @@ def main():
         itemTFIDFs2,
         options.k,
         weights=popDictionary,
+        minPop=options.minPop,
         cosineSim=options.cosine
     )
 

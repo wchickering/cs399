@@ -426,7 +426,7 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
         echo $CMD; eval $CMD
         echo "Predicting using item-item tfidf. . ."
         CMD="python $SRC/predictEdgesTfidf.py $BRAND_ONLY_OPT\
-            --savefile=$PREDICTED_TFIDF $POP_OPT --idfname=$IDFS
+            --savefile=$PREDICTED_TFIDF $POP_OPT --min-pop=0 --idfname=$IDFS
             --stopwords=$STOPWORDS $DB $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD
         echo "Predicting using one model. . ."
