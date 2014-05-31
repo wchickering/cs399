@@ -18,10 +18,14 @@ class KNNSearchEngine:
 
     def kneighbors(self, query, n_neighbors=10, weights=None, topn=None,
                    alpha=1.0, baseWeight=0.000001):
+
         ### unweighted search ###
+
         if weights is None:
-            distances, indexes =\
-                self.nbrs.kneighbors(query, n_neighbors=n_neighbors)
+            distances, indexes = self.nbrs.kneighbors(
+                query,
+                n_neighbors=min(n_neighbors, len(self.dictionary))
+            )
             neighbors = [[self.dictionary[i] for i in index]\
                          for index in indexes]
             return distances, neighbors
@@ -31,7 +35,7 @@ class KNNSearchEngine:
         # recursive call without weights to get candidates
         origDistances, origNeighbors = self.kneighbors(
             query,
-            topn if topn is not None else len(self.dictionary)
+            n_neighbors=topn if topn is not None else len(self.dictionary)
         )
  
         # weight distances by "popularity"
