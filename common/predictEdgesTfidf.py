@@ -17,7 +17,6 @@ import math
 
 # local modules
 from Util import loadPickle, getAndCheckFilename, getStopwords
-from Prediction_util import getPopDictionary
 
 # params
 selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
@@ -38,8 +37,8 @@ def getParser(usage=None):
     parser.add_option('--stopwords', dest='stopwords', default=None,
         help='File containing a comma separated list of stop words.',
         metavar='FILE')
-    parser.add_option('--popgraph', dest='popgraph', default=None,
-        help='Picked graph representing item "popularity".', metavar='FILE')
+    parser.add_option('--popdict', dest='popdict', default=None,
+        help='Picked popularity dictionary.', metavar='FILE')
     parser.add_option('--min-pop', type='int', dest='minPop',
         default=0, help='Minimum popularity to be included in search engine.',
         metavar='NUM')
@@ -174,10 +173,9 @@ def main():
         itemTFIDFs2 = itemTFs2
 
     # get popularity
-    if options.popgraph:
-        print 'Loading "popularity" graph from %s. . .' % options.popgraph
-        popgraph = loadPickle(options.popgraph)
-        popDictionary = getPopDictionary(popgraph)
+    if options.popdict:
+        print 'Loading popularity dictionary from %s. . .' % options.popdict
+        popDictionary = loadPickle(options.popdict)
     else:
         popDictionary = None
 

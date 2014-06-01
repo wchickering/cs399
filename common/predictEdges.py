@@ -11,7 +11,7 @@ import numpy as np
 
 # local modules
 from Util import loadPickle, getAndCheckFilename, loadModel
-from Prediction_util import makeEdges, getPopDictionary, filterByPopularity
+from Prediction_util import makeEdges, filterByPopularity
 from KNNSearchEngine import KNNSearchEngine
 from sklearn.preprocessing import normalize
 
@@ -19,14 +19,14 @@ def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-k', type='int', dest='k', default=2,
         help='Number of predicted edges per node.', metavar='NUM')
-    parser.add_option('--symmetric', action='store_true', dest='symmetric',
-        default=False, help=('Predict k edges for each node in each graph '
-                             'connecting to a node in the other graph.'))
+    parser.add_option('--both', action='store_true', dest='both', default=False,
+        help=('Predict k edges for each node in each graph connecting to a '
+              'node in the other graph.'))
     parser.add_option('-s', '--savefile', dest='savefile',
         default='predictEdges.pickle', help='Pickle to dump predicted edges.',
         metavar='FILE')
-    parser.add_option('--popgraph', dest='popgraph', default=None,
-        help='Picked graph representing item "popularity".', metavar='FILE')
+    parser.add_option('--popdict', dest='popdict', default=None,
+        help='Picked popularity dictionary.', metavar='FILE')
     parser.add_option('--min-pop', type='int', dest='minPop',
         default=0, help='Minimum popularity to be included in search engine.',
         metavar='NUM')
@@ -53,12 +53,10 @@ def main():
     model1_filename = getAndCheckFilename(args[1])
     model2_filename = getAndCheckFilename(args[2])
 
-    # Get popularity
-    if options.popgraph:
-        print 'Loading "popularity" graph from %s. . .' % options.popgraph
-        popgraph_fname = getAndCheckFilename(options.popgraph)
-        popgraph = loadPickle(popgraph_fname)
-        popDictionary = getPopDictionary(popgraph)
+    # get popularity dictionary
+    if options.popdict:
+        print 'Loading popularity dictionary from %s. . .' % options.popdict
+        popDictionary = loadPickle(options.popdict)
     else:
         popDictionary = None
 
@@ -83,21 +81,21 @@ def main():
     # transform each model to other's space
     print 'Transforming topic spaces. . .'
     transformed_data1 = np.dot(data1, np.array(topic_map).transpose())
-    if options.symmetric:
+    if options.both:
         transformed_data2 = np.dot(data2, np.array(topic_map))
 
     if options.sphere:
         # place all items in latent space on surface of sphere
         transformed_data1 = normalize(transformed_data1, 'l2', axis=1)
         data2 = normalize(data2, 'l2', axis=1)
-        if options.symmetric:
+        if options.both:
             transformed_data2 = normalize(transformed_data2, 'l2', axis=1)
             data1 = normalize(data1, 'l2', axis=1)
 
     # create search engines
     print 'Creating KNN search engines. . .'
     searchEngine2 = KNNSearchEngine(data2, dictionary2)
-    if options.symmetric:
+    if options.both:
         searchEngine1 = KNNSearchEngine(data1, dictionary1)
 
     # search for neighbors of model1 items within model2
@@ -108,7 +106,7 @@ def main():
         weights=popDictionary if options.weight else None,
         topn=options.topn
     )
-    if options.symmetric:
+    if options.both:
         distances2, neighbors2 = searchEngine1.kneighbors(
             transformed_data2,
             options.k,
@@ -118,7 +116,7 @@ def main():
 
     # translate neighbors into edge predictions
     predicted_edges = makeEdges(neighbors1, dictionary1)
-    if options.symmetric:
+    if options.both:
         predicted_edges += makeEdges(neighbors2, dictionary2)
         # remove duplicates
         predicted_edges = [(min(n1, n2), max(n1, n2)) for\

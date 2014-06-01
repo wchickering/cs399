@@ -5,13 +5,6 @@ Helper functions for prediction and evaluation scripts
 
 import numpy as np
 
-def getPopDictionary(popgraph):
-    popDictionary = {}
-    for item in popgraph:
-        # set popularity equal to in-degree
-        popDictionary[item] = len(popgraph[item][1])
-    return popDictionary
-
 def makeEdges(neighbors, dictionary):
     predicted_edges = []
     for index, node in dictionary.items():

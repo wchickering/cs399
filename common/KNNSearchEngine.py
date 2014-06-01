@@ -17,8 +17,7 @@ class KNNSearchEngine:
         self.nbrs = NearestNeighbors(algorithm=algorithm, leaf_size=leaf_size)
         self.nbrs.fit(data)
 
-    def kneighbors(self, query, n_neighbors=10, weights=None, topn=None,
-                   alpha=1.0):
+    def kneighbors(self, query, n_neighbors=10, weights=None, topn=None):
 
         ### unweighted search ###
 
@@ -43,8 +42,8 @@ class KNNSearchEngine:
         newDistances = np.zeros(origDistances.shape)
         for i in range(origDistances.shape[0]):
             for j in range(origDistances.shape[1]):
-                w = math.log(1.0 + weights[origNeighbors[i][j]]/alpha)
-                newDistances[i][j] = origDistances[i][j]/w
+                newDistances[i][j] =\
+                    origDistances[i][j]/weights[origNeighbors[i][j]]
 
         # re-sort neighbors by weighted distance
         neighborDistances = np.dstack((newDistances, origNeighbors))

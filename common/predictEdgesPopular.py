@@ -12,7 +12,6 @@ import random
 
 # local modules
 from Util import loadPickle, getAndCheckFilename
-from Prediction_util import getPopDictionary
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -38,7 +37,7 @@ def getPopularItems(graph, popDictionary, topn, verbose=False):
     if verbose:
         print '== Popular Items =='
         for i in range(topn):
-            print '%d, pop=%d' % (graph_pops[i][1], graph_pops[i][0])
+            print '%d, pop=%0.3f' % (graph_pops[i][1], graph_pops[i][0])
     return [item for pop, item in graph_pops[0:topn]]
 
 def predictEdges(graph, pop_items, k):
@@ -51,12 +50,13 @@ def predictEdges(graph, pop_items, k):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] popgraph graph1 graph2'
+    usage = ('Usage: %prog [options] popDictionary.pickle '
+             'graph1.pickle graph2.pickle')
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
     if len(args) != 3:
         parser.error('Wrong number of arguments')
-    popgraph_filename = getAndCheckFilename(args[0])
+    popdict_filename = getAndCheckFilename(args[0])
     graph1_filename = getAndCheckFilename(args[1])
     graph2_filename = getAndCheckFilename(args[2])
 
@@ -65,9 +65,8 @@ def main():
         random.seed(options.seed)
 
     # load popularity
-    print 'Loading "popularity" graph from %s. . .' % popgraph_filename
-    popgraph = loadPickle(popgraph_filename)
-    popDictionary = getPopDictionary(popgraph)
+    print 'Loading popularity dictionary from %s. . .' % popdict_filename
+    popDictionary = loadPickle(popdict_filename)
 
     # load graphs
     print 'Loading graph1 from %s. . .' % graph1_filename

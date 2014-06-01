@@ -12,7 +12,7 @@ import numpy as np
 
 # local modules
 from Util import loadPickle, getAndCheckFilename, loadModel
-from Prediction_util import makeEdges, getPopDictionary, filterByPopularity
+from Prediction_util import makeEdges, filterByPopularity
 from KNNSearchEngine import KNNSearchEngine
 
 def getParser(usage=None):
@@ -22,8 +22,8 @@ def getParser(usage=None):
     parser.add_option('-s', '--savefile', dest='savefile',
         default='predictEdges.pickle', help='Pickle to dump predicted edges.',
         metavar='FILE')
-    parser.add_option('--popgraph', dest='popgraph', default=None,
-        help='Picked graph representing item "popularity".', metavar='FILE')
+    parser.add_option('--popdict', dest='popdict', default=None,
+        help='Picked popularity dictionary.', metavar='FILE')
     parser.add_option('--min-pop', type='int', dest='minPop',
         default=0, help='Minimum popularity to be included in search engine.',
         metavar='NUM')
@@ -66,11 +66,9 @@ def main():
     data, dictionary = loadModel(model_filename)
 
     # Get popularity
-    if options.popgraph:
-        print 'Loading "popularity" graph from %s. . .' % options.popgraph
-        popgraph_fname = getAndCheckFilename(options.popgraph)
-        popgraph = loadPickle(popgraph_fname)
-        popDictionary = getPopDictionary(popgraph)
+    if options.popdict:
+        print 'Loading popularity dictionary from %s. . .' % options.popdict
+        popDictionary = loadPickle(options.popdict)
     else:
         popDictionary = None
 
