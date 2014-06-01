@@ -19,6 +19,9 @@ def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-k', type='int', dest='k', default=2,
         help='Number of predicted edges per node.', metavar='NUM')
+    parser.add_option('--symmetric', action='store_true', dest='symmetric',
+        default=False, help=('Predict k edges for each node in each graph '
+                             'connecting to a node in the other graph.'))
     parser.add_option('-s', '--savefile', dest='savefile',
         default='predictEdges.pickle', help='Pickle to dump predicted edges.',
         metavar='FILE')
@@ -77,30 +80,50 @@ def main():
                                                 popDictionary, options.minPop)
         print 'Filtered target space with %d items.' % data2.shape[0]
 
-    # transform to common topic space
-    print 'Transforming topic space 1 to topic space 2. . .'
+    # transform each model to other's space
+    print 'Transforming topic spaces. . .'
     transformed_data1 = np.dot(data1, np.array(topic_map).transpose())
+    if options.symmetric:
+        transformed_data2 = np.dot(data2, np.array(topic_map))
 
     if options.sphere:
         # place all items in latent space on surface of sphere
-        data2 = normalize(data2, 'l2', axis=1)
         transformed_data1 = normalize(transformed_data1, 'l2', axis=1)
+        data2 = normalize(data2, 'l2', axis=1)
+        if options.symmetric:
+            transformed_data2 = normalize(transformed_data2, 'l2', axis=1)
+            data1 = normalize(data1, 'l2', axis=1)
 
-    # create search engine
-    print 'Creating KNN search engine with model2. . .'
-    searchEngine = KNNSearchEngine(data2, dictionary2)
+    # create search engines
+    print 'Creating KNN search engines. . .'
+    searchEngine2 = KNNSearchEngine(data2, dictionary2)
+    if options.symmetric:
+        searchEngine1 = KNNSearchEngine(data1, dictionary1)
 
     # search for neighbors of model1 items within model2
     print 'Predicting edges. . .'
-    distances, neighbors = searchEngine.kneighbors(
+    distances1, neighbors1 = searchEngine2.kneighbors(
         transformed_data1,
         options.k,
         weights=popDictionary if options.weight else None,
         topn=options.topn
     )
+    if options.symmetric:
+        distances2, neighbors2 = searchEngine1.kneighbors(
+            transformed_data2,
+            options.k,
+            weights=popDictionary if options.weight else None,
+            topn=options.topn
+        )
 
     # translate neighbors into edge predictions
-    predicted_edges = makeEdges(neighbors, dictionary1)
+    predicted_edges = makeEdges(neighbors1, dictionary1)
+    if options.symmetric:
+        predicted_edges += makeEdges(neighbors2, dictionary2)
+        # remove duplicates
+        predicted_edges = [(min(n1, n2), max(n1, n2)) for\
+                           (n1, n2) in predicted_edges]
+        predicted_edges = list(set(predicted_edges))
 
     # save results
     print 'Saving results to %s. . .' % options.savefile

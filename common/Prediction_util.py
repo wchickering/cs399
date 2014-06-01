@@ -15,7 +15,7 @@ def getPopDictionary(popgraph):
 def makeEdges(neighbors, dictionary):
     predicted_edges = []
     for index, node in dictionary.items():
-        predicted_edges += [(node, int(n)) for n in neighbors[index]]
+        predicted_edges += [(node, n) for n in neighbors[index]]
     return predicted_edges
 
 def filterByPopularity(data, dictionary, popDictionary, minPop):

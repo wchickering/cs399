@@ -231,27 +231,17 @@ EXPMT=${MODEL_TYPE}_${NUM_TOPICS}_${CAT}_$SEED_EXT
 DB=$DATA/macys.db
 STOPWORDS=$DATA/stopwords.txt
 
-# proximity matrices
-PROX_MAT_BASE=$DATA/proxMat${CAT}K${EVAL_K}${SEED_EXT}
-TARGET_PROX_MAT=${PROX_MAT_BASE}_tgt.npz
-RAND_PROX_MAT=${PROX_MAT_BASE}_rand.npz
-POP_PROX_MAT=${PROX_MAT_BASE}_pop.npz
-TFIDF_PROX_MAT=${PROX_MAT_BASE}_tfidf.npz
-ONE_PROX_MAT=${PROX_MAT_BASE}_one.npz
-SOURCE_PROX_MAT=${PROX_MAT_BASE}_${NUM_TOPICS}_src.npz
-
 # graphs
 GRAPH_BASE=$DATA/graph${CAT}
 GRAPH=${GRAPH_BASE}.pickle
 GRAPH1=${GRAPH_BASE}${SEED_EXT}_1.pickle
 GRAPH2=${GRAPH_BASE}${SEED_EXT}_2.pickle
+POP_DICT=${GRAPH_BASE}${SEED_EXT}_popdict.pickle
 RAND_GRAPH=${GRAPH_BASE}${SEED_EXT}_rand.pickle
-POP_GRAPH=${GRAPH_BASE}${SEED_EXT}_pop.pickle
+POP_GRAPH=${GRAPH_BASE}${SEED_EXT}_popsrc.pickle
 TFIDF_GRAPH=${GRAPH_BASE}${SEED_EXT}_tfidf.pickle
 ONE_GRAPH=${GRAPH_BASE}${SEED_EXT}_one.pickle
 SOURCE_GRAPH=${GRAPH_BASE}${SEED_EXT}_${NUM_TOPICS}_src.pickle
-
-LOST_EDGES=$DATA/lostEdges${CAT}${SEED_EXT}.pickle
 
 # random walks
 RWALK_BASE=$DATA/randomWalk${CAT}
@@ -281,16 +271,16 @@ else
     MODEL2=$LSI2
 fi
 
-# tfidf
+# tfidf and map
 IDFS=$DATA/idfs${CAT}.pickle
 TFIDF_BASE=$DATA/tfidf_${EXPMT}
 TFIDF=${TFIDF_BASE}.pickle
 TFIDF1=${TFIDF_BASE}_1.pickle
 TFIDF2=${TFIDF_BASE}_2.pickle
-
 MAP=$DATA/topicMap_${EXPMT}.pickle
 
-# predicted edges
+# edges
+LOST_EDGES=$DATA/lostEdges${CAT}${SEED_EXT}.pickle
 PREDICTED_BASE=$DATA/predictedEdges_${EXPMT}
 PREDICTED_RAND=${PREDICTED_BASE}_rand.pickle
 PREDICTED_POP=${PREDICTED_BASE}_pop.pickle
@@ -298,11 +288,16 @@ PREDICTED_TFIDF=${PREDICTED_BASE}_tfidf.pickle
 PREDICTED_ONE=${PREDICTED_BASE}_one.pickle
 PREDICTED_EDGES=${PREDICTED_BASE}.pickle
 
-RESULTS=$DATA/results_${EXPMT}_K${EVAL_K}.txt
+# proximity matrices
+PROX_MAT_BASE=$DATA/proxMat${CAT}K${EVAL_K}${SEED_EXT}
+TARGET_PROX_MAT=${PROX_MAT_BASE}_tgt.npz
+RAND_PROX_MAT=${PROX_MAT_BASE}_rand.npz
+POP_PROX_MAT=${PROX_MAT_BASE}_pop.npz
+TFIDF_PROX_MAT=${PROX_MAT_BASE}_tfidf.npz
+ONE_PROX_MAT=${PROX_MAT_BASE}_one.npz
+SOURCE_PROX_MAT=${PROX_MAT_BASE}_${NUM_TOPICS}_src.npz
 
-if [[ -z "$POPULARITY_FLAG" ]]; then
-    POP_OPT="--popgraph=$GRAPH2"
-fi
+RESULTS=$DATA/results_${EXPMT}_K${EVAL_K}.txt
 
 # Construct recomendation graph from DB
 if [ $START_STAGE -le 1 -a $END_STAGE -ge 1 ]; then
@@ -314,18 +309,9 @@ if [ $START_STAGE -le 1 -a $END_STAGE -ge 1 ]; then
 echo
 fi
 
-# Construct proximity matrix for k-precision/recall evaluation
-if [ $START_STAGE -le 2 -a $END_STAGE -ge 2 ]; then
-    echo "=== 2. Build proximity matrix from graph ==="
-    CMD="python $SRC/buildWalkMatrix.py $SEED_OPT --type=proximity\
-        --maxdist=$EVAL_K --savefile=$TARGET_PROX_MAT $GRAPH"
-    echo $CMD; eval $CMD
-echo
-fi
-
 # Partition graph
-if [ $START_STAGE -le 3 -a $END_STAGE -ge 3 ]; then
-    echo "=== 3. Partition category graph ==="
+if [ $START_STAGE -le 2 -a $END_STAGE -ge 2 ]; then
+    echo "=== 2. Partition category graph ==="
     CMD="python $SRC/partitionGraph.py $SEED_OPT $PARTITION_BY_BRAND\
         --graph1=$GRAPH1 --graph2=$GRAPH2\
         --min-component-size=$MIN_COMPONENT_SIZE --lost_edges=$LOST_EDGES\
@@ -335,8 +321,8 @@ echo
 fi
 
 # Random walk
-if [ $START_STAGE -le 4 -a $END_STAGE -ge 4 ]; then
-    echo "=== 4. Randomly walk each graph ==="
+if [ $START_STAGE -le 3 -a $END_STAGE -ge 3 ]; then
+    echo "=== 3. Randomly walk each graph ==="
     CMD="python $SRC/buildWalkMatrix.py --home=0.05 --steps=50\
         --savefile=$RWALK $REMOVE_POP_OPT $GRAPH"
     echo $CMD; eval $CMD
@@ -350,8 +336,8 @@ echo
 fi
 
 # Train model on each graph
-if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
-    echo "=== 5. Train $MODEL_TYPE model for each graph ==="
+if [ $START_STAGE -le 4 -a $END_STAGE -ge 4 ]; then
+    echo "=== 4. Train $MODEL_TYPE model for each graph ==="
     if [ "$MODEL_TYPE" = "lda" ]; then
         CMD="python $SRC/buildLDAModel.py --num-topics=$NUM_TOPICS\
             --matrixfile=$RWALK --lda-file=$MODEL"
@@ -378,12 +364,12 @@ fi
 
 # Use tourney map if given
 if [[ "$TOURNEY_MAPPER" ]]; then
-    echo "=== 6-8. Using provided topic map ==="
+    echo "=== 5-7. Using provided topic map ==="
     MAP=$TOURNEY_MAPPER
 else
     # Get idfs for category
-    if [ $START_STAGE -le 6 -a $END_STAGE -ge 6 ]; then
-        echo "=== 6. Calculate idfs for category ==="
+    if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
+        echo "=== 5. Calculate idfs for category ==="
         CMD="python $SRC/idfsByCategory.py $BRAND_ONLY_OPT --savefile=$IDFS\
             $PARENTCAT $CAT"
         echo $CMD; eval $CMD
@@ -391,8 +377,8 @@ else
     fi
     
     # Get tfidfs for each graph
-    if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
-        echo "=== 7. Calculate tfidfs for each graph ==="
+    if [ $START_STAGE -le 6 -a $END_STAGE -ge 6 ]; then
+        echo "=== 6. Calculate tfidfs for each graph ==="
         CMD="python $SRC/buildTFIDF.py $BRAND_ONLY_OPT --stopwords=$STOPWORDS\
             --idfname=$IDFS --savefile=$TFIDF1 $DB $MODEL1"
         echo $CMD; eval $CMD
@@ -403,11 +389,22 @@ else
     fi
     
     # Map tfidf topic spaces
-    if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
-        echo "=== 8. Construct topic map from graph1 to graph2 ==="
+    if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
+        echo "=== 7. Construct topic map from graph1 to graph2 ==="
         CMD="python $SRC/mapTopics.py $MAX_CONN_OPT --savefile=$MAP\
             $TFIDF1 $TFIDF2"
         echo $CMD; eval $CMD
+    echo
+    fi
+fi
+
+if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
+    if [[ -z "$POPULARITY_FLAG" ]]; then
+        # Construct popularity "dictionary"
+        echo "=== 8. Popularity Dictionary ==="
+        CMD="python $SRC/augmentGraph.py --savefile=$POP_DICT $GRAPH1 $GRAPH2"
+        echo $CMD; eval $CMD
+        POP_OPT="--popgraph=$POP_DICT"
     echo
     fi
 fi
@@ -435,8 +432,8 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
         echo $CMD; eval $CMD
     fi
     echo "Predicting with mapping between models. . ."
-    CMD="python $SRC/predictEdges.py $POP_OPT --min-pop=0 --weight --sphere\
-        --savefile=$PREDICTED_EDGES $MAP $MODEL1 $MODEL2"
+    CMD="python $SRC/predictEdges.py -k 2 $POP_OPT --min-pop=0 --weight
+        --sphere --savefile=$PREDICTED_EDGES $MAP $MODEL1 $MODEL2"
     echo $CMD; eval $CMD
 echo
 fi
@@ -464,9 +461,12 @@ if [ $START_STAGE -le 10 -a $END_STAGE -ge 10 ]; then
     echo
 fi
 
-# Construct source proximity matrices
+# Construct proximity matrices
 if [ $START_STAGE -le 11 -a $END_STAGE -ge 11 ]; then
-    echo "=== 11. Construct source proximity matrices ==="
+    echo "=== 11. Construct proximity matrices ==="
+    CMD="python $SRC/buildWalkMatrix.py $SEED_OPT --type=proximity\
+        --maxdist=$EVAL_K --savefile=$TARGET_PROX_MAT $GRAPH"
+    echo $CMD; eval $CMD
     if [ $BENCHMARKS -eq 1 ]; then
         CMD="python $SRC/buildWalkMatrix.py $SEED_OPT --type=proximity\
             --maxdist=$EVAL_K --savefile=$RAND_PROX_MAT $RAND_GRAPH"

@@ -20,6 +20,8 @@ def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-k', type='int', dest='k', default=2, metavar='NUM',
         help='Distance away in original graph to consider correct')
+    parser.add_option('--directed', action='store_true', dest='directed',
+        default=False, help='Treat graphs as directed.')
     return parser
 
 def getMatrix(filename):
@@ -31,23 +33,23 @@ def getDict(filename):
     id2item = npzfile['dictionary']
     return dict((id2item[i], i) for i in range(len(id2item)))
 
-def getRelevantEdges(lost_edges, predicted_nodes):
-    predicted_nodes = set(predicted_nodes)
-    relevant_edges = []
-    for (item1, item2) in lost_edges:
-        if item1 in predicted_nodes:
-            relevant_edges.append((item1, item2))
-    return relevant_edges
+#def getRelevantEdges(lost_edges, predicted_nodes):
+#    predicted_nodes = set(predicted_nodes)
+#    relevant_edges = []
+#    for (item1, item2) in lost_edges:
+#        if item1 in predicted_nodes:
+#            relevant_edges.append((item1, item2))
+#    return relevant_edges
 
-def getPredictedNodes(predicted_edges):
-    predicted_edges = np.array(predicted_edges)
-    return np.unique(predicted_edges[:, 0:1])
+#def getPredictedNodes(predicted_edges):
+#    predicted_edges = np.array(predicted_edges)
+#    return np.unique(predicted_edges[:, 0:1])
 
-def evalEdges(predicted_edges, prox_mat, dictionary, k):
+def evalEdges(edges, prox_mat, dictionary, k):
     correct = 0
     eps = 0.0001
     key_errors = 0
-    for item1, item2 in predicted_edges:
+    for item1, item2 in edges:
         try:
             id1 = dictionary[item1]
             id2 = dictionary[item2]
@@ -58,20 +60,21 @@ def evalEdges(predicted_edges, prox_mat, dictionary, k):
             key_errors += 1
             pass
     if key_errors > 0:
-        print >> sys.stderr, ('WARNING: %d/%d predicted edges with one or both '
-                              'nodes missing from source graph.') % (
-            key_errors,
-            len(predicted_edges)
-        )
+        print >> sys.stderr,\
+            ('WARNING: %d/%d predicted (lost) edges with one or both nodes '
+             'missing from target (source) graph.') % (
+                key_errors,
+                len(edges)
+            )
     return correct
 
-def getItem2Dist(predicted_edges):
-    item2Cnts = defaultdict(int)
-    for item1, item2 in predicted_edges:
-        item2Cnts[item2] += 1
-    item2Dist = [(item, cnt) for item, cnt in item2Cnts.items()]
-    item2Dist.sort(key=lambda tup: tup[1], reverse=True)
-    return item2Dist
+#def getItem2Dist(predicted_edges):
+#    item2Cnts = defaultdict(int)
+#    for item1, item2 in predicted_edges:
+#        item2Cnts[item2] += 1
+#    item2Dist = [(item, cnt) for item, cnt in item2Cnts.items()]
+#    item2Dist.sort(key=lambda tup: tup[1], reverse=True)
+#    return item2Dist
 
 def main():
     # Parse options
@@ -97,50 +100,44 @@ def main():
     # Evaluate
     correct_predictions = evalEdges(predicted_edges, target_prox_mat,
                                     target_dict, options.k)
-    predicted_nodes = getPredictedNodes(predicted_edges)
-    relevant_lost_edges = getRelevantEdges(lost_edges, predicted_nodes)
-    recalled_edges = evalEdges(relevant_lost_edges, source_prox_mat,
+    recalled_edges = evalEdges(lost_edges, source_prox_mat,
                                source_dict, options.k)
-    item2_dist_src = getItem2Dist(predicted_edges)
-    item2_dist_tgt = getItem2Dist(relevant_lost_edges)
+
+    # compute metrics
+    if options.directed:
+        num_lost_edges = len(lost_edges)
+    else:
+        num_lost_edges = len(lost_edges)/2
+    precision = float(correct_predictions) / len(predicted_edges)
+    recall = float(recalled_edges) / num_lost_edges
+    f1score = 2*precision*recall/(precision + recall)
+
+    #predicted_nodes = getPredictedNodes(predicted_edges)
+    #relevant_lost_edges = getRelevantEdges(lost_edges, predicted_nodes)
+    #item2_dist_src = getItem2Dist(predicted_edges)
+    #item2_dist_tgt = getItem2Dist(relevant_lost_edges)
 
     # print evaluation results
     print '==============================================='
-    print 'Correct predictions \t : %d' % (
-        correct_predictions,
-    )
-    print 'Total predictions \t : %d' % (
-        len(predicted_edges),
-    )
-    print '%d-Precision \t\t : %0.3f' % (
-        options.k,
-        float(correct_predictions) / len(predicted_edges)
-    )
-    print 'Recalled Edges (k=%d)\t : %d' % (
-        options.k,
-        recalled_edges
-    )
-    print 'Withheld edges \t\t : %d' % (
-        len(relevant_lost_edges),
-    )
-    print '%d-Recall \t\t : %0.3f' % (
-        options.k,
-        float(recalled_edges) / len(relevant_lost_edges)
-    )
-    print 'Items predicted \t : %d' % (
-        len(predicted_nodes),
-    )
-    print 'Guesses per item \t : %d' % (
-        len(predicted_edges)/len(predicted_nodes),
-    )
-    print 'Distinct item2 (src) \t : %d (%s)' % (
-        len(item2_dist_src),
-        str([cnt for item, cnt in item2_dist_src[0:5]])
-    )
-    print 'Distinct item2 (tgt) \t : %d (%s)' % (
-        len(item2_dist_tgt),
-        str([cnt for item, cnt in item2_dist_tgt[0:5]])
-    )
+    print 'Correct predictions \t : %d' % correct_predictions
+    print 'Total predictions \t : %d' % len(predicted_edges)
+    print '%d-Precision \t\t : %0.3f' % (options.k, precision)
+    print 'Recalled Edges (k=%d)\t : %d' % (options.k, recalled_edges)
+    print 'Withheld edges \t\t : %d' % num_lost_edges
+    print '%d-Recall \t\t : %0.3f' % (options.k, recall)
+    print '%d-F1 Score \t\t : %0.3f' % (options.k, f1score)
+
+    #print 'Guesses per item \t : %d' % (
+    #    len(predicted_edges)/len(predicted_nodes),
+    #)
+    #print 'Distinct item2 (src) \t : %d (%s)' % (
+    #    len(item2_dist_src),
+    #    str([cnt for item, cnt in item2_dist_src[0:5]])
+    #)
+    #print 'Distinct item2 (tgt) \t : %d (%s)' % (
+    #    len(item2_dist_tgt),
+    #    str([cnt for item, cnt in item2_dist_tgt[0:5]])
+    #)
 
 if __name__ == '__main__':
     main()
