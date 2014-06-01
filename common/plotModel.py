@@ -39,6 +39,8 @@ def getParser(usage=None):
         help='Show plots.')
     parser.add_option('--notopicplots', action='store_true',
         dest='notopicplots', default=False, help='Do not produce topic plots.')
+    parser.add_option('--pop-vs-norm', action='store_true', dest='popVsNorm',
+        default=False, help='Plot Popularity vs L2 Norm.')
     return parser
 
 def plotModelTopics(data, numBins, savedir, xlim=None, show=False):
@@ -83,6 +85,22 @@ def plotGraphAnalysis(graph, searchEngine, savedir, numBins=100, show=False):
     plt.xlim([0,numBins])
     if savedir is not None:
         plt.savefig(os.path.join(savedir, 'graphAnalysis.%s' % saveFormat))
+    if show:
+        plt.show()
+
+def plotPopVsNorm(graph, data, dictionary, savedir=None, show=False):
+    pop = []
+    norm = []
+    for i in range(data.shape[1]):
+        item = dictionary[i]
+        pop.append(len(graph[item][1]))
+        norm.append(np.linalg.norm(data[:,i]))
+    plt.hist2d(pop, norm, bins=100, range=[[0, 20], [0.0, 0.2]])
+    plt.title('Popularity vs Norm')
+    plt.xlabel('Node In-degree')
+    plt.ylabel('Item L2 Norm')
+    if savedir is not None:
+        plt.savefig(os.path.join(savedir, 'popVsNorm.%s' % saveFormat))
     if show:
         plt.show()
 
@@ -156,6 +174,10 @@ def main():
             else:
                 print 'Loading graph from %s. . .' % options.graphfile
                 graph = loadGraph(options.graphfile)
+                if options.popVsNorm:
+                    print 'Plotting popularity vs norm. . .'
+                    plotPopVsNorm(graph, data, dictionary, savedir=savedir,
+                                  show=options.show)
                 print 'Plotting graph analysis. . .'
                 plotGraphAnalysis(graph, searchEngine, savedir,
                                   numBins=options.bins, show=options.show)
