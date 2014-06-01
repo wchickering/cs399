@@ -400,16 +400,16 @@ else
     fi
 fi
 
-if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
-    if [[ -z "$POPULARITY_FLAG" ]]; then
+if [[ -z "$POPULARITY_FLAG" ]]; then
+    if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
         # Construct popularity dictionary
         echo "=== 8. Popularity Dictionary ==="
         CMD="python $SRC/buildPopDictionary.py --savefile=$POP_DICT --alpha=1.0\
             $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
-        POP_DICT_OPT="--popdict=$POP_DICT"
     echo
     fi
+    POP_DICT_OPT="--popdict=$POP_DICT"
 fi
 
 # Predict edges
@@ -435,8 +435,12 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
         echo $CMD; eval $CMD; echo $CMDTERM
     fi
     echo "Predicting with mapping between models. . ."
-    CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES -k 2\
-        $POP_DICT_OPT --min-pop=0 --weight --sphere $MAP $MODEL1 $MODEL2"
+    CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES -k 1.8\
+        $POP_DICT_OPT --min-pop=0 --weight-in --weight-out --symmetric --sphere\
+        $MAP $MODEL1 $MODEL2"
+    #CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES -k 2.0\
+    #    $POP_DICT_OPT --min-pop=0 --weight-in --sphere\
+    #    $MAP $MODEL1 $MODEL2"
     echo $CMD; eval $CMD; echo $CMDTERM
 echo
 fi

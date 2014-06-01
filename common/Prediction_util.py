@@ -7,8 +7,8 @@ import numpy as np
 
 def makeEdges(neighbors, dictionary):
     predicted_edges = []
-    for index, node in dictionary.items():
-        predicted_edges += [(node, n) for n in neighbors[index]]
+    for i in range(len(neighbors)):
+        predicted_edges += [(dictionary[i], n) for n in neighbors[i]]
     return predicted_edges
 
 def filterByPopularity(data, dictionary, popDictionary, minPop):
