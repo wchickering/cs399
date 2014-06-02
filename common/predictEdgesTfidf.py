@@ -126,47 +126,47 @@ def getTFIDFneighbors(queryTFIDF, itemTFIDFs, k, weights=None, minWeight=0,
 
 def predictEdges(itemTFIDFs1, itemTFIDFs2, k, symmetric=False, weights=None,
                  weightIn=True, weightOut=False, minWeight=0, cosineSim=False):
-    predicted_edges = []
+    predictedEdges = []
     if weights is not None and weightOut:
         print 'Predicting edges (weighted outgoing). . . '
-        total_predictions = int(len(itemTFIDFs1)*k)
+        totalPredictions = int(len(itemTFIDFs1)*k)
         if symmetric:
-            total_predictions += int(len(itemTFIDFs2)*k)
-        total_popularity = 0.0
+            totalPredictions += int(len(itemTFIDFs2)*k)
+        totalPopularity = 0.0
         for item1 in itemTFIDFs1:
-            total_popularity += weights[item1]
+            totalPopularity += weights[item1]
         if symmetric:
             for item2 in itemTFIDFs2:
-                total_popularity += weights[item2]
+                totalPopularity += weights[item2]
         for item1 in itemTFIDFs1:
-            num_predictions = int(round(total_predictions*\
+            numPredictions = int(round(totalPredictions*\
                                         weights[item1]/\
-                                        total_popularity))
-            if num_predictions > 0:
+                                        totalPopularity))
+            if numPredictions > 0:
                 neighbors = getTFIDFneighbors(
                     itemTFIDFs1[item1],
                     itemTFIDFs2,
-                    num_predictions,
+                    numPredictions,
                     weights=weights if weightIn else None,
                     minWeight=minWeight,
                     cosineSim=cosineSim
                 )
-                predicted_edges += [(item1, n) for n in neighbors]
+                predictedEdges += [(item1, n) for n in neighbors]
         if symmetric:
             for item2 in itemTFIDFs2:
-                num_predictions = int(round(total_predictions*\
+                numPredictions = int(round(totalPredictions*\
                                             weights[item2]/\
-                                            total_popularity))
-                if num_predictions > 0:
+                                            totalPopularity))
+                if numPredictions > 0:
                     neighbors = getTFIDFneighbors(
                         itemTFIDFs2[item2],
                         itemTFIDFs1,
-                        num_predictions,
+                        numPredictions,
                         weights=weights if weightIn else None,
                         minWeight=minWeight,
                         cosineSim=cosineSim
                     )
-                    predicted_edges += [(item2, n) for n in neighbors]
+                    predictedEdges += [(item2, n) for n in neighbors]
     else:
         print 'Predicting edges (uniform outgoing). . .'
         for item1 in itemTFIDFs1:
@@ -178,7 +178,7 @@ def predictEdges(itemTFIDFs1, itemTFIDFs2, k, symmetric=False, weights=None,
                 minWeight=minWeight,
                 cosineSim=cosineSim
             )
-            predicted_edges += [(item1, n) for n in neighbors]
+            predictedEdges += [(item1, n) for n in neighbors]
         if symmetric:
             for item2 in itemTFIDFs2:
                 neighbors = getTFIDFneighbors(
@@ -189,8 +189,8 @@ def predictEdges(itemTFIDFs1, itemTFIDFs2, k, symmetric=False, weights=None,
                     minWeight=minWeight,
                     cosineSim=cosineSim
                 )
-                predicted_edges += [(item2, n) for n in neighbors]
-    return predicted_edges
+                predictedEdges += [(item2, n) for n in neighbors]
+    return predictedEdges
 
 def main():
     # Parse options
@@ -200,18 +200,18 @@ def main():
     if len(args) != 3:
         parser.error('Wrong number of arguments') 
     dbFilename = getAndCheckFilename(args[0])
-    graph1_filename = getAndCheckFilename(args[1])
-    graph2_filename = getAndCheckFilename(args[2])
+    graphFilename1 = getAndCheckFilename(args[1])
+    graphFilename2 = getAndCheckFilename(args[2])
 
     # connect to database
     print 'Connecting to database %s. . .' % dbFilename
     db_conn = sqlite3.connect(dbFilename)
 
     # load graphs
-    print 'Loading graph1 from %s. . .' % graph1_filename
-    graph1 = loadPickle(graph1_filename)
-    print 'Loading graph2 from %s. . .' % graph2_filename
-    graph2 = loadPickle(graph2_filename)
+    print 'Loading graph1 from %s. . .' % graphFilename1
+    graph1 = loadPickle(graphFilename1)
+    print 'Loading graph2 from %s. . .' % graphFilename2
+    graph2 = loadPickle(graphFilename2)
 
     # get stop words
     print 'Loading Stopwords and IDFs. . .'
@@ -242,8 +242,7 @@ def main():
         popDictionary = None
 
     # predict edges
-    print 'Predicting edges. . .'
-    predicted_edges = predictEdges(
+    predictedEdges = predictEdges(
         itemTFIDFs1,
         itemTFIDFs2,
         options.k,
@@ -257,7 +256,7 @@ def main():
 
     # save results
     print 'Saving results to %s. . .' % options.savefile
-    pickle.dump(predicted_edges, open(options.savefile, 'w'))
+    pickle.dump(predictedEdges, open(options.savefile, 'w'))
 
 if __name__ == '__main__':
     main()

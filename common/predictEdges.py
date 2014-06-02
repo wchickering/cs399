@@ -53,9 +53,9 @@ def main():
     if len(args) != 3:
         parser.error('Wrong number of arguments') 
 
-    topic_map_filename = getAndCheckFilename(args[0])
-    model1_filename = getAndCheckFilename(args[1])
-    model2_filename = getAndCheckFilename(args[2])
+    topicMapFilename = getAndCheckFilename(args[0])
+    modelFilename1 = getAndCheckFilename(args[1])
+    modelFilename2 = getAndCheckFilename(args[2])
 
     # get popularity dictionary
     if options.popdict:
@@ -65,14 +65,14 @@ def main():
         popDictionary = None
 
     # load topic map
-    print 'Loading topic map from %s. . .' % topic_map_filename
-    topic_map = loadPickle(topic_map_filename)
+    print 'Loading topic map from %s. . .' % topicMapFilename
+    topicMap = loadPickle(topicMapFilename)
 
     # load models
-    print 'Loading model1 from %s. . .' % model1_filename
-    data1, dictionary1 = loadModel(model1_filename)
-    print 'Loading model2 from %s. . .' % model2_filename
-    data2, dictionary2 = loadModel(model2_filename)
+    print 'Loading model1 from %s. . .' % modelFilename1
+    data1, dictionary1 = loadModel(modelFilename1)
+    print 'Loading model2 from %s. . .' % modelFilename2
+    data2, dictionary2 = loadModel(modelFilename2)
 
     if popDictionary is not None and options.minPop > 0:
         # filter items in target space by popularity
@@ -84,16 +84,16 @@ def main():
 
     # transform each model to other's space
     print 'Transforming topic spaces. . .'
-    transformed_data1 = np.dot(data1, np.array(topic_map).transpose())
+    transformedData1 = np.dot(data1, np.array(topicMap).transpose())
     if options.symmetric:
-        transformed_data2 = np.dot(data2, np.array(topic_map))
+        transformedData2 = np.dot(data2, np.array(topicMap))
 
     if options.sphere:
         # place all items in latent space on surface of sphere
-        transformed_data1 = normalize(transformed_data1, 'l2', axis=1)
+        transformedData1 = normalize(transformedData1, 'l2', axis=1)
         data2 = normalize(data2, 'l2', axis=1)
         if options.symmetric:
-            transformed_data2 = normalize(transformed_data2, 'l2', axis=1)
+            transformedData2 = normalize(transformedData2, 'l2', axis=1)
             data1 = normalize(data1, 'l2', axis=1)
 
     # create search engines
@@ -106,23 +106,23 @@ def main():
     if popDictionary is not None and options.weightOut:
         # choose outgoing edge nodes based on popularity
         print 'Predicting edges (weighted outgoing). . .'
-        total_predictions = int(transformed_data1.shape[1]*options.k)
+        totalPredictions = int(transformedData1.shape[1]*options.k)
         if options.symmetric:
-            total_predictions += int(transformed_data2.shape[1]*options.k)
-        total_popularity = 0.0
-        for i in range(transformed_data1.shape[1]):
-            total_popularity += popDictionary[dictionary1[i]]
+            totalPredictions += int(transformedData2.shape[1]*options.k)
+        totalPopularity = 0.0
+        for i in range(transformedData1.shape[1]):
+            totalPopularity += popDictionary[dictionary1[i]]
         if options.symmetric:
-            for i in range(transformed_data2.shape[1]):
-                total_popularity += popDictionary[dictionary2[i]]
+            for i in range(transformedData2.shape[1]):
+                totalPopularity += popDictionary[dictionary2[i]]
         neighbors1 = []
-        for i in range(transformed_data1.shape[0]):
-            num_predictions = int(round(total_predictions*\
+        for i in range(transformedData1.shape[0]):
+            num_predictions = int(round(totalPredictions*\
                                         popDictionary[dictionary1[i]]/\
-                                        total_popularity))
+                                        totalPopularity))
             if num_predictions > 0:
                 _, n = searchEngine2.kneighbors(
-                    transformed_data1[i,:],
+                    transformedData1[i,:],
                     num_predictions,
                     weights=popDictionary if options.weightIn else None,
                     topn=options.topn
@@ -132,13 +132,13 @@ def main():
                 neighbors1.append([]) # place holder
         if options.symmetric:
             neighbors2 = []
-            for i in range(transformed_data2.shape[0]):
-                num_predictions = int(round(total_predictions*\
+            for i in range(transformedData2.shape[0]):
+                num_predictions = int(round(totalPredictions*\
                                             popDictionary[dictionary2[i]]/\
-                                            total_popularity))
+                                            totalPopularity))
                 if num_predictions > 0:
                     _, n = searchEngine1.kneighbors(
-                        transformed_data2[i,:],
+                        transformedData2[i,:],
                         num_predictions,
                         weights=popDictionary if options.weightIn else None,
                         topn=options.topn
@@ -150,14 +150,14 @@ def main():
         # choose outgoing edge nodes uniformly
         print 'Predicting edges (uniform outgoing). . .'
         _, neighbors1 = searchEngine2.kneighbors(
-            transformed_data1,
+            transformedData1,
             int(options.k),
             weights=popDictionary if options.weightIn else None,
             topn=options.topn
         )
         if options.symmetric:
             _, neighbors2 = searchEngine1.kneighbors(
-                transformed_data2,
+                transformedData2,
                 int(options.k),
                 weights=popDictionary if options.weightIn else None,
                 topn=options.topn

@@ -432,7 +432,8 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting based on popularity. . ."
         CMD="python $SRC/predictEdgesPopular.py --savefile=$PREDICTED_POP\
-            $SEED_OPT -v --topn=3 $POP_DICT $GRAPH1 $GRAPH2"
+            $SEED_OPT -v --topn=3 -k 1.8 --weight-out --symmetric\
+            $POP_DICT $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting using item-item tfidf. . ."
         CMD="python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF\
