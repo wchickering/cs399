@@ -237,7 +237,6 @@ GRAPH_BASE=$DATA/graph${CAT}
 GRAPH=${GRAPH_BASE}.pickle
 GRAPH1=${GRAPH_BASE}${SEED_EXT}_1.pickle
 GRAPH2=${GRAPH_BASE}${SEED_EXT}_2.pickle
-POP_DICT=${GRAPH_BASE}${SEED_EXT}_popdict.pickle
 RAND_GRAPH=${GRAPH_BASE}${SEED_EXT}_rand.pickle
 POP_GRAPH=${GRAPH_BASE}${SEED_EXT}_popsrc.pickle
 TFIDF_GRAPH=${GRAPH_BASE}${SEED_EXT}_tfidf.pickle
@@ -288,6 +287,8 @@ TFIDF1=${TFIDF_BASE}_1.pickle
 TFIDF2=${TFIDF_BASE}_2.pickle
 MAP=$DATA/topicMap_${EXPMT}.pickle
 IDENT_MAP=$DATA/identMap_${NUM_TOPICS}.pickle
+
+POP_DICT=$DATA/popDict${CAT}${SEED_EXT}.pickle
 
 # edges
 LOST_EDGES=$DATA/lostEdges${CAT}${SEED_EXT}.pickle
@@ -435,8 +436,9 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting using item-item tfidf. . ."
         CMD="python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF\
-            $POP_DICT_OPT $BRAND_ONLY_OPT --min-pop=0 --idfname=$IDFS\
-            --stopwords=$STOPWORDS $DB $GRAPH1 $GRAPH2"
+            -k 1.8 $BRAND_ONLY_OPT --idfname=$IDFS $POP_DICT_OPT\
+            --stopwords=$STOPWORDS --min-pop=0 --weight-in --weight-out
+            --symmetric $DB $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting using one model. . ."
         CMD="python $SRC/partitionModel.py --model1=$MODEL_ONE1\
@@ -452,9 +454,6 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES -k 1.8\
         $POP_DICT_OPT --min-pop=0 --weight-in --weight-out --symmetric --sphere\
         $MAP $MODEL1 $MODEL2"
-    #CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES -k 2.0\
-    #    $POP_DICT_OPT --min-pop=0 --weight-in --sphere\
-    #    $MAP $MODEL1 $MODEL2"
     echo $CMD; eval $CMD; echo $CMDTERM
 echo
 fi

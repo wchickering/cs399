@@ -24,8 +24,12 @@ displayInterval = 100
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-k', type='int', dest='k', default=2,
-        help='Number of predicted edges per node.', metavar='NUM')
+    parser.add_option('-k', type='float', dest='k', default=2.0,
+        help='Number of predicted edges per node.', metavar='FLOAT')
+    parser.add_option('--symmetric', action='store_true', dest='symmetric',
+        default=False,
+        help=('Predict k edges for each node in each graph connecting to a '
+              'node in the other graph.'))
     parser.add_option('-s', '--savefile', dest='savefile',
         default='predictEdges.pickle', help='Pickle to dump predicted edges.',
         metavar='FILE')
@@ -42,59 +46,16 @@ def getParser(usage=None):
     parser.add_option('--min-pop', type='int', dest='minPop',
         default=0, help='Minimum popularity to be included in search engine.',
         metavar='NUM')
+    parser.add_option('--weight-in', action='store_true', dest='weightIn',
+        default=False,
+        help='Weight KNN search engine results using popDictionary.')
+    parser.add_option('--weight-out', action='store_true', dest='weightOut',
+        default=False,
+        help='Weight choice of outgoing edges using popDictionary.')
     parser.add_option('--brand-only', action='store_true', dest='brandOnly',
         default=False,
         help='Only consider brand (i.e. first term in description).')
     return parser
-
-def TFIDFsimilarity(tfidf1, tfidf2, cosineSim=False):
-    score = 0.0
-    for word1 in tfidf1:
-        if word1 in tfidf2:
-            score += tfidf1[word1]*tfidf2[word1]
-    if cosineSim:
-        weight1 = sum([tfidf1[word]*tfidf1[word] for word in tfidf1])
-        weight2 = sum([tfidf2[word]*tfidf2[word] for word in tfidf2])
-        return (score / math.sqrt(weight1 * weight2))
-    else:
-        return score
-
-def getTFIDFneighbors(queryTFIDF, itemTFIDFs, k, weights=None, minPop=0,
-                      cosineSim=False):
-    queue = PriorityQueue() 
-    for item in itemTFIDFs:
-        if weights is not None and minPop > 0:
-            if weights[item] < minPop:
-                continue
-        similarity = TFIDFsimilarity(
-            queryTFIDF, itemTFIDFs[item], cosineSim=cosineSim
-        )
-        if weights is not None:
-            similarity *= weights[item]
-        queue.put((similarity, item))
-        if queue.qsize() > k:
-            queue.get()
-    neighbors = []
-    while not queue.empty():
-        (similarity, item) = queue.get()
-        neighbors.append(item)
-    return neighbors
-
-def predictEdges(itemTFIDFs1, itemTFIDFs2, k, weights=None, minPop=0,
-                 cosineSim=False):
-    predicted_edges = []
-    count = 0
-    for node1 in itemTFIDFs1:
-        if count % displayInterval == 0:
-            print 'Getting neighbors of %d / %d nodes' % (
-                count, len(itemTFIDFs1.keys())
-            )
-        count += 1
-        neighbors = getTFIDFneighbors(itemTFIDFs1[node1], itemTFIDFs2, k,
-                                      weights=weights, minPop=minPop,
-                                      cosineSim=cosineSim)
-        predicted_edges += [(node1, n) for n in neighbors]
-    return predicted_edges
 
 def getItemTFs(db_conn, graph, stopwords=None, brandOnly=False):
     db_curs = db_conn.cursor()
@@ -129,6 +90,107 @@ def combineTFandIDF(itemTFs, termIDFs):
             [(term, tf*termIDFs[term]) for (term, tf) in itemTFs[item].items()]
         )
     return itemTFIDFs
+
+def TFIDFsimilarity(tfidf1, tfidf2, cosineSim=False):
+    score = 0.0
+    for word1 in tfidf1:
+        if word1 in tfidf2:
+            score += tfidf1[word1]*tfidf2[word1]
+    if cosineSim:
+        weight1 = sum([tfidf1[word]*tfidf1[word] for word in tfidf1])
+        weight2 = sum([tfidf2[word]*tfidf2[word] for word in tfidf2])
+        return (score / math.sqrt(weight1 * weight2))
+    else:
+        return score
+
+def getTFIDFneighbors(queryTFIDF, itemTFIDFs, k, weights=None, minWeight=0,
+                      cosineSim=False):
+    queue = PriorityQueue()
+    for item in itemTFIDFs:
+        if weights is not None and minWeight > 0:
+            if weights[item] < minWeight:
+                continue
+        similarity = TFIDFsimilarity(
+            queryTFIDF, itemTFIDFs[item], cosineSim=cosineSim
+        )
+        if weights is not None:
+            similarity *= weights[item]
+        queue.put((similarity, item))
+        if queue.qsize() > k:
+            queue.get()
+    neighbors = []
+    while not queue.empty():
+        (similarity, item) = queue.get()
+        neighbors.append(item)
+    return neighbors
+
+def predictEdges(itemTFIDFs1, itemTFIDFs2, k, symmetric=False, weights=None,
+                 weightIn=True, weightOut=False, minWeight=0, cosineSim=False):
+    predicted_edges = []
+    if weights is not None and weightOut:
+        print 'Predicting edges (weighted outgoing). . . '
+        total_predictions = int(len(itemTFIDFs1)*k)
+        if symmetric:
+            total_predictions += int(len(itemTFIDFs2)*k)
+        total_popularity = 0.0
+        for item1 in itemTFIDFs1:
+            total_popularity += weights[item1]
+        if symmetric:
+            for item2 in itemTFIDFs2:
+                total_popularity += weights[item2]
+        for item1 in itemTFIDFs1:
+            num_predictions = int(round(total_predictions*\
+                                        weights[item1]/\
+                                        total_popularity))
+            if num_predictions > 0:
+                neighbors = getTFIDFneighbors(
+                    itemTFIDFs1[item1],
+                    itemTFIDFs2,
+                    num_predictions,
+                    weights=weights if weightIn else None,
+                    minWeight=minWeight,
+                    cosineSim=cosineSim
+                )
+                predicted_edges += [(item1, n) for n in neighbors]
+        if symmetric:
+            for item2 in itemTFIDFs2:
+                num_predictions = int(round(total_predictions*\
+                                            weights[item2]/\
+                                            total_popularity))
+                if num_predictions > 0:
+                    neighbors = getTFIDFneighbors(
+                        itemTFIDFs2[item2],
+                        itemTFIDFs1,
+                        num_predictions,
+                        weights=weights if weightIn else None,
+                        minWeight=minWeight,
+                        cosineSim=cosineSim
+                    )
+                    predicted_edges += [(item2, n) for n in neighbors]
+    else:
+        print 'Predicting edges (uniform outgoing). . .'
+        for item1 in itemTFIDFs1:
+            neighbors = getTFIDFneighbors(
+                itemTFIDFs1[item1],
+                itemTFIDFs2,
+                k,
+                weights=weights if weightIn else None,
+                minWeight=minWeight,
+                cosineSim=cosineSim
+            )
+            predicted_edges += [(item1, n) for n in neighbors]
+        if symmetric:
+            for item2 in itemTFIDFs2:
+                neighbors = getTFIDFneighbors(
+                    itemTFIDFs2[item2],
+                    itemTFIDFs1,
+                    k,
+                    weights=weights if weightIn else None,
+                    minWeight=minWeight,
+                    cosineSim=cosineSim
+                )
+                predicted_edges += [(item2, n) for n in neighbors]
+    return predicted_edges
 
 def main():
     # Parse options
@@ -185,8 +247,11 @@ def main():
         itemTFIDFs1,
         itemTFIDFs2,
         options.k,
+        symmetric=options.symmetric,
         weights=popDictionary,
-        minPop=options.minPop,
+        weightIn=options.weightIn,
+        weightOut=options.weightOut,
+        minWeight=options.minPop,
         cosineSim=options.cosine
     )
 

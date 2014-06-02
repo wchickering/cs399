@@ -18,7 +18,7 @@ from sklearn.preprocessing import normalize
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('-k', type='float', dest='k', default=2.0,
-        help='Number of predicted edges per node.', metavar='NUM')
+        help='Number of predicted edges per node.', metavar='FLOAT')
     parser.add_option('--symmetric', action='store_true', dest='symmetric',
         default=False,
         help=('Predict k edges for each node in each graph connecting to a '
