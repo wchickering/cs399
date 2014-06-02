@@ -15,6 +15,13 @@ verify_number () {
     fi
 }
 
+verify_float () {
+    re='^[0-9]*\.?[0-9]+$'
+    if ! [[ $1 =~ $re ]] ; then
+        die "error: Not a float: $1"
+    fi
+}
+
 while test $# -gt 0; do
     case "$1" in
         -h|--help)
@@ -27,8 +34,12 @@ while test $# -gt 0; do
             echo "-s, --start-stage=NUM     Specify the starting stage"
             echo "-e, --end-stage=NUM       Specify the ending stage"
             echo "--data=DIR                Specify the data directory to use"
-            echo "-k, --numtopics=NUM       Number of topics/concepts"
+            echo "--numtopics=NUM           Number of topics/concepts"
+            echo "--edges-per-node          Edge prediction per node"
             echo "--directed                Run experiment on directed graphs"
+            echo "--asymmetric              Don't include --symmetric on predictors"
+            echo "--no-weight-in            Exclude popularity from KNN search"
+            echo "--no-weight-out           Predict outgoing edges uniformaly"
             echo "--no-benchmarks           Don't run benchmark predictors"
             echo "--no-popularity-added     Don't add popularity back into graph"
             echo "--no-popularity-removed   Don't remove popularity in graph"
@@ -38,6 +49,7 @@ while test $# -gt 0; do
             echo "--no-partition-by-brand   Do not partition graph by brand"
             echo "--brand-only              Only consider brand for TFIDF"
             echo "--no-zero-mean            Do not subtract mean before SVD"
+            echo "--min-pop=FLOAT           Specifiy minimum popularity in search"
             echo "--min-component-size=NUM  Specifiy minimum component size"
             echo "                          allowed in graph"
             echo "--max-mapping-connections=NUM"  
@@ -82,24 +94,31 @@ while test $# -gt 0; do
             export DATA=`echo $1 | sed -e 's/^[^=]*=//g'`
             shift
             ;;
-        -k)
-            shift
-            if test $# -gt 0; then
-                export NUM_TOPICS=$1
-                verify_number $NUM_TOPICS
-            else
-                die "number of topics not specified"
-            fi
-            shift
-            ;;
         --numtopics*)
             export NUM_TOPICS=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_number $NUM_TOPICS
             shift
             ;;
+        --edges-per-node*)
+            export EDGES_PER_NODE=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_float $EDGES_PER_NODE
+            shift
+            ;;
         --directed)
             # this should be left undefined by default
             export DIRECTED_OPT='--directed'
+            shift
+            ;;
+        --asymmetric)
+            export SYMMETRIC=0
+            shift
+            ;;
+        --no-weight-in)
+            export WEIGHT_IN=0
+            shift
+            ;;
+        --no-weight-out)
+            export WEIGHT_OUT=0
             shift
             ;;
         --no-benchmarks)
@@ -134,6 +153,11 @@ while test $# -gt 0; do
             ;;
         --no-zero-mean)
             export ZERO_MEAN_FLAG=0
+            shift
+            ;;
+        --min-pop*)
+            export MIN_POP=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_float $MIN_POP
             shift
             ;;
         --min-component-size*)
@@ -188,6 +212,21 @@ if [[ -z "$NUM_TOPICS" ]]; then
     NUM_TOPICS=32
 fi
 
+if [[ -z "$EDGES_PER_NODE" ]]; then
+    EDGES_PER_NODE="1.8"
+fi
+if [[ -z "$SYMMETRIC" ]]; then
+    SYMMETRIC_OPT="--symmetric"
+fi
+
+if [[ -z "$WEIGHT_IN" ]]; then
+    WEIGHT_IN_OPT="--weight-in"
+fi
+
+if [[ -z "$WEIGHT_OUT" ]]; then
+    WEIGHT_OUT_OPT="--weight-out"
+fi
+
 if [[ -z "$BENCHMARKS" ]]; then
     BENCHMARKS=1
 fi
@@ -206,6 +245,10 @@ fi
 
 if [[ -z "$REMOVE_POP_FLAG" ]]; then
     REMOVE_POP_OPT='--tran2'
+fi
+
+if [[ -z "$MIN_POP" ]]; then
+    MIN_POP="0.0"
 fi
 
 if [[ -z "$MIN_COMPONENT_SIZE" ]]; then
@@ -432,29 +475,30 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting based on popularity. . ."
         CMD="python $SRC/predictEdgesPopular.py --savefile=$PREDICTED_POP\
-            $SEED_OPT -v --topn=3 -k 1.8 --weight-out --symmetric\
-            $POP_DICT $GRAPH1 $GRAPH2"
+            $SEED_OPT -v --topn=3 -k $EDGES_PER_NODE $WEIGHT_OUT_OPT\
+            $SYMMETRIC_OPT $POP_DICT $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting using item-item tfidf. . ."
         CMD="python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF\
-            -k 1.8 $BRAND_ONLY_OPT --idfname=$IDFS $POP_DICT_OPT\
-            --stopwords=$STOPWORDS --min-pop=0 --weight-in --weight-out
-            --symmetric $DB $GRAPH1 $GRAPH2"
+            -k $EDGES_PER_NODE $BRAND_ONLY_OPT --idfname=$IDFS $POP_DICT_OPT\
+            --stopwords=$STOPWORDS --min-pop=$MIN_POP $WEIGHT_IN_OPT\
+            $WEIGHT_OUT_OPT $SYMMETRIC_OPT $DB $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting using one model. . ."
         CMD="python $SRC/partitionModel.py --model1=$MODEL_ONE1\
             --model2=$MODEL_ONE2 --ident-map=$IDENT_MAP\
             $MODEL $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
-        CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_ONE -k 1.8\
-            $POP_DICT_OPT --min-pop=0 --weight-in --weight-out --symmetric\
-            --sphere $IDENT_MAP $MODEL_ONE1 $MODEL_ONE2"
+        CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_ONE\
+            -k $EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP $WEIGHT_IN_OPT\
+            $WEIGHT_OUT_OPT $SYMMETRIC_OPT --sphere\
+            $IDENT_MAP $MODEL_ONE1 $MODEL_ONE2"
         echo $CMD; eval $CMD; echo $CMDTERM
     fi
     echo "** Predicting with mapping between models. . ."
-    CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES -k 1.8\
-        $POP_DICT_OPT --min-pop=0 --weight-in --weight-out --symmetric --sphere\
-        $MAP $MODEL1 $MODEL2"
+    CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES\
+        -k $EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP $WEIGHT_IN_OPT\
+        $WEIGHT_OUT_OPT $SYMMETRIC_OPT --sphere $MAP $MODEL1 $MODEL2"
     echo $CMD; eval $CMD; echo $CMDTERM
 echo
 fi

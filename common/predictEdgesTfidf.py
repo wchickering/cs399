@@ -43,9 +43,9 @@ def getParser(usage=None):
         metavar='FILE')
     parser.add_option('--popdict', dest='popdict', default=None,
         help='Picked popularity dictionary.', metavar='FILE')
-    parser.add_option('--min-pop', type='int', dest='minPop',
-        default=0, help='Minimum popularity to be included in search engine.',
-        metavar='NUM')
+    parser.add_option('--min-pop', type='float', dest='minPop',
+        default=0.0, help='Minimum popularity to be included in search engine.',
+        metavar='FLOAT')
     parser.add_option('--weight-in', action='store_true', dest='weightIn',
         default=False,
         help='Weight KNN search engine results using popDictionary.')
