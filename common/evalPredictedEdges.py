@@ -6,12 +6,10 @@ original recommender graph.
 """
 
 from optparse import OptionParser
-import pickle
 import os
 import sys
 import math
 import numpy as np
-from collections import defaultdict
 
 # local modules
 from Util import loadPickle, getAndCheckFilename
@@ -32,18 +30,6 @@ def getDict(filename):
     npzfile = np.load(filename)
     id2item = npzfile['dictionary']
     return dict((id2item[i], i) for i in range(len(id2item)))
-
-#def getRelevantEdges(lost_edges, predicted_nodes):
-#    predicted_nodes = set(predicted_nodes)
-#    relevant_edges = []
-#    for (item1, item2) in lost_edges:
-#        if item1 in predicted_nodes:
-#            relevant_edges.append((item1, item2))
-#    return relevant_edges
-
-#def getPredictedNodes(predicted_edges):
-#    predicted_edges = np.array(predicted_edges)
-#    return np.unique(predicted_edges[:, 0:1])
 
 def evalEdges(edges, prox_mat, dictionary, k):
     correct = 0
@@ -67,14 +53,6 @@ def evalEdges(edges, prox_mat, dictionary, k):
                 len(edges)
             )
     return correct
-
-#def getItem2Dist(predicted_edges):
-#    item2Cnts = defaultdict(int)
-#    for item1, item2 in predicted_edges:
-#        item2Cnts[item2] += 1
-#    item2Dist = [(item, cnt) for item, cnt in item2Cnts.items()]
-#    item2Dist.sort(key=lambda tup: tup[1], reverse=True)
-#    return item2Dist
 
 def main():
     # Parse options
@@ -104,18 +82,15 @@ def main():
                                source_dict, options.k)
 
     # compute metrics
-    if options.directed:
-        num_lost_edges = len(lost_edges)
-    else:
-        num_lost_edges = len(lost_edges)/2
-    precision = float(correct_predictions) / len(predicted_edges)
+    num_correct_predictions = len(predicted_edges)
+    num_lost_edges = len(lost_edges)
+    if not options.directed:
+        recalled_edges /= 2
+        num_lost_edges /= 2
+
+    precision = float(correct_predictions) / num_correct_predictions
     recall = float(recalled_edges) / num_lost_edges
     f1score = 2*precision*recall/(precision + recall)
-
-    #predicted_nodes = getPredictedNodes(predicted_edges)
-    #relevant_lost_edges = getRelevantEdges(lost_edges, predicted_nodes)
-    #item2_dist_src = getItem2Dist(predicted_edges)
-    #item2_dist_tgt = getItem2Dist(relevant_lost_edges)
 
     # print evaluation results
     print '==============================================='
@@ -126,18 +101,6 @@ def main():
     print 'Withheld edges \t\t : %d' % num_lost_edges
     print '%d-Recall \t\t : %0.3f' % (options.k, recall)
     print '%d-F1 Score \t\t : %0.3f' % (options.k, f1score)
-
-    #print 'Guesses per item \t : %d' % (
-    #    len(predicted_edges)/len(predicted_nodes),
-    #)
-    #print 'Distinct item2 (src) \t : %d (%s)' % (
-    #    len(item2_dist_src),
-    #    str([cnt for item, cnt in item2_dist_src[0:5]])
-    #)
-    #print 'Distinct item2 (tgt) \t : %d (%s)' % (
-    #    len(item2_dist_tgt),
-    #    str([cnt for item, cnt in item2_dist_tgt[0:5]])
-    #)
 
 if __name__ == '__main__':
     main()
