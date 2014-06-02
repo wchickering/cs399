@@ -74,19 +74,24 @@ def main():
     print 'Loading model2 from %s. . .' % modelFilename2
     data2, dictionary2 = loadModel(modelFilename2)
 
-    if popDictionary is not None and options.minPop > 0:
-        # filter items in target space by popularity
-        print 'Filtering target space such that popularity >= %d. . .' %\
-              options.minPop
-        data2, dictionary2 = filterByPopularity(data2, dictionary2,
-                                                popDictionary, options.minPop)
-        print 'Filtered target space with %d items.' % data2.shape[0]
-
     # transform each model to other's space
     print 'Transforming topic spaces. . .'
     transformedData1 = np.dot(data1, np.array(topicMap).transpose())
+    transformedDictionary1 = dict(dictionary1)
     if options.symmetric:
         transformedData2 = np.dot(data2, np.array(topicMap))
+        transformedDictionary2 = dict(dictionary2)
+
+    if popDictionary is not None and options.minPop > 0:
+        # filter items in target space by popularity
+        print 'Filtering target spaces. . .'
+        data2, dictionary2 = filterByPopularity(
+            data2, dictionary2, popDictionary, options.minPop
+        )
+        if options.symmetric:
+            data1, dictionary1 = filterByPopularity(
+                data1, dictionary1, popDictionary, options.minPop
+            )
 
     if options.sphere:
         # place all items in latent space on surface of sphere
@@ -111,19 +116,20 @@ def main():
             totalPredictions += int(transformedData2.shape[1]*options.k)
         totalPopularity = 0.0
         for i in range(transformedData1.shape[1]):
-            totalPopularity += popDictionary[dictionary1[i]]
+            totalPopularity += popDictionary[transformedDictionary1[i]]
         if options.symmetric:
             for i in range(transformedData2.shape[1]):
-                totalPopularity += popDictionary[dictionary2[i]]
+                totalPopularity += popDictionary[transformedDictionary2[i]]
         neighbors1 = []
         for i in range(transformedData1.shape[0]):
-            num_predictions = int(round(totalPredictions*\
-                                        popDictionary[dictionary1[i]]/\
-                                        totalPopularity))
-            if num_predictions > 0:
+            numPredictions = int(round(
+                totalPredictions*popDictionary[transformedDictionary1[i]]/\
+                    totalPopularity
+            ))
+            if numPredictions > 0:
                 _, n = searchEngine2.kneighbors(
                     transformedData1[i,:],
-                    num_predictions,
+                    numPredictions,
                     weights=popDictionary if options.weightIn else None,
                     topn=options.topn
                 )
@@ -133,13 +139,14 @@ def main():
         if options.symmetric:
             neighbors2 = []
             for i in range(transformedData2.shape[0]):
-                num_predictions = int(round(totalPredictions*\
-                                            popDictionary[dictionary2[i]]/\
-                                            totalPopularity))
-                if num_predictions > 0:
+                numPredictions = int(round(
+                    totalPredictions*popDictionary[transformedDictionary2[i]]/\
+                        totalPopularity
+                ))
+                if numPredictions > 0:
                     _, n = searchEngine1.kneighbors(
                         transformedData2[i,:],
-                        num_predictions,
+                        numPredictions,
                         weights=popDictionary if options.weightIn else None,
                         topn=options.topn
                     )
@@ -164,9 +171,9 @@ def main():
             )
 
     # translate neighbors into edge predictions
-    predicted_edges = makeEdges(neighbors1, dictionary1)
+    predicted_edges = makeEdges(neighbors1, transformedDictionary1)
     if options.symmetric:
-        predicted_edges += makeEdges(neighbors2, dictionary2)
+        predicted_edges += makeEdges(neighbors2, transformedDictionary2)
         # remove duplicates
         predicted_edges = [(min(n1, n2), max(n1, n2)) for\
                            (n1, n2) in predicted_edges]

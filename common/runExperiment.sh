@@ -38,6 +38,7 @@ while test $# -gt 0; do
             echo "--edges-per-node          Edge prediction per node"
             echo "--directed                Run experiment on directed graphs"
             echo "--asymmetric              Don't include --symmetric on predictors"
+            echo "--alpha=FLOAT             Popularity scaling factor."
             echo "--no-weight-in            Exclude popularity from KNN search"
             echo "--no-weight-out           Predict outgoing edges uniformaly"
             echo "--no-benchmarks           Don't run benchmark predictors"
@@ -111,6 +112,11 @@ while test $# -gt 0; do
             ;;
         --asymmetric)
             export SYMMETRIC=0
+            shift
+            ;;
+        --alpha*)
+            export ALPHA=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_float $ALPHA
             shift
             ;;
         --no-weight-in)
@@ -219,6 +225,10 @@ if [[ -z "$SYMMETRIC" ]]; then
     SYMMETRIC_OPT="--symmetric"
 fi
 
+if [[ -z "$ALPHA" ]]; then
+    ALPHA="1.0"
+fi
+
 if [[ -z "$WEIGHT_IN" ]]; then
     WEIGHT_IN_OPT="--weight-in"
 fi
@@ -271,12 +281,12 @@ SEED_OPT="--seed=$SEED"
 CMDTERM='-----'
 SRC=../common
 SEED_EXT=Seed${SEED}
-EXPMT=${MODEL_TYPE}_${NUM_TOPICS}_${CAT}_$SEED_EXT
+EXPMT=${MODEL_TYPE}_${NUM_TOPICS}_${CAT// /_}_$SEED_EXT
 DB=$DATA/macys.db
 STOPWORDS=$DATA/stopwords.txt
 
 # graphs
-GRAPH_BASE=$DATA/graph${CAT}
+GRAPH_BASE=$DATA/graph${CAT// /_}
 GRAPH=${GRAPH_BASE}.pickle
 GRAPH1=${GRAPH_BASE}${SEED_EXT}_1.pickle
 GRAPH2=${GRAPH_BASE}${SEED_EXT}_2.pickle
@@ -287,7 +297,7 @@ ONE_GRAPH=${GRAPH_BASE}${SEED_EXT}_one.pickle
 SOURCE_GRAPH=${GRAPH_BASE}${SEED_EXT}_${NUM_TOPICS}_src.pickle
 
 # random walks
-RWALK_BASE=$DATA/randomWalk${CAT}
+RWALK_BASE=$DATA/randomWalk${CAT// /_}
 RWALK=${RWALK_BASE}.npz
 RWALK1=${RWALK_BASE}${SEED_EXT}_1.npz
 RWALK2=${RWALK_BASE}${SEED_EXT}_2.npz
@@ -323,7 +333,7 @@ else
 fi
 
 # tfidf and map
-IDFS=$DATA/idfs${CAT}.pickle
+IDFS=$DATA/idfs${CAT// /_}.pickle
 TFIDF_BASE=$DATA/tfidf_${EXPMT}
 TFIDF=${TFIDF_BASE}.pickle
 TFIDF1=${TFIDF_BASE}_1.pickle
@@ -331,10 +341,10 @@ TFIDF2=${TFIDF_BASE}_2.pickle
 MAP=$DATA/topicMap_${EXPMT}.pickle
 IDENT_MAP=$DATA/identMap_${NUM_TOPICS}.pickle
 
-POP_DICT=$DATA/popDict${CAT}${SEED_EXT}.pickle
+POP_DICT=$DATA/popDict${CAT// /_}${SEED_EXT}.pickle
 
 # edges
-LOST_EDGES=$DATA/lostEdges${CAT}${SEED_EXT}.pickle
+LOST_EDGES=$DATA/lostEdges${CAT// /_}${SEED_EXT}.pickle
 PREDICTED_BASE=$DATA/predictedEdges_${EXPMT}
 PREDICTED_RAND=${PREDICTED_BASE}_rand.pickle
 PREDICTED_POP=${PREDICTED_BASE}_pop.pickle
@@ -343,7 +353,7 @@ PREDICTED_ONE=${PREDICTED_BASE}_one.pickle
 PREDICTED_EDGES=${PREDICTED_BASE}.pickle
 
 # proximity matrices
-PROX_MAT_BASE=$DATA/proxMat${CAT}K${EVAL_K}${SEED_EXT}
+PROX_MAT_BASE=$DATA/proxMat${CAT// /_}K${EVAL_K}${SEED_EXT}
 TARGET_PROX_MAT=${PROX_MAT_BASE}_tgt.npz
 RAND_PROX_MAT=${PROX_MAT_BASE}_rand.npz
 POP_PROX_MAT=${PROX_MAT_BASE}_pop.npz
@@ -357,8 +367,8 @@ RESULTS=$DATA/results_${EXPMT}_K${EVAL_K}.txt
 if [ $START_STAGE -le 1 -a $END_STAGE -ge 1 ]; then
     echo "=== 1. Build directed recommender graph for category from DB ==="
     CMD="python $SRC/buildRecGraph.py --savefile=$GRAPH $DIRECTED_OPT\
-        --min-component-size=$MIN_COMPONENT_SIZE --parent-category=$PARENTCAT\
-        --category=$CAT $DB"
+        --min-component-size=$MIN_COMPONENT_SIZE\
+        --parent-category='$PARENTCAT' --category='$CAT' $DB"
     echo $CMD; eval $CMD; echo $CMDTERM
 echo
 fi
@@ -376,7 +386,7 @@ fi
 # Random walk
 if [ $START_STAGE -le 3 -a $END_STAGE -ge 3 ]; then
     HOME="0.1"
-    STEPS="30"
+    STEPS="20"
     echo "=== 3. Randomly walk each graph ==="
     CMD="python $SRC/buildWalkMatrix.py --savefile=$RWALK --home=$HOME\
         --steps=$STEPS $REMOVE_POP_OPT $GRAPH"
@@ -426,7 +436,7 @@ else
     if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
         echo "=== 5. Calculate idfs for category ==="
         CMD="python $SRC/idfsByCategory.py --savefile=$IDFS $BRAND_ONLY_OPT\
-            $PARENTCAT $CAT"
+            '$PARENTCAT' '$CAT'"
         echo $CMD; eval $CMD; echo $CMDTERM
     echo
     fi
@@ -457,8 +467,8 @@ if [[ -z "$POPULARITY_FLAG" ]]; then
     if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
         # Construct popularity dictionary
         echo "=== 8. Popularity Dictionary ==="
-        CMD="python $SRC/buildPopDictionary.py --savefile=$POP_DICT --alpha=1.0\
-            $GRAPH1 $GRAPH2"
+        CMD="python $SRC/buildPopDictionary.py --savefile=$POP_DICT\
+            --alpha=$ALPHA $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
     echo
     fi

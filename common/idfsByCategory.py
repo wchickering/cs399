@@ -73,7 +73,7 @@ def calculateIDFs(db_conn, parentCategory, category, stopwords=None,
             wordDocCounts[word] += 1
             if brandOnly:
                 break
-    print 'Calculating IDFs. . .'
+    print 'Calculating IDFs for %d items. . .' % numProducts
     idf = {}
     for word in wordDocCounts:
         idf[word] = math.log(numProducts / wordDocCounts[word])
