@@ -435,8 +435,8 @@ else
     # Get idfs for category
     if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
         echo "=== 5. Calculate idfs for category ==="
-        CMD="python $SRC/idfsByCategory.py --savefile=$IDFS $BRAND_ONLY_OPT\
-            '$PARENTCAT' '$CAT'"
+        CMD="python $SRC/idfsByCategory.py --savefile=$IDFS\
+            --include-categories $BRAND_ONLY_OPT '$PARENTCAT' '$CAT'"
         echo $CMD; eval $CMD; echo $CMDTERM
     echo
     fi
@@ -444,11 +444,11 @@ else
     # Get tfidfs for each graph
     if [ $START_STAGE -le 6 -a $END_STAGE -ge 6 ]; then
         echo "=== 6. Calculate tfidfs for each graph ==="
-        CMD="python $SRC/buildTFIDF.py --savefile=$TFIDF1 $BRAND_ONLY_OPT\
-            --stopwords=$STOPWORDS --idfname=$IDFS $DB $MODEL1"
+        CMD="python $SRC/buildTFIDF.py --savefile=$TFIDF1 --include-categories\
+            $BRAND_ONLY_OPT --stopwords=$STOPWORDS --idfname=$IDFS $DB $MODEL1"
         echo $CMD; eval $CMD; echo $CMDTERM
-        CMD="python $SRC/buildTFIDF.py --savefile=$TFIDF2 $BRAND_ONLY_OPT\
-            --stopwords=$STOPWORDS --idfname=$IDFS $DB $MODEL2"
+        CMD="python $SRC/buildTFIDF.py --savefile=$TFIDF2 --include-categories\
+            $BRAND_ONLY_OPT --stopwords=$STOPWORDS --idfname=$IDFS $DB $MODEL2"
         echo $CMD; eval $CMD; echo $CMDTERM
     echo
     fi

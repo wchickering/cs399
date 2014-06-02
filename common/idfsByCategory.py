@@ -18,17 +18,22 @@ import string
 # local modules
 from Util import getStopwords
 
-# params
-displayInterval = 10000
-
 # db_params
 selectCategoryProductsStmt =\
-   ('SELECT Description '
+   ('SELECT Id, Description '
     'FROM Products '
     'WHERE Id in '
     '(SELECT Id FROM Categories '
      'WHERE parentCategory = :parentCategory '
      'AND category = :category)')
+selectCategoriesStmt =\
+    ('SELECT DISTINCT ParentCategory '
+     'FROM Categories '
+     'WHERE Id = :Id '
+     'UNION '
+     'SELECT DISTINCT Category '
+     'FROM Categories '
+     'WHERE Id = :Id')
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -41,23 +46,28 @@ def getParser(usage=None):
         default='data/stopwords.txt',
         help='File containing a comma separated list of stop words.',
         metavar='FILE')
+    parser.add_option('--include-categories', action='store_true',
+        dest='includeCategories', default=False, help='Include categories.')
     parser.add_option('--brand-only', action='store_true', dest='brandOnly',
         default=False,
         help='Only consider brand (i.e. first term in description).')
     return parser
 
 def calculateIDFs(db_conn, parentCategory, category, stopwords=None,
-                  brandOnly=False):
+                  includeCategories=False, brandOnly=False):
     db_curs = db_conn.cursor()
+    db_curs2 = db_conn.cursor()
     print 'Reading category products. . .'
     db_curs.execute(selectCategoryProductsStmt, (parentCategory, category))
     numProducts = 0
     wordDocCounts = defaultdict(int)
     for row in db_curs:
         numProducts += 1
-        if numProducts % displayInterval == 0:
-            print '%d Products' % numProducts
-        description = row[0]
+        item = row[0]
+        description = row[1]
+        if includeCategories:
+            db_curs2.execute(selectCategoriesStmt, {'Id': item})
+            description += ' ' + ' '.join(r[0] for r in db_curs2.fetchall())
         # strip out punctuation
         description = ''.join(ch for ch in description\
                               if ch not in string.punctuation)
@@ -97,6 +107,7 @@ def main():
 
     # Calculate idfs over all products
     idf = calculateIDFs(db_conn, parent, category, stopwords=stopwords,
+                        includeCategories=options.includeCategories,
                         brandOnly=options.brandOnly)
     print 'Computed IDFs for %d terms.' % len(idf)
 

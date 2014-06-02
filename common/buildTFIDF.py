@@ -20,7 +20,18 @@ from Util import loadPickle, getAndCheckFilename, getStopwords
 from LSI_util import showConcept
 
 # db params
-selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
+selectDescriptionStmt =\
+    ('SELECT Description '
+     'FROM Products '
+     'WHERE Id = :Id')
+selectCategoriesStmt =\
+    ('SELECT DISTINCT ParentCategory '
+     'FROM Categories '
+     'WHERE Id = :Id '
+     'UNION '
+     'SELECT DISTINCT Category '
+     'FROM Categories '
+     'WHERE Id = :Id')
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -40,6 +51,8 @@ def getParser(usage=None):
         metavar='FILE')
     parser.add_option('--no-idf', action='store_true', dest='noIDF',
         default=False, help='Set IDF=1 for all terms.')
+    parser.add_option('--include-categories', action='store_true',
+        dest='includeCategories', default=False, help='Include categories.')
     parser.add_option('--brand-only', action='store_true', dest='brandOnly',
         default=False,
         help='Only consider brand (i.e. first term in description).')
@@ -94,8 +107,10 @@ def getTopicDists(filenames, topn=None):
             sys.exit(-1)
     return topicDists
 
-def getTopicTFs(db_conn, topicDists, stopwords=None, brandOnly=False):
+def getTopicTFs(db_conn, topicDists, stopwords=None, includeCategories=False,
+                brandOnly=False):
     db_curs = db_conn.cursor()
+    db_curs2 = db_conn.cursor()
     topicTFs = []
     for topic in range(len(topicDists)):
         tf = defaultdict(float)
@@ -104,6 +119,9 @@ def getTopicTFs(db_conn, topicDists, stopwords=None, brandOnly=False):
             item = topicDists[topic][i][1]
             db_curs.execute(selectDescriptionStmt, (item,))
             description = db_curs.fetchone()[0]
+            if includeCategories:
+                db_curs2.execute(selectCategoriesStmt, {'Id': item})
+                description += ' ' + ' '.join(r[0] for r in db_curs2.fetchall())
             # remove punctuation
             description = ''.join(ch for ch in description\
                                   if ch not in string.punctuation)
@@ -199,9 +217,11 @@ def main():
     # get TFs
     print 'Computing term frequencies. . .'
     topicTFs = getTopicTFs(db_conn, topicDists, stopwords=stopwords,
+                           includeCategories=options.includeCategories,
                            brandOnly=options.brandOnly)
     if allTopicDists is not None:
         allTopicTFs = getTopicTFs(db_conn, allTopicDists, stopwords=stopwords,
+                                  includeCategories=options.includeCategories,
                                   brandOnly=options.brandOnly)
     else:
         alltopicTFs = None
