@@ -209,7 +209,7 @@ if [[ -z "$REMOVE_POP_FLAG" ]]; then
 fi
 
 if [[ -z "$MIN_COMPONENT_SIZE" ]]; then
-    MIN_COMPONENT_SIZE=100
+    MIN_COMPONENT_SIZE=40
 fi
 
 if [[ -z "$EVAL_K" ]]; then
@@ -255,21 +255,29 @@ LDA_BASE=$DATA/$EXPMT
 LDA=${LDA_BASE}.pickle
 LDA1=${LDA_BASE}_1.pickle
 LDA2=${LDA_BASE}_2.pickle
+LDA1=${LDA_BASE}_one_1.pickle
+LDA2=${LDA_BASE}_one_2.pickle
 
 # lsi models
 LSI_BASE=$DATA/$EXPMT
 LSI=${LSI_BASE}.npz
 LSI1=${LSI_BASE}_1.npz
 LSI2=${LSI_BASE}_2.npz
+LSI_ONE1=${LSI_BASE}_one_1.npz
+LSI_ONE2=${LSI_BASE}_one_2.npz
 
 if [ "$MODEL_TYPE" = "lda" ]; then
     MODEL=$LDA
     MODEL1=$LDA1
     MODEL2=$LDA2
+    MODEL_ONE1=$LDA_ONE1
+    MODEL_ONE2=$LDA_ONE2
 else
     MODEL=$LSI
     MODEL1=$LSI1
     MODEL2=$LSI2
+    MODEL_ONE1=$LSI_ONE1
+    MODEL_ONE2=$LSI_ONE2
 fi
 
 # tfidf and map
@@ -279,6 +287,7 @@ TFIDF=${TFIDF_BASE}.pickle
 TFIDF1=${TFIDF_BASE}_1.pickle
 TFIDF2=${TFIDF_BASE}_2.pickle
 MAP=$DATA/topicMap_${EXPMT}.pickle
+IDENT_MAP=$DATA/identMap_${NUM_TOPICS}.pickle
 
 # edges
 LOST_EDGES=$DATA/lostEdges${CAT}${SEED_EXT}.pickle
@@ -416,25 +425,30 @@ fi
 if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     echo "=== 9. Predict edges ==="
     if [ $BENCHMARKS -eq 1 ]; then
-        echo "Predicting randomly. . ."
+        echo "** Predicting randomly. . ."
         CMD="python $SRC/predictEdgesRandomly.py --savefile=$PREDICTED_RAND\
             $SEED_OPT $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
-        echo "Predicting based on popularity. . ."
+        echo "** Predicting based on popularity. . ."
         CMD="python $SRC/predictEdgesPopular.py --savefile=$PREDICTED_POP\
             $SEED_OPT -v --topn=3 $POP_DICT $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
-        echo "Predicting using item-item tfidf. . ."
+        echo "** Predicting using item-item tfidf. . ."
         CMD="python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF\
             $POP_DICT_OPT $BRAND_ONLY_OPT --min-pop=0 --idfname=$IDFS\
             --stopwords=$STOPWORDS $DB $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
-        echo "Predicting using one model. . ."
-        CMD="python $SRC/predictEdgesOneModel.py --savefile=$PREDICTED_ONE\
-            $POP_DICT_OPT --min-pop=0 $MODEL $GRAPH1 $GRAPH2"
+        echo "** Predicting using one model. . ."
+        CMD="python $SRC/partitionModel.py --model1=$MODEL_ONE1\
+            --model2=$MODEL_ONE2 --ident-map=$IDENT_MAP\
+            $MODEL $GRAPH1 $GRAPH2"
+        echo $CMD; eval $CMD; echo $CMDTERM
+        CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_ONE -k 1.8\
+            $POP_DICT_OPT --min-pop=0 --weight-in --weight-out --symmetric\
+            --sphere $IDENT_MAP $MODEL_ONE1 $MODEL_ONE2"
         echo $CMD; eval $CMD; echo $CMDTERM
     fi
-    echo "Predicting with mapping between models. . ."
+    echo "** Predicting with mapping between models. . ."
     CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES -k 1.8\
         $POP_DICT_OPT --min-pop=0 --weight-in --weight-out --symmetric --sphere\
         $MAP $MODEL1 $MODEL2"
