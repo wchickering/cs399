@@ -18,6 +18,7 @@ categories_fname = 'categories.json'
 imageFileTemplate = 'data/images/%d.jpg'
 metaUrlTemplate = 'http://www1.macys.com/catalog/category/facetedmeta?sortBy=NAME&productsPerPage=%d&pageIndex=%d&parentCategoryId=%d&categoryId=%d'
 productsUrlTemplate = 'http://www1.macys.com/shop/catalog/product/thumbnail/1?edge=hybrid&limit=none&suppressColorSwatches=false&categoryId=%d&ids=%s'
+detailsUrlTemplate = 'http://www1.macys.com%s'
 productsPerPage = 100
 pauseTime = 0.2 # number of second to pause between HTTP requests.
 urlretrieveTimeout = 20
@@ -26,7 +27,8 @@ urlretrieveTimeout = 20
 db_fname = 'data/macys.db'
 createProductsTableStmt =\
     ('CREATE TABLE IF NOT EXISTS Products(Id INT PRIMARY KEY, Url TEXT, '
-     'ImgFile TEXT, Description TEXT, Prices TEXT, Available INT, '
+     'ImgFile TEXT, Description TEXT, ShortDescription TEXT, '
+     'LongDescription TEXT, Bullets TEXT, Prices TEXT, Available INT, '
      'Time TIMESTAMP, HaveRecs INT)')
 createCategoriesTableStmt =\
     ('CREATE TABLE IF NOT EXISTS Categories(Id INT, ParentCategory TEXT, '
@@ -38,9 +40,10 @@ selectCategoryStmt =\
     ('SELECT * FROM Categories WHERE Id = :Id AND '
      'ParentCategory = :ParentCategory AND Category = :Category')
 insertProductStmt =\
-    ('INSERT INTO Products(Id, Url, ImgFile, Description, Prices, Available, '
-     'HaveRecs, Time) VALUES (:Id, :Url, :ImgFile, :Description, :Prices, 1, '
-     '0, CURRENT_TIMESTAMP)')
+    ('INSERT INTO Products(Id, Url, ImgFile, Description, ShortDescription, '
+     'LongDescription, Bullets, Prices, Available, HaveRecs, Time) VALUES '
+     '(:Id, :Url, :ImgFile, :Description, :ShortDescription, :LongDescription, '
+     ':Bullets, :Prices, 1, 0, CURRENT_TIMESTAMP)')
 insertCategoryStmt =\
     ('INSERT INTO Categories(Id, ParentCategory, Category) '
      'VALUES (:Id, :ParentCategory, :Category)')
@@ -99,16 +102,39 @@ def processProduct(productTag, parentCategoryName, categoryName, db_curs):
             newTag.extract()
         shortDescription = \
             normalizeStr(shortDescriptionTag.find('a').renderContents().strip())
-        print 'shortDesciption = %s' % shortDescription
         priceTag = productTag.find('div', {'class' : 'prices'})
         prices = []
         for tag in priceTag.findAll('span'):
             prices.append(normalizeStr(tag.renderContents()))
         print 'prices = %s' % prices
-        # insert product into db
-        db_curs.execute(insertProductStmt,\
-            {'Id': product_id, 'Url': productUrl, 'ImgFile': img_fname,\
-             'Description': shortDescription, 'Prices': str(prices)})
+        #  visit product details page
+        url = detailsUrlTemplate % productUrl
+        print '---------------------------'
+        print 'Opening Url: %s' % url
+        html = urllib2.urlopen(url).read()
+        soup = BeautifulSoup(html)
+        detailsTag = soup.find('div', {'id': 'prdDesc'})
+        longDescriptionTag = detailsTag.find('div', {'id': 'longDescription'})
+        longDescription = normalizeStr(longDescriptionTag.renderContents().strip())
+        bulletsTag = detailsTag.find('ul', {'id': 'bullets'})
+        bullets = []
+        for tag in bulletsTag.findAll('li'):
+            bullets.append(normalizeStr(tag.renderContents().strip()))
+        allBullets = ' '.join(bullets)
+        description = ' '.join([shortDescription, longDescription, allBullets])
+        print 'description = %s' % description
+        db_curs.execute(
+            insertProductStmt, {
+                'Id': product_id,
+                'Url': productUrl,
+                'ImgFile': img_fname,
+                'Description': description,
+                'ShortDescription': shortDescription,
+                'LongDescription': longDescription,
+                'Bullets': allBullets,
+                'Prices': str(prices)
+            }
+        )
         # insert category into db
         db_curs.execute(insertCategoryStmt,\
             {'Id': product_id, 'ParentCategory': parentCategoryName,\
@@ -137,6 +163,7 @@ def processCategory(category, db_conn):
             (productsPerPage, pageIndex, parentCategoryId, categoryId)
         try:
             # retrieve meta data
+            print '---------------------------'
             print 'Opening Url: %s' % meta_url 
             meta_json = urllib2.urlopen(meta_url).read()
             meta = json.loads(unicode(meta_json, "ISO-8859-1"))
@@ -168,6 +195,7 @@ def processCategory(category, db_conn):
                                            newProductIds))
                 print 'productList =', productList
                 url = productsUrlTemplate % (categoryId, productList)
+                print '---------------------------'
                 print 'Opening Url: %s' % url
                 html = urllib2.urlopen(url).read()
                 soup = BeautifulSoup(html)
