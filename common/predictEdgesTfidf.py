@@ -18,9 +18,15 @@ import math
 # local modules
 from Util import loadPickle, getAndCheckFilename, getStopwords
 
-# params
-selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
-displayInterval = 100
+# db params
+selectDescriptionStmt =\
+    ('SELECT Description '
+     'FROM Products '
+     'WHERE Id = :Id')
+selectShortDescriptionStmt =\
+    ('SELECT ShortDescription '
+     'FROM Products '
+     'WHERE Id = :Id')
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -41,6 +47,10 @@ def getParser(usage=None):
     parser.add_option('--stopwords', dest='stopwords', default=None,
         help='File containing a comma separated list of stop words.',
         metavar='FILE')
+    parser.add_option('--short-only', action='store_true', dest='shortOnly',
+        default=False, help='Limit text to that in short descriptions.')
+    parser.add_option('--bigrams', action='store_true', dest='bigrams',
+        default=False, help='Include bigrams as well as unigrams.')
     parser.add_option('--popdict', dest='popdict', default=None,
         help='Picked popularity dictionary.', metavar='FILE')
     parser.add_option('--min-pop', type='float', dest='minPop',
@@ -57,22 +67,33 @@ def getParser(usage=None):
         help='Only consider brand (i.e. first term in description).')
     return parser
 
-def getItemTFs(db_conn, graph, stopwords=None, brandOnly=False):
+def getItemTFs(db_conn, graph, stopwords=None, shortOnly=False, bigrams=False,
+               brandOnly=False):
     db_curs = db_conn.cursor()
     itemTFs = {}
     for item in graph:
         tf = defaultdict(int)
-        db_curs.execute(selectDescriptionStmt, (item,))
-        description = db_curs.fetchone()[0]
+        if shortOnly:
+            db_curs.execute(selectShortDescriptionStmt, (item,))
+        else:
+            db_curs.execute(selectDescriptionStmt, (item,))
+        row = db_curs.fetchone()
+        description = row[0]
         # remove punctuation
         description = ''.join(ch for ch in description\
                               if ch not in string.punctuation)
         # stem terms
         terms = [stem(term.lower()) for term in description.split()]
+        lastTerm = None
         for term in terms:
+            # skip stopwords
             if stopwords is not None and term in stopwords:
                 continue
             tf[term] += 1
+            if bigrams and lastTerm is not None:
+                bg = ' '.join([lastTerm, term])
+                tf[bg] += 1
+            lastTerm = term
             # only consider first term in description if brandOnly=True
             if brandOnly:
                 break
@@ -220,8 +241,10 @@ def main():
     # get TFs
     print 'Computing term frequencies. . .'
     itemTFs1 = getItemTFs(db_conn, graph1, stopwords=stopwords,
+                          shortOnly=options.shortOnly, bigrams=options.bigrams,
                           brandOnly=options.brandOnly)
     itemTFs2 = getItemTFs(db_conn, graph2, stopwords=stopwords,
+                          shortOnly=options.shortOnly, bigrams=options.bigrams,
                           brandOnly=options.brandOnly)
 
     # get TF-IDFs

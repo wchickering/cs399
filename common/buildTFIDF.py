@@ -24,6 +24,10 @@ selectDescriptionStmt =\
     ('SELECT Description '
      'FROM Products '
      'WHERE Id = :Id')
+selectShortDescriptionStmt =\
+    ('SELECT ShortDescription '
+     'FROM Products '
+     'WHERE Id = :Id')
 selectCategoriesStmt =\
     ('SELECT DISTINCT ParentCategory '
      'FROM Categories '
@@ -49,6 +53,10 @@ def getParser(usage=None):
     parser.add_option('--stopwords', dest='stopwords', default=None,
         help='File containing a comma separated list of stop words.',
         metavar='FILE')
+    parser.add_option('--short-only', action='store_true', dest='shortOnly',
+        default=False, help='Limit text to that in short descriptions.')
+    parser.add_option('--bigrams', action='store_true', dest='bigrams',
+        default=False, help='Include bigrams as well as unigrams.')
     parser.add_option('--no-idf', action='store_true', dest='noIDF',
         default=False, help='Set IDF=1 for all terms.')
     parser.add_option('--include-categories', action='store_true',
@@ -107,8 +115,8 @@ def getTopicDists(filenames, topn=None):
             sys.exit(-1)
     return topicDists
 
-def getTopicTFs(db_conn, topicDists, stopwords=None, includeCategories=False,
-                brandOnly=False):
+def getTopicTFs(db_conn, topicDists, stopwords=None, shortOnly=False,
+                bigrams=False, includeCategories=False, brandOnly=False):
     db_curs = db_conn.cursor()
     db_curs2 = db_conn.cursor()
     topicTFs = []
@@ -117,8 +125,12 @@ def getTopicTFs(db_conn, topicDists, stopwords=None, includeCategories=False,
         for i in range(len(topicDists[topic])):
             topicStrength = topicDists[topic][i][0]
             item = topicDists[topic][i][1]
-            db_curs.execute(selectDescriptionStmt, (item,))
-            description = db_curs.fetchone()[0]
+            if shortOnly:
+                db_curs.execute(selectShortDescriptionStmt, (item,))
+            else:
+                db_curs.execute(selectDescriptionStmt, (item,))
+            row = db_curs.fetchone()
+            description = row[0]
             if includeCategories:
                 db_curs2.execute(selectCategoriesStmt, {'Id': item})
                 description += ' ' + ' '.join(r[0] for r in db_curs2.fetchall())
@@ -127,12 +139,17 @@ def getTopicTFs(db_conn, topicDists, stopwords=None, includeCategories=False,
                                   if ch not in string.punctuation)
             # stem terms
             terms = [stem(term.lower()) for term in description.split()]
+            lastTerm = None
             for term in terms:
                 # skip stopwords
                 if stopwords is not None and term in stopwords:
                     continue
                 # interpret sum of topicStrengths as term frequency
                 tf[term] += topicStrength
+                if bigrams and lastTerm is not None:
+                    bg = ' '.join([lastTerm, term])
+                    tf[bg] += topicStrength
+                lastTerm = term
                 # only consider first term in description if brandOnly=True
                 if brandOnly:
                     break
@@ -217,10 +234,13 @@ def main():
     # get TFs
     print 'Computing term frequencies. . .'
     topicTFs = getTopicTFs(db_conn, topicDists, stopwords=stopwords,
+                           shortOnly=options.shortOnly, bigrams=options.bigrams,
                            includeCategories=options.includeCategories,
                            brandOnly=options.brandOnly)
     if allTopicDists is not None:
         allTopicTFs = getTopicTFs(db_conn, allTopicDists, stopwords=stopwords,
+                                  shortOnly=options.shortOnly,
+                                  bigrams=options.bigrams,
                                   includeCategories=options.includeCategories,
                                   brandOnly=options.brandOnly)
     else:

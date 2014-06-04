@@ -48,6 +48,8 @@ while test $# -gt 0; do
             echo "--lda                     Use lda instead of lsi for latent"
             echo "                          space"
             echo "--no-partition-by-brand   Do not partition graph by brand"
+            echo "--no-bigrams              Do not include bigrams in TFIDF"
+            echo "--short-only              Only consider short descriptions for TFIDF"
             echo "--brand-only              Only consider brand for TFIDF"
             echo "--no-zero-mean            Do not subtract mean before SVD"
             echo "--min-pop=FLOAT           Specifiy minimum popularity in search"
@@ -149,6 +151,14 @@ while test $# -gt 0; do
             export PARTITION_BY_BRAND_FLAG=0
             shift
             ;;
+        --no-bigrams)
+            export BIGRAMS_FLAG=0
+            shift
+            ;;
+        --short-only)
+            export SHORT_ONLY_OPT="--short-only"
+            shift
+            ;;
         --brand-only)
             export BRAND_ONLY_OPT="--brand-only"
             shift
@@ -246,7 +256,11 @@ if [[ -z "$MODEL_TYPE" ]]; then
 fi
 
 if [[ -z "$PARTITION_BY_BRAND_FLAG" ]]; then
-    PARTITION_BY_BRAND='--partition-by-brand'
+    PARTITION_BY_BRAND_OPT='--partition-by-brand'
+fi
+
+if [[ -z "$BIGRAMS_FLAG" ]]; then
+    BIGRAMS_OPT='--bigrams'
 fi
 
 if [[ -z "$ZERO_MEAN_FLAG" ]]; then
@@ -293,6 +307,7 @@ GRAPH2=${GRAPH_BASE}${SEED_EXT}_2.pickle
 RAND_GRAPH=${GRAPH_BASE}${SEED_EXT}_rand.pickle
 POP_GRAPH=${GRAPH_BASE}${SEED_EXT}_popsrc.pickle
 TFIDF_GRAPH=${GRAPH_BASE}${SEED_EXT}_tfidf.pickle
+RANDMAP_GRAPH=${GRAPH_BASE}${SEED_EXT}_randmap.pickle
 ONE_GRAPH=${GRAPH_BASE}${SEED_EXT}_one.pickle
 SOURCE_GRAPH=${GRAPH_BASE}${SEED_EXT}_${NUM_TOPICS}_src.pickle
 
@@ -340,6 +355,7 @@ TFIDF1=${TFIDF_BASE}_1.pickle
 TFIDF2=${TFIDF_BASE}_2.pickle
 MAP=$DATA/topicMap_${EXPMT}.pickle
 IDENT_MAP=$DATA/identMap_${NUM_TOPICS}.pickle
+RAND_MAP=$DATA/randMap_${NUM_TOPICS}.pickle
 
 POP_DICT=$DATA/popDict${CAT// /_}${SEED_EXT}.pickle
 
@@ -349,6 +365,7 @@ PREDICTED_BASE=$DATA/predictedEdges_${EXPMT}
 PREDICTED_RAND=${PREDICTED_BASE}_rand.pickle
 PREDICTED_POP=${PREDICTED_BASE}_pop.pickle
 PREDICTED_TFIDF=${PREDICTED_BASE}_tfidf.pickle
+PREDICTED_RANDMAP=${PREDICTED_BASE}_randmap.pickle
 PREDICTED_ONE=${PREDICTED_BASE}_one.pickle
 PREDICTED_EDGES=${PREDICTED_BASE}.pickle
 
@@ -358,6 +375,7 @@ TARGET_PROX_MAT=${PROX_MAT_BASE}_tgt.npz
 RAND_PROX_MAT=${PROX_MAT_BASE}_rand.npz
 POP_PROX_MAT=${PROX_MAT_BASE}_pop.npz
 TFIDF_PROX_MAT=${PROX_MAT_BASE}_tfidf.npz
+RANDMAP_PROX_MAT=${PROX_MAT_BASE}_randmap.npz
 ONE_PROX_MAT=${PROX_MAT_BASE}_one.npz
 SOURCE_PROX_MAT=${PROX_MAT_BASE}_${NUM_TOPICS}_src.npz
 
@@ -377,7 +395,7 @@ fi
 if [ $START_STAGE -le 2 -a $END_STAGE -ge 2 ]; then
     echo "=== 2. Partition category graph ==="
     CMD="python $SRC/partitionGraph.py --graph1=$GRAPH1 --graph2=$GRAPH2\
-        --lost_edges=$LOST_EDGES $SEED_OPT $PARTITION_BY_BRAND\
+        --lost_edges=$LOST_EDGES $SEED_OPT $PARTITION_BY_BRAND_OPT\
         --min-component-size=$MIN_COMPONENT_SIZE $GRAPH"
     echo $CMD; eval $CMD; echo $CMDTERM
 echo
@@ -385,8 +403,8 @@ fi
 
 # Random walk
 if [ $START_STAGE -le 3 -a $END_STAGE -ge 3 ]; then
-    HOME="0.1"
-    STEPS="20"
+    HOME="0.05"
+    STEPS="30"
     echo "=== 3. Randomly walk each graph ==="
     CMD="python $SRC/buildWalkMatrix.py --savefile=$RWALK --home=$HOME\
         --steps=$STEPS $REMOVE_POP_OPT $GRAPH"
@@ -432,30 +450,38 @@ if [[ "$TOURNEY_MAPPER" ]]; then
     echo "=== 5-7. Using provided topic map ==="
     MAP=$TOURNEY_MAPPER
 else
-    # Get idfs for category
+    # Get IDFs for category
     if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
-        echo "=== 5. Calculate idfs for category ==="
+        echo "=== 5. Calculate IDFs for category ==="
         CMD="python $SRC/idfsByCategory.py --savefile=$IDFS\
-            --include-categories $BRAND_ONLY_OPT '$PARENTCAT' '$CAT'"
+            $SHORT_ONLY_OPT $BIGRAMS_OPT $BRAND_ONLY_OPT '$PARENTCAT' '$CAT'"
         echo $CMD; eval $CMD; echo $CMDTERM
     echo
     fi
     
-    # Get tfidfs for each graph
+    # Get TF-IDFs for each graph
     if [ $START_STAGE -le 6 -a $END_STAGE -ge 6 ]; then
-        echo "=== 6. Calculate tfidfs for each graph ==="
-        CMD="python $SRC/buildTFIDF.py --savefile=$TFIDF1 --include-categories\
-            $BRAND_ONLY_OPT --stopwords=$STOPWORDS --idfname=$IDFS $DB $MODEL1"
+        echo "=== 6. Calculate TF-IDFs for each graph ==="
+        CMD="python $SRC/buildTFIDF.py --savefile=$TFIDF1 $SHORT_ONLY_OPT\
+            $BIGRAMS_OPT $BRAND_ONLY_OPT --stopwords=$STOPWORDS --idfname=$IDFS\
+            $DB $MODEL1"
         echo $CMD; eval $CMD; echo $CMDTERM
-        CMD="python $SRC/buildTFIDF.py --savefile=$TFIDF2 --include-categories\
-            $BRAND_ONLY_OPT --stopwords=$STOPWORDS --idfname=$IDFS $DB $MODEL2"
+        CMD="python $SRC/buildTFIDF.py --savefile=$TFIDF2 $SHORT_ONLY_OPT\
+            $BIGRAMS_OPT $BRAND_ONLY_OPT --stopwords=$STOPWORDS --idfname=$IDFS\
+            $DB $MODEL2"
         echo $CMD; eval $CMD; echo $CMDTERM
     echo
     fi
     
-    # Map tfidf topic spaces
+    # Map TF-IDF topic spaces
     if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
-        echo "=== 7. Construct topic map from graph1 to graph2 ==="
+        echo "=== 7. Construct topic maps from graph1 to graph2 ==="
+        CMD="python $SRC/mapTopics.py --savefile=$RAND_MAP --random\
+            $TFIDF1 $TFIDF2"
+        echo $CMD; eval $CMD; echo $CMDTERM
+        CMD="python $SRC/mapTopics.py --savefile=$IDENT_MAP --identity\
+            $TFIDF1 $TFIDF2"
+        echo $CMD; eval $CMD; echo $CMDTERM
         CMD="python $SRC/mapTopics.py --savefile=$MAP $MAX_CONN_OPT\
             $TFIDF1 $TFIDF2"
         echo $CMD; eval $CMD; echo $CMDTERM
@@ -488,16 +514,21 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
             $SEED_OPT -v --topn=3 -k $EDGES_PER_NODE $WEIGHT_OUT_OPT\
             $SYMMETRIC_OPT $POP_DICT $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
-        echo "** Predicting using item-item tfidf. . ."
+        echo "** Predicting using item-item TF-IDF. . ."
         CMD="python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF\
-            -k $EDGES_PER_NODE $BRAND_ONLY_OPT --idfname=$IDFS $POP_DICT_OPT\
-            --stopwords=$STOPWORDS --min-pop=$MIN_POP $WEIGHT_IN_OPT\
-            $WEIGHT_OUT_OPT $SYMMETRIC_OPT $DB $GRAPH1 $GRAPH2"
+            -k $EDGES_PER_NODE $SHORT_ONLY_OPT $BIGRAMS_OPT $BRAND_ONLY_OPT\
+            --idfname=$IDFS $POP_DICT_OPT --stopwords=$STOPWORDS\
+            --min-pop=$MIN_POP $WEIGHT_IN_OPT $WEIGHT_OUT_OPT $SYMMETRIC_OPT\
+            $DB $GRAPH1 $GRAPH2"
+        echo $CMD; eval $CMD; echo $CMDTERM
+        echo "** Predicting using random map. . ."
+        CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_RANDMAP\
+            -k $EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP $WEIGHT_IN_OPT\
+            $WEIGHT_OUT_OPT $SYMMETRIC_OPT --sphere $RAND_MAP $MODEL1 $MODEL2"
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting using one model. . ."
         CMD="python $SRC/partitionModel.py --model1=$MODEL_ONE1\
-            --model2=$MODEL_ONE2 --ident-map=$IDENT_MAP\
-            $MODEL $GRAPH1 $GRAPH2"
+            --model2=$MODEL_ONE2 $MODEL $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
         CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_ONE\
             -k $EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP $WEIGHT_IN_OPT\
@@ -526,6 +557,9 @@ if [ $START_STAGE -le 10 -a $END_STAGE -ge 10 ]; then
         CMD="python $SRC/augmentGraph.py --savefile=$TFIDF_GRAPH\
             --edges=$PREDICTED_TFIDF $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
+        CMD="python $SRC/augmentGraph.py --savefile=$RANDMAP_GRAPH\
+            --edges=$PREDICTED_RANDMAP $GRAPH1 $GRAPH2"
+        echo $CMD; eval $CMD; echo $CMDTERM
         CMD="python $SRC/augmentGraph.py --savefile=$ONE_GRAPH\
             --edges=$PREDICTED_ONE $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
@@ -551,6 +585,9 @@ if [ $START_STAGE -le 11 -a $END_STAGE -ge 11 ]; then
         echo $CMD; eval $CMD; echo $CMDTERM
         CMD="python $SRC/buildWalkMatrix.py --savefile=$TFIDF_PROX_MAT\
             $SEED_OPT --type=proximity --maxdist=$EVAL_K $TFIDF_GRAPH"
+        echo $CMD; eval $CMD; echo $CMDTERM
+        CMD="python $SRC/buildWalkMatrix.py --savefile=$RANDMAP_PROX_MAT\
+            $SEED_OPT --type=proximity --maxdist=$EVAL_K $RANDMAP_GRAPH"
         echo $CMD; eval $CMD; echo $CMDTERM
         CMD="python $SRC/buildWalkMatrix.py --savefile=$ONE_PROX_MAT\
             $SEED_OPT --type=proximity --maxdist=$EVAL_K $ONE_GRAPH"
@@ -585,6 +622,11 @@ if [ $START_STAGE -le 12 -a $END_STAGE -ge 12 ]; then
         echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
         echo $CMDTERM | tee -a $RESULTS
         echo | tee -a $RESULTS
+        echo "  RANDOM MAP PREDICTIONS " | tee -a $RESULTS
+        CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
+            $RANDMAP_PROX_MAT $LOST_EDGES $PREDICTED_RANDMAP"
+        echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
+        echo $CMDTERM | tee -a $RESULTS
         echo "  ONE MODEL PREDICTIONS " | tee -a $RESULTS
         CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
             $ONE_PROX_MAT $LOST_EDGES $PREDICTED_ONE"

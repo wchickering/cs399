@@ -19,8 +19,15 @@ import string
 from Util import getStopwords
 
 # db_params
-selectCategoryProductsStmt =\
+selectDescriptionStmt =\
    ('SELECT Id, Description '
+    'FROM Products '
+    'WHERE Id in '
+    '(SELECT Id FROM Categories '
+     'WHERE parentCategory = :parentCategory '
+     'AND category = :category)')
+selectShortDescriptionStmt =\
+   ('SELECT Id, ShortDescription '
     'FROM Products '
     'WHERE Id in '
     '(SELECT Id FROM Categories '
@@ -46,6 +53,10 @@ def getParser(usage=None):
         default='data/stopwords.txt',
         help='File containing a comma separated list of stop words.',
         metavar='FILE')
+    parser.add_option('--short-only', action='store_true', dest='shortOnly',
+        default=False, help='Limit text to that in short descriptions.')
+    parser.add_option('--bigrams', action='store_true', dest='bigrams',
+        default=False, help='Include bigrams as well as unigrams.')
     parser.add_option('--include-categories', action='store_true',
         dest='includeCategories', default=False, help='Include categories.')
     parser.add_option('--brand-only', action='store_true', dest='brandOnly',
@@ -54,11 +65,15 @@ def getParser(usage=None):
     return parser
 
 def calculateIDFs(db_conn, parentCategory, category, stopwords=None,
-                  includeCategories=False, brandOnly=False):
+                  shortOnly=False, bigrams=False, includeCategories=False,
+                  brandOnly=False):
     db_curs = db_conn.cursor()
     db_curs2 = db_conn.cursor()
     print 'Reading category products. . .'
-    db_curs.execute(selectCategoryProductsStmt, (parentCategory, category))
+    if shortOnly:
+        db_curs.execute(selectShortDescriptionStmt, (parentCategory, category))
+    else:
+        db_curs.execute(selectDescriptionStmt, (parentCategory, category))
     numProducts = 0
     wordDocCounts = defaultdict(int)
     for row in db_curs:
@@ -71,22 +86,31 @@ def calculateIDFs(db_conn, parentCategory, category, stopwords=None,
         # strip out punctuation
         description = ''.join(ch for ch in description\
                               if ch not in string.punctuation)
-        if brandOnly:
-            # Only consider first word of description if brandOnly=True
-            # must use a list to preserve word order
-            words = [stem(w.lower()) for w in description.split()]
-        else:
-            words = set([stem(w.lower()) for w in description.split()])
-        for word in words:
-            if stopwords is not None and word in stopwords:
+        # stem words
+        terms = [stem(w.lower()) for w in description.split()]
+        seen = set()
+        lastTerm = None
+        for term in terms:
+            # skip stop words
+            if stopwords is not None and term in stopwords:
                 continue
-            wordDocCounts[word] += 1
+            # ignore duplicate terms
+            if term not in seen:
+                seen.add(term)
+                wordDocCounts[term] += 1
+            if bigrams and lastTerm is not None:
+                bg = ' '.join([lastTerm, term])
+                if bg not in seen:
+                    seen.add(bg)
+                    wordDocCounts[bg] += 1
+            lastTerm = term
+            # only consider first term in description if brandOnly=True
             if brandOnly:
                 break
     print 'Calculating IDFs for %d items. . .' % numProducts
     idf = {}
-    for word in wordDocCounts:
-        idf[word] = math.log(numProducts / wordDocCounts[word])
+    for term in wordDocCounts:
+        idf[term] = math.log(numProducts / wordDocCounts[term])
     return idf
 
 def main():
@@ -107,6 +131,7 @@ def main():
 
     # Calculate idfs over all products
     idf = calculateIDFs(db_conn, parent, category, stopwords=stopwords,
+                        shortOnly=options.shortOnly, bigrams=options.bigrams,
                         includeCategories=options.includeCategories,
                         brandOnly=options.brandOnly)
     print 'Computed IDFs for %d terms.' % len(idf)
