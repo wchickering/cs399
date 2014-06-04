@@ -1,289 +1,171 @@
 #!/usr/bin/env python
 
 """
-Compute a sparse TF-IDF vectors for each topic/concept of an LDA/LSI model.
+Compute sparse TF-IDF vectors for all products in a particular category,
+treating each product as a "document".
 """
 
-from stemming.porter2 import stem
 from optparse import OptionParser
 from collections import defaultdict
+from stemming.porter2 import stem
 import pickle
 import os
 import sys
+import math
 import sqlite3
 import string
-import numpy as np
-import math
 
 # local modules
-from Util import loadPickle, getAndCheckFilename, getStopwords
-from LSI_util import showConcept
+from Util import getAndCheckFilename, getStopwords
 
-# db params
+# db_params
 selectDescriptionStmt =\
-    ('SELECT Description '
-     'FROM Products '
-     'WHERE Id = :Id')
-selectShortDescriptionStmt =\
-    ('SELECT ShortDescription '
-     'FROM Products '
-     'WHERE Id = :Id')
-selectCategoriesStmt =\
-    ('SELECT DISTINCT ParentCategory '
-     'FROM Categories '
-     'WHERE Id = :Id '
-     'UNION '
-     'SELECT DISTINCT Category '
-     'FROM Categories '
-     'WHERE Id = :Id')
+   ('SELECT Id, Description '
+    'FROM Products '
+    'WHERE Id in '
+    '(SELECT Id FROM Categories '
+     'WHERE parentCategory = :parentCategory '
+     'AND category = :category)')
+selectDescriptionStmt2 =\
+   ('SELECT Id, Description, ShortDescription '
+    'FROM Products '
+    'WHERE Id in '
+    '(SELECT Id FROM Categories '
+     'WHERE parentCategory = :parentCategory '
+     'AND category = :category)')
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-i', '--idfname', dest='idfname', default=None,
-        help='Name of pickle with saved idfs', metavar='FILE')
-    parser.add_option('-n', '--topn', type='int', dest='topn', default=None,
-        help='Number of items per topic to consider.', metavar='NUM')
-    parser.add_option('-k', '--topnPrint', type='int', dest='topnPrint',
-        default=10, help='Number of words per topic to print.', metavar='NUM')
-    parser.add_option('-v', '--verbose', 
-        action='store_true', dest='verbose', default=False,
-        help='Print top words')
-    parser.add_option('--savefile', dest='savefile', default='tfidf.pickle',
-        help='Name of pickle to save tfidfs per topic.', metavar='FILE')
+    parser.add_option('--savefile', dest='savefile', default='tfidfs.pickle',
+        help='Name of pickle to save idfs', metavar='FILE')
     parser.add_option('--stopwords', dest='stopwords', default=None,
         help='File containing a comma separated list of stop words.',
         metavar='FILE')
-    parser.add_option('--short-only', action='store_true', dest='shortOnly',
-        default=False, help='Limit text to that in short descriptions.')
+    parser.add_option('--short', action='store_true', dest='short',
+        default=False, help='Include TF-IDF vectors from short descriptions.')
     parser.add_option('--bigrams', action='store_true', dest='bigrams',
-        default=False, help='Include bigrams as well as unigrams.')
-    parser.add_option('--no-idf', action='store_true', dest='noIDF',
-        default=False, help='Set IDF=1 for all terms.')
-    parser.add_option('--include-categories', action='store_true',
-        dest='includeCategories', default=False, help='Include categories.')
-    parser.add_option('--brand-only', action='store_true', dest='brandOnly',
-        default=False,
-        help='Only consider brand (i.e. first term in description).')
+        default=False, help='Include TF-IDF vectors for bigrams.')
     return parser
 
-def getTopicDists(filenames, topn=None):
-    topicDists = []
-    for filename in filenames:
-        if filename.endswith('.pickle'):
-            # load LDA model
-            print 'Loading LDA model from %s. . .' % filename
-            with open(filename, 'r') as f:
-                model = pickle.load(f)
-            topicDists += [model.show_topic(
-                    topic,
-                    topn=(topn if topn is not None else len(model.id2word))
-                ) for topic in range(model.num_topics)]
-        elif filename.endswith('.npz'):
-            # load LSI model
-            print 'Loading LSI model from %s. . .' % filename
-            npzfile = np.load(filename)
-            u = npzfile['u']
-            s = npzfile['s']
-            v = npzfile['v']
-            dictionary = npzfile['dictionary']
-            if topn is not None and topn < u.shape[0]/2:
-                topicDists_top = [showConcept(
-                        u,
-                        concept,
-                        topn=topn,
-                        dictionary=dictionary
-                    ) for concept in range(len(s))]
-                topicDists_bot = [showConcept(
-                        u,
-                        concept,
-                        topn=topn,
-                        dictionary=dictionary,
-                        reverse=False
-                    ) for concept in range(len(s))]
-                for i in range(len(s)):
-                    topicDists.append(topicDists_top[i] + topicDists_bot[i])
-            else:
-                topicDists += [showConcept(
-                        u,
-                        concept,
-                        topn=u.shape[0],
-                        dictionary=dictionary
-                    ) for concept in range(len(s))]
-        else:
-            print >> sys.stderr,\
-                'error: Input must be either a .pickle or .npz file.'
-            sys.exit(-1)
-    return topicDists
+def getTerms(text, stopwords=None):
+    # strip out punctuation
+    text = ''.join(ch for ch in text if ch not in string.punctuation)
+    # stem words
+    terms = [stem(term.lower()) for term in text.split()]
+    # remove stop words
+    if stopwords is not None:
+        terms = [term for term in terms if term not in stopwords]
+    return terms
 
-def getTopicTFs(db_conn, topicDists, stopwords=None, shortOnly=False,
-                bigrams=False, includeCategories=False, brandOnly=False):
+def getBigrams(terms):
+    """Returns a list of bigrams for a list of TERMS."""
+    bigrams = []
+    lastTerm = None
+    for term in terms:
+        if lastTerm is not None:
+            bigrams.append(' '.join([lastTerm, term]))
+        lastTerm = term
+    return bigrams
+
+def computeTFs(terms, termDocCounts):
+    """
+    Compute term frequencies and update term document counts, TERMDOCCOUNTS,
+    given a document consisting of TERMS.
+    """
+    tfs = defaultdict(int)
+    seen = set()
+    for term in terms:
+        tfs[term] += 1
+        if term not in seen:
+            seen.add(term)
+            termDocCounts[term] += 1
+    return tfs
+
+def computeTFIDFs(tfs, termDocCounts, numDocs):
+    """
+    Returns a sparse TF-IDF vector given a sparse vector of term frequencies,
+    TFS, given the term document counts, TERMDOCCOUNTS, and number of documents,
+    NUMDOCS.
+    """
+    tfidfs = {}
+    for item in tfs:
+        tfidfs[item] = defaultdict(float)
+        for term, tf in tfs[item].items():
+            tfidfs[item][term] = tf*math.log(float(numDocs)/termDocCounts[term])
+    return tfidfs
+
+def getTFIDFs(db_conn, parentCategory, category, stopwords,
+              includeShort=False, includeBigrams=False):
+    # compute TF vectors and term document counts
+    tfs = {}
+    tfs['terms'] = {}
+    termDocCounts = defaultdict(int)
+    if includeShort:
+        tfs['short'] = {}
+        shortDescTermDocCounts = defaultdict(int)
+    if includeBigrams:
+        tfs['bigrams'] = {}
+        bigramDocCounts = defaultdict(int)
     db_curs = db_conn.cursor()
-    db_curs2 = db_conn.cursor()
-    topicTFs = []
-    for topic in range(len(topicDists)):
-        tf = defaultdict(float)
-        for i in range(len(topicDists[topic])):
-            topicStrength = topicDists[topic][i][0]
-            item = topicDists[topic][i][1]
-            if shortOnly:
-                db_curs.execute(selectShortDescriptionStmt, (item,))
-            else:
-                db_curs.execute(selectDescriptionStmt, (item,))
-            row = db_curs.fetchone()
-            description = row[0]
-            if includeCategories:
-                db_curs2.execute(selectCategoriesStmt, {'Id': item})
-                description += ' ' + ' '.join(r[0] for r in db_curs2.fetchall())
-            # remove punctuation
-            description = ''.join(ch for ch in description\
-                                  if ch not in string.punctuation)
-            # stem terms
-            terms = [stem(term.lower()) for term in description.split()]
-            lastTerm = None
-            for term in terms:
-                # skip stopwords
-                if stopwords is not None and term in stopwords:
-                    continue
-                # interpret sum of topicStrengths as term frequency
-                tf[term] += topicStrength
-                if bigrams and lastTerm is not None:
-                    bg = ' '.join([lastTerm, term])
-                    tf[bg] += topicStrength
-                lastTerm = term
-                # only consider first term in description if brandOnly=True
-                if brandOnly:
-                    break
-        topicTFs.append(tf)
-    return topicTFs
-
-def combineTFandIDF(topicTFs, termIDFs):
-    """
-    Get sparse TF-IDF vector for each topic by combining TFs with externally
-    supplied IDFs.
-    """
-    topicTFIDFs = []
-    for tf in topicTFs:
-        tfidf = []
-        for term in tf:
-            if term not in termIDFs:
-                print >> sys.stderr, 'WARNING: No IDF for TF term: %s' % term
-                continue
-            tfidf.append((term, tf[term] * termIDFs[term]))
-        # Sort terms by tfidf
-        tfidf.sort(key=lambda tup: tup[1], reverse=True)
-        topicTFIDFs.append(tfidf)
-    return topicTFIDFs
-
-def getTermDFs(topicTFs):
-    """Get term "document" frequencies, where document are topics"""
-    df = defaultdict(int)
-    for tf in topicTFs:
-        for term in tf:
-            df[term] += 1
-    return df
-
-def getTopicTFIDFs(topicTFs, allTopicTFs):
-    """Get sparse TF-IDF vector for each topic, where "documents" are topics"""
-    df = getTermDFs(allTopicTFs)
-    topicTFIDFs = []
-    for tf in topicTFs:
-        tfidf = [(term, tf[term] * math.log(len(allTopicTFs) / df[term]))\
-                 for term, tf_val in tf.items()]
-        # Sort terms by tfidf
-        tfidf.sort(key=lambda tup: tup[1], reverse=True)
-        topicTFIDFs.append(tfidf)
-    return topicTFIDFs
-
-def getTFIDFsansIDF(topicTFs):
-    """Get sparse TF-IDF vectors in which IDF=1 for all terms"""
-    topicTFIDFs = []
-    for tf in topicTFs:
-        tfidf = [(term, tf[term]) for term, tf_val in tf.items()]
-        # Sort terms by tfidf
-        tfidf.sort(key=lambda tup: tup[1], reverse=True)
-        topicTFIDFs.append(tfidf)
-    return topicTFIDFs
+    if includeShort:
+        db_curs.execute(selectDescriptionStmt2, (parentCategory, category))
+    else:
+        db_curs.execute(selectDescriptionStmt, (parentCategory, category))
+    numDocs = 0
+    for row in db_curs:
+        numDocs += 1
+        item = row[0]
+        terms = getTerms(row[1], stopwords=stopwords)
+        tfs['terms'][item] = computeTFs(terms, termDocCounts)
+        if includeShort:
+            tfs['short'][item] = computeTFs(
+                getTerms(row[2], stopwords=stopwords), shortDescTermDocCounts
+            )
+        if includeBigrams:
+            tfs['bigrams'][item] = computeTFs(
+                getBigrams(terms), bigramDocCounts
+            )
+    # use TF vectors and term document counts to compute TF-IDF vectors
+    tfidfs = {}
+    tfidfs['terms'] = computeTFIDFs(tfs['terms'], termDocCounts, numDocs)
+    if includeShort:
+        tfidfs['short'] = computeTFIDFs(
+            tfs['short'], shortDescTermDocCounts, numDocs
+        )
+    if includeBigrams:
+        tfidfs['bigrams'] = computeTFIDFs(
+            tfs['bigrams'], bigramDocCounts, numDocs
+        )
+    return tfidfs
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] database modelfile1 [modelfile2] [...]'
+    usage = 'Usage: %prog [options] database parentCategory category'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
-    if len(args) < 2:
+    if len(args) != 3:
         parser.error('Wrong number of arguments')
-    dbFilename = getAndCheckFilename(args[0])
-    modelFilenames = args[1:]
+    dbname = getAndCheckFilename(args[0])
+    parentCategory = args[1]
+    category = args[2]
 
-    # connect to db
-    print 'Connecting to database %s. . .' % dbFilename
-    db_conn = sqlite3.connect(dbFilename)
-
-    # get topic distributions
-    # Multiple (e.g. 2) models can be given such that IDF may be
-    # computed considering ALL topics as the documents in a corpus.
-    topicDists = getTopicDists([modelFilenames[0]], topn=options.topn)
-    if len(modelFilenames) > 1:
-        allTopicDists = getTopicDists(modelFilenames, options.topn)
-    else:
-        allTopicDists = None
+    # Connect to db
+    db_conn = sqlite3.connect(dbname)
 
     # get stop words
     if options.stopwords is not None:
-        print 'Loading stopwords form %s. . .' % options.stopwords
+        print 'Loading stopwords from %s. . .' % options.stopwords
         stopwords = getStopwords(options.stopwords)
     else:
         stopwords = None
 
-    # get TFs
-    print 'Computing term frequencies. . .'
-    topicTFs = getTopicTFs(db_conn, topicDists, stopwords=stopwords,
-                           shortOnly=options.shortOnly, bigrams=options.bigrams,
-                           includeCategories=options.includeCategories,
-                           brandOnly=options.brandOnly)
-    if allTopicDists is not None:
-        allTopicTFs = getTopicTFs(db_conn, allTopicDists, stopwords=stopwords,
-                                  shortOnly=options.shortOnly,
-                                  bigrams=options.bigrams,
-                                  includeCategories=options.includeCategories,
-                                  brandOnly=options.brandOnly)
-    else:
-        alltopicTFs = None
+    # get TF-IDF vectors
+    tfidfs = getTFIDFs(db_conn, parentCategory, category, stopwords=stopwords,
+                       includeShort=options.short,
+                       includeBigrams=options.bigrams)
 
-    # get TF-IDFs
-    if options.noIDF:
-        topicTFIDFs = getTFIDFsansIDF(topicTFs)
-    else:
-        if options.idfname is not None:
-            print 'Loadng IDFs from %s. . .' % options.idfname
-            termIDFs = loadPickle(options.idfname)
-            topicTFIDFs = combineTFandIDF(topicTFs, termIDFs)
-        else:
-            print 'Computing IDFs with topics as documents. . .'
-            if allTopicTFs is not None:
-                topicTFIDFs = getTopicTFIDFs(topicTFs, allTopicTFs)
-            else:
-                topicTFIDFs = getTopicTFIDFs(topicTFs, topicTFs)
-
-    # dump TF-IDFS
-    print 'Saving TF-IDFs to %s. . .' % options.savefile
-    pickle.dump(topicTFIDFs, open(options.savefile, 'w'))
-
-    # Print the `topnPrint` terms for each topic
-    if options.verbose:
-        for topic in range(len(topicDists)):
-            tfidfs = [tup[1] for tup in topicTFIDFs[topic]]
-            print ''
-            print 'Top words for topic %d (num terms = %d, l2 norm = %0.3f)' % (
-                topic,
-                len(tfidfs),
-                np.linalg.norm(tfidfs)
-            )
-            print '======================='
-            for i in range(options.topnPrint):
-                print '%s : %.3f' % (
-                    topicTFIDFs[topic][i][0],
-                    topicTFIDFs[topic][i][1]
-                )
+    # save results to disk
+    pickle.dump(tfidfs, open(options.savefile, 'w'))
 
 if __name__ == '__main__':
     main()

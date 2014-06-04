@@ -34,30 +34,25 @@ while test $# -gt 0; do
             echo "-s, --start-stage=NUM     Specify the starting stage"
             echo "-e, --end-stage=NUM       Specify the ending stage"
             echo "--data=DIR                Specify the data directory to use"
-            echo "--numtopics=NUM           Number of topics/concepts"
+            echo "--num-topics=NUM           Number of topics/concepts"
             echo "--edges-per-node          Edge prediction per node"
             echo "--directed                Run experiment on directed graphs"
-            echo "--asymmetric              Don't include --symmetric on predictors"
+            echo "--asymmetric              Don't include --symmetric for predictors"
+            echo "--no-sphere               Don't include --sphere for predictors"
+            echo "--normalize               Include --normalize for mapTopics"
+            echo "--short-coeff=FLOAT       Coeff for TF-IDF from short descriptions"
+            echo "--bigrams-coeff=FLOAT     Coeff for TF-IDF from bigrams"
             echo "--alpha=FLOAT             Popularity scaling factor."
             echo "--no-weight-in            Exclude popularity from KNN search"
             echo "--no-weight-out           Predict outgoing edges uniformaly"
             echo "--no-benchmarks           Don't run benchmark predictors"
             echo "--no-popularity-added     Don't add popularity back into graph"
-            echo "--no-popularity-removed   Don't remove popularity in graph"
-            echo "                          traversal"
-            echo "--lda                     Use lda instead of lsi for latent"
-            echo "                          space"
+            echo "--no-popularity-removed   Don't remove popularity in graph traversal"
+            echo "--lda (BROKEN!)           Use lda instead of lsi for latent space"
             echo "--no-partition-by-brand   Do not partition graph by brand"
-            echo "--no-bigrams              Do not include bigrams in TFIDF"
-            echo "--short-only              Only consider short descriptions for TFIDF"
-            echo "--brand-only              Only consider brand for TFIDF"
             echo "--no-zero-mean            Do not subtract mean before SVD"
-            echo "--min-pop=FLOAT           Specifiy minimum popularity in search"
-            echo "--min-component-size=NUM  Specifiy minimum component size"
-            echo "                          allowed in graph"
-            echo "--max-mapping-connections=NUM"  
-            echo "                          Specify the maximum number of"
-            echo "                          topics one topic can map to"
+            echo "--min-pop=FLOAT           Min popularity for KNN search"
+            echo "--min-component-size=NUM  Min component size allowed in graph"
             echo "--tourney-mapper=FILE     Use mapper created from tourney"  
             echo "--eval-k=NUM              Specify k for k-precision and"
             echo "                          k-recall in evaluation"
@@ -97,7 +92,7 @@ while test $# -gt 0; do
             export DATA=`echo $1 | sed -e 's/^[^=]*=//g'`
             shift
             ;;
-        --numtopics*)
+        --num-topics*)
             export NUM_TOPICS=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_number $NUM_TOPICS
             shift
@@ -108,12 +103,29 @@ while test $# -gt 0; do
             shift
             ;;
         --directed)
-            # this should be left undefined by default
             export DIRECTED_OPT='--directed'
             shift
             ;;
         --asymmetric)
             export SYMMETRIC=0
+            shift
+            ;;
+        --no-sphere)
+            export SPHERE=0
+            shift
+            ;;
+        --normalize)
+            export NORMALIZE_OPT="--normalize"
+            shift
+            ;;
+        --short-coeff*)
+            export SHORT_COEFF=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_float $SHORT_COEFF
+            shift
+            ;;
+        --bigrams-coeff*)
+            export BIGRAMS_COEFF=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_float $BIGRAMS_COEFF
             shift
             ;;
         --alpha*)
@@ -134,12 +146,10 @@ while test $# -gt 0; do
             shift
             ;;
         --no-popularity-added)
-            # this should be left undefined by default
             export POPULARITY_FLAG=0
             shift
             ;;
         --no-popularity-removed)
-            # this should be left undefined by default
             export REMOVE_POP_FLAG=0
             shift
             ;;
@@ -149,18 +159,6 @@ while test $# -gt 0; do
             ;;
         --no-partition-by-brand)
             export PARTITION_BY_BRAND_FLAG=0
-            shift
-            ;;
-        --no-bigrams)
-            export BIGRAMS_FLAG=0
-            shift
-            ;;
-        --short-only)
-            export SHORT_ONLY_OPT="--short-only"
-            shift
-            ;;
-        --brand-only)
-            export BRAND_ONLY_OPT="--brand-only"
             shift
             ;;
         --tourney-mapper*)
@@ -181,19 +179,12 @@ while test $# -gt 0; do
             verify_number $MIN_COMPONENT_SIZE
             shift
             ;;
-        --max-mapping-connections*)
-            export MAX_CONN=`echo $1 | sed -e 's/^[^=]*=//g'`
-            verify_number $MAX_CONN
-            export MAX_CONN_OPT="--max_connections=$MAX_CONN"
-            shift
-            ;;
         --eval-k*)
             export EVAL_K=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_number $EVAL_K
             shift
             ;;
         --seed*)
-            # this should be left undefined by default
             export SEED=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_number $SEED
             shift
@@ -225,14 +216,29 @@ if [[ -z "$DATA" ]]; then
 fi
 
 if [[ -z "$NUM_TOPICS" ]]; then
-    NUM_TOPICS=32
+    NUM_TOPICS=16
 fi
 
 if [[ -z "$EDGES_PER_NODE" ]]; then
     EDGES_PER_NODE="1.8"
 fi
+
 if [[ -z "$SYMMETRIC" ]]; then
     SYMMETRIC_OPT="--symmetric"
+fi
+
+if [[ -z "$SPHERE" ]]; then
+    SPHERE_OPT="--sphere"
+fi
+
+if [[ -z "$SHORT_COEFF" ]]; then
+    SHORT_COEFF="0.0"
+else
+    SHORT_OPT="--short"
+fi
+
+if [[ -z "$BIGRAMS_COEFF" ]]; then
+    BIGRAMS_COEFF="0.3"
 fi
 
 if [[ -z "$ALPHA" ]]; then
@@ -257,10 +263,6 @@ fi
 
 if [[ -z "$PARTITION_BY_BRAND_FLAG" ]]; then
     PARTITION_BY_BRAND_OPT='--partition-by-brand'
-fi
-
-if [[ -z "$BIGRAMS_FLAG" ]]; then
-    BIGRAMS_OPT='--bigrams'
 fi
 
 if [[ -z "$ZERO_MEAN_FLAG" ]]; then
@@ -347,12 +349,8 @@ else
     MODEL_ONE2=$LSI_ONE2
 fi
 
-# tfidf and map
-IDFS=$DATA/idfs${CAT// /_}.pickle
-TFIDF_BASE=$DATA/tfidf_${EXPMT}
-TFIDF=${TFIDF_BASE}.pickle
-TFIDF1=${TFIDF_BASE}_1.pickle
-TFIDF2=${TFIDF_BASE}_2.pickle
+# tfidf and maps
+TFIDF=$DATA/tfidf${CAT// /_}.pickle
 MAP=$DATA/topicMap_${EXPMT}.pickle
 IDENT_MAP=$DATA/identMap_${NUM_TOPICS}.pickle
 RAND_MAP=$DATA/randMap_${NUM_TOPICS}.pickle
@@ -381,31 +379,42 @@ SOURCE_PROX_MAT=${PROX_MAT_BASE}_${NUM_TOPICS}_src.npz
 
 RESULTS=$DATA/results_${EXPMT}_K${EVAL_K}.txt
 
-# Construct recommendation graph from DB
+echo
+
+# Construct TF-IDF vectors for category items
 if [ $START_STAGE -le 1 -a $END_STAGE -ge 1 ]; then
-    echo "=== 1. Build directed recommender graph for category from DB ==="
+    echo "=== 1. Construct TF-IDF vectors for category items ==="
+    CMD="python $SRC/buildTFIDF.py --savefile=$TFIDF --stopwords=$STOPWORDS\
+        $SHORT_OPT --bigrams $DB '$PARENTCAT' '$CAT'"
+    echo $CMD; eval $CMD; echo $CMDTERM
+    echo
+fi
+
+# Construct recommendation graph from DB
+if [ $START_STAGE -le 2 -a $END_STAGE -ge 2 ]; then
+    echo "=== 2. Build directed recommender graph for category from DB ==="
     CMD="python $SRC/buildRecGraph.py --savefile=$GRAPH $DIRECTED_OPT\
         --min-component-size=$MIN_COMPONENT_SIZE\
         --parent-category='$PARENTCAT' --category='$CAT' $DB"
     echo $CMD; eval $CMD; echo $CMDTERM
-echo
+    echo
 fi
 
 # Partition graph
-if [ $START_STAGE -le 2 -a $END_STAGE -ge 2 ]; then
-    echo "=== 2. Partition category graph ==="
+if [ $START_STAGE -le 3 -a $END_STAGE -ge 3 ]; then
+    echo "=== 3. Partition category graph ==="
     CMD="python $SRC/partitionGraph.py --graph1=$GRAPH1 --graph2=$GRAPH2\
         --lost_edges=$LOST_EDGES $SEED_OPT $PARTITION_BY_BRAND_OPT\
         --min-component-size=$MIN_COMPONENT_SIZE $DB $GRAPH"
     echo $CMD; eval $CMD; echo $CMDTERM
-echo
+    echo
 fi
 
 # Random walk
-if [ $START_STAGE -le 3 -a $END_STAGE -ge 3 ]; then
+if [ $START_STAGE -le 4 -a $END_STAGE -ge 4 ]; then
     HOME="0.05"
     STEPS="30"
-    echo "=== 3. Randomly walk each graph ==="
+    echo "=== 4. Randomly walk each graph ==="
     CMD="python $SRC/buildWalkMatrix.py --savefile=$RWALK --home=$HOME\
         --steps=$STEPS $REMOVE_POP_OPT $GRAPH"
     echo $CMD; eval $CMD; echo $CMDTERM
@@ -415,12 +424,12 @@ if [ $START_STAGE -le 3 -a $END_STAGE -ge 3 ]; then
     CMD="python $SRC/buildWalkMatrix.py --savefile=$RWALK2 --home=$HOME\
         --steps=$STEPS $REMOVE_POP_OPT $GRAPH2"
     echo $CMD; eval $CMD; echo $CMDTERM
-echo
+    echo
 fi
 
 # Train model on each graph
-if [ $START_STAGE -le 4 -a $END_STAGE -ge 4 ]; then
-    echo "=== 4. Train $MODEL_TYPE model for each graph ==="
+if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
+    echo "=== 5. Train $MODEL_TYPE model for each graph ==="
     if [ "$MODEL_TYPE" = "lda" ]; then
         CMD="python $SRC/buildLDAModel.py --lda-file=$MODEL"\
             --num-topics=$NUM_TOPICS --matrixfile=$RWALK
@@ -442,69 +451,46 @@ if [ $START_STAGE -le 4 -a $END_STAGE -ge 4 ]; then
             $ZERO_MEAN_OPT $RWALK2"
         echo $CMD; eval $CMD; echo $CMDTERM
     fi
-echo
+    echo
 fi
 
-# Use tourney map if given
 if [[ "$TOURNEY_MAPPER" ]]; then
-    echo "=== 5-7. Using provided topic map ==="
+    # Use tourney map if given
+    echo "=== 6. Using provided topic map ==="
     MAP=$TOURNEY_MAPPER
 else
-    # Get IDFs for category
-    if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
-        echo "=== 5. Calculate IDFs for category ==="
-        CMD="python $SRC/idfsByCategory.py --savefile=$IDFS $SHORT_ONLY_OPT\
-            $BIGRAMS_OPT $BRAND_ONLY_OPT --stopwords=$STOPWORDS\
-            $DB '$PARENTCAT' '$CAT'"
-        echo $CMD; eval $CMD; echo $CMDTERM
-    echo
-    fi
-    
-    # Get TF-IDFs for each graph
+    # Map topic spaces using TF-IDF vectors
     if [ $START_STAGE -le 6 -a $END_STAGE -ge 6 ]; then
-        echo "=== 6. Calculate TF-IDFs for each graph ==="
-        CMD="python $SRC/buildTFIDF.py --savefile=$TFIDF1 $SHORT_ONLY_OPT\
-            $BIGRAMS_OPT $BRAND_ONLY_OPT --stopwords=$STOPWORDS --idfname=$IDFS\
-            $DB $MODEL1"
-        echo $CMD; eval $CMD; echo $CMDTERM
-        CMD="python $SRC/buildTFIDF.py --savefile=$TFIDF2 $SHORT_ONLY_OPT\
-            $BIGRAMS_OPT $BRAND_ONLY_OPT --stopwords=$STOPWORDS --idfname=$IDFS\
-            $DB $MODEL2"
-        echo $CMD; eval $CMD; echo $CMDTERM
-    echo
-    fi
-    
-    # Map TF-IDF topic spaces
-    if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
-        echo "=== 7. Construct topic maps from graph1 to graph2 ==="
+        echo "=== 6. Construct topic maps from model1 to model2 ==="
         CMD="python $SRC/mapTopics.py --savefile=$RAND_MAP --random\
-            $TFIDF1 $TFIDF2"
+            $SEED_OPT $NORMALIZE_OPT $TFIDF $MODEL1 $MODEL2"
         echo $CMD; eval $CMD; echo $CMDTERM
         CMD="python $SRC/mapTopics.py --savefile=$IDENT_MAP --identity\
-            $TFIDF1 $TFIDF2"
+            $NORMALIZE_OPT $TFIDF $MODEL1 $MODEL2"
         echo $CMD; eval $CMD; echo $CMDTERM
-        CMD="python $SRC/mapTopics.py --savefile=$MAP $MAX_CONN_OPT\
-            $TFIDF1 $TFIDF2"
+        CMD="python $SRC/mapTopics.py --savefile=$MAP\
+            --short-coeff=$SHORT_COEFF --bigrams-coeff=$BIGRAMS_COEFF\
+            $NORMALIZE_OPT $TFIDF $MODEL1 $MODEL2"
         echo $CMD; eval $CMD; echo $CMDTERM
-    echo
+        echo
     fi
 fi
 
 if [[ -z "$POPULARITY_FLAG" ]]; then
-    if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
+    if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
         # Construct popularity dictionary
-        echo "=== 8. Popularity Dictionary ==="
+        echo "=== 7. Popularity Dictionary ==="
         CMD="python $SRC/buildPopDictionary.py --savefile=$POP_DICT\
             --alpha=$ALPHA $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
-    echo
+        echo
     fi
     POP_DICT_OPT="--popdict=$POP_DICT"
 fi
 
 # Predict edges
-if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
-    echo "=== 9. Predict edges ==="
+if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
+    echo "=== 8. Predict edges ==="
     if [ $BENCHMARKS -eq 1 ]; then
         echo "** Predicting randomly. . ."
         CMD="python $SRC/predictEdgesRandomly.py --savefile=$PREDICTED_RAND\
@@ -517,15 +503,14 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting using item-item TF-IDF. . ."
         CMD="python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF\
-            -k $EDGES_PER_NODE $SHORT_ONLY_OPT $BIGRAMS_OPT $BRAND_ONLY_OPT\
-            --idfname=$IDFS $POP_DICT_OPT --stopwords=$STOPWORDS\
-            --min-pop=$MIN_POP $WEIGHT_IN_OPT $WEIGHT_OUT_OPT $SYMMETRIC_OPT\
-            $DB $GRAPH1 $GRAPH2"
+            -k $EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP $WEIGHT_IN_OPT\
+            $WEIGHT_OUT_OPT $SYMMETRIC_OPT --short-coeff=$SHORT_COEFF\
+            --bigrams-coeff=$BIGRAMS_COEFF $TFIDF $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting using random map. . ."
         CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_RANDMAP\
             -k $EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP $WEIGHT_IN_OPT\
-            $WEIGHT_OUT_OPT $SYMMETRIC_OPT --sphere $RAND_MAP $MODEL1 $MODEL2"
+            $WEIGHT_OUT_OPT $SYMMETRIC_OPT $SPHERE_OPT $RAND_MAP $MODEL1 $MODEL2"
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting using one model. . ."
         CMD="python $SRC/partitionModel.py --model1=$MODEL_ONE1\
@@ -533,21 +518,21 @@ if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
         echo $CMD; eval $CMD; echo $CMDTERM
         CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_ONE\
             -k $EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP $WEIGHT_IN_OPT\
-            $WEIGHT_OUT_OPT $SYMMETRIC_OPT --sphere\
+            $WEIGHT_OUT_OPT $SYMMETRIC_OPT $SPHERE_OPT\
             $IDENT_MAP $MODEL_ONE1 $MODEL_ONE2"
         echo $CMD; eval $CMD; echo $CMDTERM
     fi
     echo "** Predicting with mapping between models. . ."
     CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES\
         -k $EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP $WEIGHT_IN_OPT\
-        $WEIGHT_OUT_OPT $SYMMETRIC_OPT --sphere $MAP $MODEL1 $MODEL2"
+        $WEIGHT_OUT_OPT $SYMMETRIC_OPT $SPHERE_OPT $MAP $MODEL1 $MODEL2"
     echo $CMD; eval $CMD; echo $CMDTERM
-echo
+    echo
 fi
 
 # Construct source graphs
-if [ $START_STAGE -le 10 -a $END_STAGE -ge 10 ]; then
-    echo "=== 10. Construct source graphs ==="
+if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
+    echo "=== 9. Construct source graphs ==="
     if [ $BENCHMARKS -eq 1 ]; then
         CMD="python $SRC/augmentGraph.py --savefile=$RAND_GRAPH\
             --edges=$PREDICTED_RAND $GRAPH1 $GRAPH2"
@@ -572,8 +557,8 @@ if [ $START_STAGE -le 10 -a $END_STAGE -ge 10 ]; then
 fi
 
 # Construct proximity matrices
-if [ $START_STAGE -le 11 -a $END_STAGE -ge 11 ]; then
-    echo "=== 11. Construct proximity matrices ==="
+if [ $START_STAGE -le 10 -a $END_STAGE -ge 10 ]; then
+    echo "=== 10. Construct proximity matrices ==="
     CMD="python $SRC/buildWalkMatrix.py --savefile=$TARGET_PROX_MAT\
         $SEED_OPT --type=proximity --maxdist=$EVAL_K $GRAPH"
     echo $CMD; eval $CMD; echo $CMDTERM
@@ -601,8 +586,8 @@ if [ $START_STAGE -le 11 -a $END_STAGE -ge 11 ]; then
 fi
 
 # Evaluate predictions
-if [ $START_STAGE -le 12 -a $END_STAGE -ge 12 ]; then
-    echo "=== 12. Evaluate predictions ===" | tee $RESULTS
+if [ $START_STAGE -le 11 -a $END_STAGE -ge 11 ]; then
+    echo "=== 11. Evaluate predictions ===" | tee $RESULTS
     if [ $BENCHMARKS -eq 1 ]; then
         echo | tee -a $RESULTS
         echo "  RANDOM PREDICTIONS " | tee -a $RESULTS
