@@ -34,8 +34,8 @@ while test $# -gt 0; do
             echo "-s, --start-stage=NUM     Specify the starting stage"
             echo "-e, --end-stage=NUM       Specify the ending stage"
             echo "--data=DIR                Specify the data directory to use"
-            echo "--num-topics=NUM           Number of topics/concepts"
-            echo "--edges-per-node          Edge prediction per node"
+            echo "--num-topics=NUM          Number of topics/concepts"
+            echo "--edges-per-node=FLOAT    Edge predictions per node"
             echo "--directed                Run experiment on directed graphs"
             echo "--asymmetric              Don't include --symmetric for predictors"
             echo "--no-sphere               Don't include --sphere for predictors"
@@ -53,6 +53,7 @@ while test $# -gt 0; do
             echo "--no-partition-by-brand   Do not partition graph by brand"
             echo "--no-zero-mean            Do not subtract mean before SVD"
             echo "--min-pop=FLOAT           Min popularity for KNN search"
+            echo "--neighbor-limit=NUM      Limit for weighted KNN serch"
             echo "--min-component-size=NUM  Min component size allowed in graph"
             echo "--tourney-mapper=FILE     Use mapper created from tourney"  
             echo "--eval-k=NUM              Specify k for k-precision and"
@@ -177,6 +178,12 @@ while test $# -gt 0; do
         --min-pop*)
             export MIN_POP=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_float $MIN_POP
+            shift
+            ;;
+        --neighbor-limit*)
+            export NEIGHBOR_LIMIT=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_number $NEIGHBOR_LIMIT
+            export NEIGHBOR_LIMIT_OPT="--neighbor-limit=$NEIGHBOR_LIMIT"
             shift
             ;;
         --min-component-size*)
@@ -503,38 +510,41 @@ if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
     if [ $BENCHMARKS -eq 1 ]; then
         echo "** Predicting randomly. . ."
         CMD="python $SRC/predictEdgesRandomly.py --savefile=$PREDICTED_RAND\
-            $SEED_OPT $GRAPH1 $GRAPH2"
+            $SEED_OPT --edges-per-node=$EDGES_PER_NODE $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting based on popularity. . ."
         CMD="python $SRC/predictEdgesPopular.py --savefile=$PREDICTED_POP\
-            $SEED_OPT -v --topn=3 -k $EDGES_PER_NODE $WEIGHT_OUT_OPT\
-            $SYMMETRIC_OPT $POP_DICT $GRAPH1 $GRAPH2"
+            $SEED_OPT -v --topn=3 --edges-per-node=$EDGES_PER_NODE\
+            $WEIGHT_OUT_OPT $SYMMETRIC_OPT $POP_DICT $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting using item-item TF-IDF. . ."
         CMD="python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF\
-            -k $EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP $WEIGHT_IN_OPT\
-            $WEIGHT_OUT_OPT $SYMMETRIC_OPT --short-coeff=$SHORT_COEFF\
-            --bigrams-coeff=$BIGRAMS_COEFF $TFIDF $GRAPH1 $GRAPH2"
+            --edges-per-node=$EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP\
+            $WEIGHT_IN_OPT $WEIGHT_OUT_OPT $SYMMETRIC_OPT\
+            --short-coeff=$SHORT_COEFF --bigrams-coeff=$BIGRAMS_COEFF\
+            $TFIDF $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting using random map. . ."
         CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_RANDMAP\
-            -k $EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP $WEIGHT_IN_OPT\
-            $WEIGHT_OUT_OPT $SYMMETRIC_OPT $SPHERE_OPT $RAND_MAP $MODEL1 $MODEL2"
+            --edges-per-node=$EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP\
+            $NEIGHBOR_LIMIT_OPT $WEIGHT_IN_OPT $WEIGHT_OUT_OPT $SYMMETRIC_OPT\
+            $SPHERE_OPT $RAND_MAP $MODEL1 $MODEL2"
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting using one model. . ."
         CMD="python $SRC/partitionModel.py --model1=$MODEL_ONE1\
             --model2=$MODEL_ONE2 $MODEL $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
         CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_ONE\
-            -k $EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP $WEIGHT_IN_OPT\
-            $WEIGHT_OUT_OPT $SYMMETRIC_OPT $SPHERE_OPT\
-            $IDENT_MAP $MODEL_ONE1 $MODEL_ONE2"
+            --edges-per-node=$EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP\
+            $NEIGHBOR_LIMIT_OPT $WEIGHT_IN_OPT $WEIGHT_OUT_OPT $SYMMETRIC_OPT\
+            $SPHERE_OPT $IDENT_MAP $MODEL_ONE1 $MODEL_ONE2"
         echo $CMD; eval $CMD; echo $CMDTERM
     fi
     echo "** Predicting with mapping between models. . ."
     CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES\
-        -k $EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP $WEIGHT_IN_OPT\
-        $WEIGHT_OUT_OPT $SYMMETRIC_OPT $SPHERE_OPT $MAP $MODEL1 $MODEL2"
+        --edges-per-node=$EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP\
+        $NEIGHBOR_LIMIT_OPT $WEIGHT_IN_OPT $WEIGHT_OUT_OPT $SYMMETRIC_OPT\
+        $SPHERE_OPT $MAP $MODEL1 $MODEL2"
     echo $CMD; eval $CMD; echo $CMDTERM
     echo
 fi

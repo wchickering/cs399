@@ -16,7 +16,8 @@ from TFIDF_SimilarityCache import TFIDF_SimilarityCache
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-k', type='float', dest='k', default=2.0,
+    parser.add_option('--edges-per-node', type='float', dest='edgesPerNode',
+        default=1.0,
         help='Number of predicted edges per node.', metavar='FLOAT')
     parser.add_option('--symmetric', action='store_true', dest='symmetric',
         default=False,
@@ -45,8 +46,8 @@ def getParser(usage=None):
         help='Weight choice of outgoing edges using popDictionary.')
     return parser
 
-def getTFIDFneighbors(simCache, sourceItem, targetItems, k, weights=None,
-                      minWeight=0, reverseSim=False):
+def getTFIDFneighbors(simCache, sourceItem, targetItems, edgesPerNode,
+                      weights=None, minWeight=0, reverseSim=False):
     queue = PriorityQueue()
     for targetItem in targetItems:
         if weights is not None and minWeight > 0:
@@ -59,7 +60,7 @@ def getTFIDFneighbors(simCache, sourceItem, targetItems, k, weights=None,
         if weights is not None:
             similarity *= weights[targetItem]
         queue.put((similarity, targetItem))
-        if queue.qsize() > k:
+        if queue.qsize() > edgesPerNode:
             queue.get()
     neighbors = []
     while not queue.empty():
@@ -67,14 +68,14 @@ def getTFIDFneighbors(simCache, sourceItem, targetItems, k, weights=None,
         neighbors.append(targetItem)
     return neighbors
 
-def predictEdges(simCache, items1, items2, k, symmetric=False, weights=None,
-                 weightIn=True, weightOut=False, minWeight=0):
+def predictEdges(simCache, items1, items2, edgesPerNode, symmetric=False,
+                 weights=None, weightIn=False, weightOut=False, minWeight=0):
     predictedEdges = []
     if weights is not None and weightOut:
         print 'Predicting edges (weighted outgoing). . . '
-        totalPredictions = int(len(items1)*k)
+        totalPredictions = int(len(items1)*edgesPerNode)
         if symmetric:
-            totalPredictions += int(len(items2)*k)
+            totalPredictions += int(len(items2)*edgesPerNode)
         totalPopularity = 0.0
         for item1 in items1:
             totalPopularity += weights[item1]
@@ -119,7 +120,7 @@ def predictEdges(simCache, items1, items2, k, symmetric=False, weights=None,
                 simCache,
                 item1,
                 items2,
-                k,
+                edgesPerNode,
                 weights=weights if weightIn else None,
                 minWeight=minWeight,
                 reverseSim=False
@@ -130,7 +131,7 @@ def predictEdges(simCache, items1, items2, k, symmetric=False, weights=None,
                 neighbors = getTFIDFneighbors(
                     item2,
                     items1,
-                    k,
+                    edgesPerNode,
                     weights=weights if weightIn else None,
                     minWeight=minWeight,
                     reverseSim=True
@@ -181,7 +182,7 @@ def main():
         simCache,
         graph1.keys(),
         graph2.keys(),
-        options.k,
+        options.edgesPerNode,
         symmetric=options.symmetric,
         weights=popDictionary,
         weightIn=options.weightIn,

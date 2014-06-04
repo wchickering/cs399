@@ -14,8 +14,9 @@ from Util import loadPickle, getAndCheckFilename
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-k', type='int', dest='k', default=2,
-        help='Number of predicted edges per node.', metavar='NUM')
+    parser.add_option('--edges-per-node', type='float', dest='edgesPerNode',
+        default=1.0, help='Number of predicted edges per node.',
+        metavar='FLOAT')
     parser.add_option('--seed', type='int', dest='seed', default=None,
         help='Seed for random number generator.', metavar='NUM')
     parser.add_option('-s', '--savefile', dest='savefile',
@@ -25,10 +26,10 @@ def getParser(usage=None):
         help='Picked graph representing item "popularity".', metavar='FILE')
     return parser
 
-def predictRandomEdges(graph1, graph2, k):
+def predictRandomEdges(graph1, graph2, edgesPerNode):
     predicted_edges = []
     for node1 in graph1:
-        neighbors = random.sample(graph2.keys(), k)
+        neighbors = random.sample(graph2.keys(), int(edgesPerNode))
         predicted_edges += [(node1, n) for n in neighbors]
     return predicted_edges
 
@@ -55,7 +56,7 @@ def main():
 
     # predict edges
     print 'Randomly predicting edges. . .'
-    predicted_edges = predictRandomEdges(graph1, graph2, options.k)
+    predicted_edges = predictRandomEdges(graph1, graph2, options.edgesPerNode)
 
     # save results
     print 'Saving results to %s. . .' % options.savefile

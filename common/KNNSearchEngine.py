@@ -17,7 +17,8 @@ class KNNSearchEngine:
         self.nbrs = NearestNeighbors(algorithm=algorithm, leaf_size=leaf_size)
         self.nbrs.fit(data)
 
-    def kneighbors(self, query, n_neighbors=10, weights=None, topn=None):
+    def kneighbors(self, query, n_neighbors=10, weights=None,
+                   neighborLimit=None):
 
         ### unweighted search ###
 
@@ -35,7 +36,8 @@ class KNNSearchEngine:
         # recursive call without weights to get candidates
         origDistances, origNeighbors = self.kneighbors(
             query,
-            n_neighbors=topn if topn is not None else len(self.dictionary)
+            n_neighbors=neighborLimit if neighborLimit is not None\
+                                      else len(self.dictionary)
         )
  
         # apply weights to distances

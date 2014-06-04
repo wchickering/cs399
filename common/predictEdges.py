@@ -17,7 +17,8 @@ from KNNSearchEngine import KNNSearchEngine
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-k', type='float', dest='k', default=2.0,
+    parser.add_option('--edges-per-node', type='float', dest='edgesPerNode',
+        default=1.0,
         help='Number of predicted edges per node.', metavar='FLOAT')
     parser.add_option('--symmetric', action='store_true', dest='symmetric',
         default=False,
@@ -40,7 +41,8 @@ def getParser(usage=None):
     parser.add_option('--sphere', action='store_true', dest='sphere',
         default=False,
         help='Project items in latent spaces onto surface of sphere.')
-    parser.add_option('--topn', type='int', dest='topn', default=None,
+    parser.add_option('--neighbor-limit', type='int', dest='neighborLimit',
+        default=None,
         help=('Number of nearest neighbors in latent space to consider before '
               'applying popularity weighting.'), metavar='NUM')
     return parser
@@ -111,9 +113,10 @@ def main():
     if popDictionary is not None and options.weightOut:
         # choose outgoing edge nodes based on popularity
         print 'Predicting edges (weighted outgoing). . .'
-        totalPredictions = int(transformedData1.shape[1]*options.k)
+        totalPredictions = int(transformedData1.shape[1]*options.edgesPerNode)
         if options.symmetric:
-            totalPredictions += int(transformedData2.shape[1]*options.k)
+            totalPredictions +=\
+                int(transformedData2.shape[1]*options.edgesPerNode)
         totalPopularity = 0.0
         for i in range(transformedData1.shape[1]):
             totalPopularity += popDictionary[transformedDictionary1[i]]
@@ -131,7 +134,7 @@ def main():
                     transformedData1[i,:],
                     numPredictions,
                     weights=popDictionary if options.weightIn else None,
-                    topn=options.topn
+                    neighborLimit=options.neighborLimit
                 )
                 neighbors1.append(n[0])
             else:
@@ -148,7 +151,7 @@ def main():
                         transformedData2[i,:],
                         numPredictions,
                         weights=popDictionary if options.weightIn else None,
-                        topn=options.topn
+                        neighborLimit=options.neighborLimit
                     )
                     neighbors2.append(n[0])
                 else:
@@ -158,16 +161,16 @@ def main():
         print 'Predicting edges (uniform outgoing). . .'
         _, neighbors1 = searchEngine2.kneighbors(
             transformedData1,
-            int(options.k),
+            int(options.edgesPerNode),
             weights=popDictionary if options.weightIn else None,
-            topn=options.topn
+            neighborLimit=options.neighborLimit
         )
         if options.symmetric:
             _, neighbors2 = searchEngine1.kneighbors(
                 transformedData2,
-                int(options.k),
+                int(options.edgesPerNode),
                 weights=popDictionary if options.weightIn else None,
-                topn=options.topn
+                neighborLimit=options.neighborLimit
             )
 
     # translate neighbors into edge predictions

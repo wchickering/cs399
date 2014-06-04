@@ -15,7 +15,8 @@ from Util import loadPickle, getAndCheckFilename
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-k', type='float', dest='k', default=2.0,
+    parser.add_option('--edges-per-node', type='float', dest='edgesPerNode',
+        default=1.0,
         help='Number of predicted edges per node.', metavar='FLOAT')
     parser.add_option('--topn', type='int', dest='topn', default=10,
         help='Predict edges with top N most popular items.', metavar='NUM')
@@ -47,14 +48,14 @@ def getPopularItems(graph, popDictionary, topn, verbose=False):
             print '%d, pop=%0.3f' % (graphPops[i][1], graphPops[i][0])
     return [item for pop, item in graphPops[0:topn]]
 
-def predictEdges(graph1, graph2, popItems1, popItems2, k,
+def predictEdges(graph1, graph2, popItems1, popItems2, edgesPerNode,
                  weights=None, symmetric=False):
     predictedEdges = []
     if weights is not None:
         print 'Predicting edges (weighted outgoing). . .'
-        totalPredictions = int(len(graph1)*k)
+        totalPredictions = int(len(graph1)*edgesPerNode)
         if symmetric:
-            totalPredictions += int(len(graph2)*k)
+            totalPredictions += int(len(graph2)*edgesPerNode)
         totalPopularity = 0.0
         for item1 in graph1:
             totalPopularity += weights[item1]
@@ -77,7 +78,7 @@ def predictEdges(graph1, graph2, popItems1, popItems2, k,
     else:
         print 'Predicting edges (uniform outgoing). . .'
         for item1 in graph1:
-            for i in range(int(k)):
+            for i in range(int(edgesPerNode)):
                 predictedEdges.append((item1, random.choice(popItems2)))
     return predictedEdges
 
@@ -123,7 +124,7 @@ def main():
         graph2,
         popItems1,
         popItems2,
-        options.k,
+        options.edgesPerNode,
         weights=popDictionary if options.weightOut else None,
         symmetric=options.symmetric
     )
