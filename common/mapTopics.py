@@ -35,6 +35,8 @@ def getParser(usage=None):
     parser.add_option('--normalize', action='store_true', dest='normalize',
         default=False,
         help='Normalize column vectors of transformation matrix.')
+    parser.add_option('--ortho', action='store_true', dest='ortho',
+        default=False, help='Orthogonalize the transformation matrix.')
     parser.add_option('--seed', type='int', dest='seed', default=None,
         help='Seed for random number generator.', metavar='NUM')
     return parser
@@ -44,6 +46,10 @@ def loadLSIModel(modelFilename):
     model = npzfile['u']
     items = npzfile['dictionary']
     return model, items
+
+def orthogonalize(m):
+    from scipy.linalg import sqrtm, inv
+    return m.dot(inv(sqrtm(m.T.dot(m))))
 
 def getTopicMap(model1, dictionary1, model2, dictionary2, simCache):
     topicMap = []
@@ -105,7 +111,12 @@ def main():
     if options.normalize:
         # normalize map
         print 'Normalizing topic map. . .'
-        normalize(topicMap, axis=0)
+        topicMap = normalize(topicMap, axis=0)
+
+    if options.ortho:
+        # orthogonalize map
+        print 'Orthogonalizing topic map. . .'
+        topicMap = orthogonalize(topicMap)
 
     # save topic map to disk
     print 'Saving topic map to %s. . .' % options.savefile

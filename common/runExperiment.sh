@@ -40,6 +40,7 @@ while test $# -gt 0; do
             echo "--asymmetric              Don't include --symmetric for predictors"
             echo "--no-sphere               Don't include --sphere for predictors"
             echo "--normalize               Include --normalize for mapTopics"
+            echo "--no-ortho                Don't include --ortho for mapTopics"
             echo "--short-coeff=FLOAT       Coeff for TF-IDF from short descriptions"
             echo "--bigrams-coeff=FLOAT     Coeff for TF-IDF from bigrams"
             echo "--alpha=FLOAT             Popularity scaling factor."
@@ -116,6 +117,10 @@ while test $# -gt 0; do
             ;;
         --normalize)
             export NORMALIZE_OPT="--normalize"
+            shift
+            ;;
+        --no-ortho)
+            export ORTHO=0
             shift
             ;;
         --short-coeff*)
@@ -229,6 +234,10 @@ fi
 
 if [[ -z "$SPHERE" ]]; then
     SPHERE_OPT="--sphere"
+fi
+
+if [[ -z "$ORTHO" ]]; then
+    ORTHO_OPT="--ortho"
 fi
 
 if [[ -z "$SHORT_COEFF" ]]; then
@@ -463,14 +472,14 @@ else
     if [ $START_STAGE -le 6 -a $END_STAGE -ge 6 ]; then
         echo "=== 6. Construct topic maps from model1 to model2 ==="
         CMD="python $SRC/mapTopics.py --savefile=$RAND_MAP --random\
-            $SEED_OPT $NORMALIZE_OPT $TFIDF $MODEL1 $MODEL2"
+            $SEED_OPT $NORMALIZE_OPT $ORTHO_OPT $TFIDF $MODEL1 $MODEL2"
         echo $CMD; eval $CMD; echo $CMDTERM
         CMD="python $SRC/mapTopics.py --savefile=$IDENT_MAP --identity\
-            $NORMALIZE_OPT $TFIDF $MODEL1 $MODEL2"
+            $NORMALIZE_OPT $ORTHO_OPT $TFIDF $MODEL1 $MODEL2"
         echo $CMD; eval $CMD; echo $CMDTERM
         CMD="python $SRC/mapTopics.py --savefile=$MAP\
             --short-coeff=$SHORT_COEFF --bigrams-coeff=$BIGRAMS_COEFF\
-            $NORMALIZE_OPT $TFIDF $MODEL1 $MODEL2"
+            $NORMALIZE_OPT $ORTHO_OPT $TFIDF $MODEL1 $MODEL2"
         echo $CMD; eval $CMD; echo $CMDTERM
         echo
     fi

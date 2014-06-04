@@ -76,10 +76,10 @@ def main():
 
     # transform each model to other's space
     print 'Transforming topic spaces. . .'
-    transformedData1 = np.dot(data1, np.array(topicMap).transpose())
+    transformedData1 = np.dot(data1, topicMap.transpose())
     transformedDictionary1 = dict(dictionary1)
     if options.symmetric:
-        transformedData2 = np.dot(data2, np.array(topicMap))
+        transformedData2 = np.dot(data2, topicMap)
         transformedDictionary2 = dict(dictionary2)
 
     if popDictionary is not None and options.minPop > 0:
