@@ -235,8 +235,11 @@ def main():
     graph2 = loadPickle(graphFilename2)
 
     # get stop words
-    print 'Loading Stopwords and IDFs. . .'
-    stopwords = getStopwords(options.stopwords)
+    if options.stopwords is not None:
+        print 'Loading stopwords from %s. . .' % options.stopwords
+        stopwords = getStopwords(options.stopwords)
+    else:
+        stopwords = None
 
     # get TFs
     print 'Computing term frequencies. . .'

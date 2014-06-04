@@ -21,7 +21,6 @@ import random
 from Util import loadPickle, getAndCheckFilename
 from sklearn.preprocessing import normalize
 
-# params
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
     parser.add_option('--savefile', dest='savefile', default='topicMap.pickle',

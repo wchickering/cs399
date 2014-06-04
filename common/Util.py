@@ -36,8 +36,6 @@ def getAndCheckFilename(fname):
     return fname
 
 def getStopwords(fname):
-    if fname is None:
-        return None
     getAndCheckFilename(fname)
     with open(fname, 'r') as f:
         try:

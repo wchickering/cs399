@@ -16,7 +16,7 @@ import sqlite3
 import string
 
 # local modules
-from Util import getStopwords
+from Util import getAndCheckFilename, getStopwords
 
 # db_params
 selectDescriptionStmt =\
@@ -44,13 +44,9 @@ selectCategoriesStmt =\
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-d', '--database', dest='dbname',
-        default='data/macys.db', help='Name of Sqlite3 product database.',
-        metavar='DBNAME')
     parser.add_option('--savefile', dest='savefile', default='data/idf.pickle',
         help='Name of pickle to save idfs', metavar='FILE')
-    parser.add_option('--stopwords', dest='stopwords',
-        default='data/stopwords.txt',
+    parser.add_option('--stopwords', dest='stopwords', default=None,
         help='File containing a comma separated list of stop words.',
         metavar='FILE')
     parser.add_option('--short-only', action='store_true', dest='shortOnly',
@@ -110,24 +106,30 @@ def calculateIDFs(db_conn, parentCategory, category, stopwords=None,
     print 'Calculating IDFs for %d items. . .' % numProducts
     idf = {}
     for term in wordDocCounts:
-        idf[term] = math.log(numProducts / wordDocCounts[term])
+        idf[term] = math.log(float(numProducts) / wordDocCounts[term])
     return idf
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] parent category'
+    usage = 'Usage: %prog [options] database parent category'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
-    if len(args) != 2:
+    if len(args) != 3:
         parser.error('Wrong number of arguments')
-    parent = args[0]
-    category = args[1]
+    dbname = getAndCheckFilename(args[0])
+    parent = args[1]
+    category = args[2]
 
     # Connect to db
-    db_conn = sqlite3.connect(options.dbname)
+    print 'Connecting to database %s. . .' % dbname
+    db_conn = sqlite3.connect(dbname)
 
     # get stop words
-    stopwords = getStopwords(options.stopwords)
+    if options.stopwords is not None:
+        print 'Loading stopwords from %s. . .' % options.stopwords
+        stopwords = getStopwords(options.stopwords)
+    else:
+        stopwords = None
 
     # Calculate idfs over all products
     idf = calculateIDFs(db_conn, parent, category, stopwords=stopwords,

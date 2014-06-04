@@ -24,8 +24,6 @@ selectDescriptionStmt = 'SELECT Description FROM Products WHERE Id = :Id'
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
-    parser.add_option('-d', '--database', dest='dbname',
-        default='data/macys.db', help='Database to pull descriptions from.')
     parser.add_option('--graph1', dest='graph1filename',
         default='partitionedGraph1.pickle',
         help='Name of partitioned graph1 pickle.', metavar='FILE')
@@ -94,24 +92,25 @@ def buildGraphs(itemMap, graph):
 
 def main():
     # Parse options
-    usage = 'Usage: %prog [options] graph.pickle'
+    usage = 'Usage: %prog [options] database graph.pickle'
     parser = getParser(usage=usage)
     (options, args) = parser.parse_args()
-    if len(args) != 1:
+    if len(args) != 2:
         parser.error('Wrong number of arguments')
-    graphfname = getAndCheckFilename(args[0])
+    dbname = getAndCheckFilename(args[0])
+    graphfname = getAndCheckFilename(args[1])
 
-    # seed rng
-    if options.seed is not None:
-        random.seed(options.seed)
+    # connect to database
+    print 'Connecting to database %s. .' % dbname
+    db_conn = sqlite3.connect(dbname)
 
     # load graph
     print 'Loading graph from %s. . .' % graphfname
     graph = loadPickle(graphfname)
 
-    # connect to database
-    print 'Connecting to database. .'
-    db_conn = sqlite3.connect(options.dbname)
+    # seed rng
+    if options.seed is not None:
+        random.seed(options.seed)
 
     # partition graph
     print 'Partitioning graph. . .'

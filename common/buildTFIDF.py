@@ -228,8 +228,11 @@ def main():
         allTopicDists = None
 
     # get stop words
-    print 'Loading stopwords form %s. . .' % options.stopwords
-    stopwords = getStopwords(options.stopwords)
+    if options.stopwords is not None:
+        print 'Loading stopwords form %s. . .' % options.stopwords
+        stopwords = getStopwords(options.stopwords)
+    else:
+        stopwords = None
 
     # get TFs
     print 'Computing term frequencies. . .'

@@ -396,7 +396,7 @@ if [ $START_STAGE -le 2 -a $END_STAGE -ge 2 ]; then
     echo "=== 2. Partition category graph ==="
     CMD="python $SRC/partitionGraph.py --graph1=$GRAPH1 --graph2=$GRAPH2\
         --lost_edges=$LOST_EDGES $SEED_OPT $PARTITION_BY_BRAND_OPT\
-        --min-component-size=$MIN_COMPONENT_SIZE $GRAPH"
+        --min-component-size=$MIN_COMPONENT_SIZE $DB $GRAPH"
     echo $CMD; eval $CMD; echo $CMDTERM
 echo
 fi
@@ -453,8 +453,9 @@ else
     # Get IDFs for category
     if [ $START_STAGE -le 5 -a $END_STAGE -ge 5 ]; then
         echo "=== 5. Calculate IDFs for category ==="
-        CMD="python $SRC/idfsByCategory.py --savefile=$IDFS\
-            $SHORT_ONLY_OPT $BIGRAMS_OPT $BRAND_ONLY_OPT '$PARENTCAT' '$CAT'"
+        CMD="python $SRC/idfsByCategory.py --savefile=$IDFS $SHORT_ONLY_OPT\
+            $BIGRAMS_OPT $BRAND_ONLY_OPT --stopwords=$STOPWORDS\
+            $DB '$PARENTCAT' '$CAT'"
         echo $CMD; eval $CMD; echo $CMDTERM
     echo
     fi
