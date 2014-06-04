@@ -16,10 +16,10 @@ import sys
 import math
 import numpy as np
 import random
+from sklearn.preprocessing import normalize
 
 # local modules
 from Util import loadPickle, getAndCheckFilename
-from sklearn.preprocessing import normalize
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)

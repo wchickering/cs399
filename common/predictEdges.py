@@ -8,12 +8,12 @@ import pickle
 import os
 import sys
 import numpy as np
+from sklearn.preprocessing import normalize
 
 # local modules
 from Util import loadPickle, getAndCheckFilename, loadModel
 from Prediction_util import makeEdges, filterByPopularity
 from KNNSearchEngine import KNNSearchEngine
-from sklearn.preprocessing import normalize
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
