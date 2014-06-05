@@ -44,6 +44,7 @@ while test $# -gt 0; do
             echo "--short-coeff=FLOAT       Coeff for TF-IDF from short descriptions"
             echo "--bigrams-coeff=FLOAT     Coeff for TF-IDF from bigrams"
             echo "--alpha=FLOAT             Popularity scaling factor."
+            echo "--beta=FLOAT              Sigmoid parameter for mapTopics."
             echo "--no-weight-in            Exclude popularity from KNN search"
             echo "--no-weight-out           Predict outgoing edges uniformaly"
             echo "--no-benchmarks           Don't run benchmark predictors"
@@ -137,6 +138,12 @@ while test $# -gt 0; do
         --alpha*)
             export ALPHA=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_float $ALPHA
+            shift
+            ;;
+        --beta*)
+            export BETA=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_float $BETA
+            export BETA_OPT="--beta=$BETA"
             shift
             ;;
         --no-weight-in)
@@ -486,7 +493,7 @@ else
         echo $CMD; eval $CMD; echo $CMDTERM
         CMD="python $SRC/mapTopics.py --savefile=$MAP\
             --short-coeff=$SHORT_COEFF --bigrams-coeff=$BIGRAMS_COEFF\
-            $NORMALIZE_OPT $ORTHO_OPT $TFIDF $MODEL1 $MODEL2"
+            $NORMALIZE_OPT $ORTHO_OPT $BETA_OPT $TFIDF $MODEL1 $MODEL2"
         echo $CMD; eval $CMD; echo $CMDTERM
         echo
     fi

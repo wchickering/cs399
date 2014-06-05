@@ -37,6 +37,9 @@ def getParser(usage=None):
         help='Normalize column vectors of transformation matrix.')
     parser.add_option('--ortho', action='store_true', dest='ortho',
         default=False, help='Orthogonalize the transformation matrix.')
+    parser.add_option('--beta', type='float', dest='beta', default=None,
+        help='Parameter for sigmoid to apply to weighted similarities.',
+        metavar='NUM')
     parser.add_option('--seed', type='int', dest='seed', default=None,
         help='Seed for random number generator.', metavar='NUM')
     return parser
@@ -51,13 +54,24 @@ def orthogonalize(m):
     from scipy.linalg import sqrtm, inv
     return m.dot(inv(sqrtm(m.T.dot(m))))
 
-def getTopicMap(model1, dictionary1, model2, dictionary2, simCache):
+def sigmoid(x, beta=1.0):
+    u = np.exp(-x/beta)
+    return (1.0 - u)/(1.0 + u)
+
+def getTopicMap(model1, dictionary1, model2, dictionary2, simCache, beta=None):
     topicMap = []
     for topic1 in range(model1.shape[1]):
         mapColumn = []
         for topic2 in range(model2.shape[1]):
-            mixMatrix = np.outer(model1[:,topic1],model2[:,topic2])
-            mapColumn.append(np.sum(np.multiply(mixMatrix, simCache.sims)))
+            # weightMatrix entries are products of the pair's topic strengths
+            weightMatrix = np.outer(model1[:,topic1],model2[:,topic2])
+            # weightedSimMatrix entries are products of topicStrengths and
+            # TF-IDF inner products
+            weightedSimMatrix = np.multiply(weightMatrix, simCache.sims)
+            if beta is not None:
+                # apply sigmoid to each weighted similarity
+                weightedSimMatrix = sigmoid(weightedSimMatrix, beta)
+            mapColumn.append(np.sum(weightedSimMatrix))
         topicMap.append(mapColumn)
     return np.array(topicMap).transpose()
 
@@ -106,7 +120,8 @@ def main():
 
         print 'Mapping topics between catalogs. . .'
         # build topic map
-        topicMap = getTopicMap(model1, items1, model2, items2, simCache)
+        topicMap = getTopicMap(model1, items1, model2, items2, simCache,
+                               beta=options.beta)
 
     if options.normalize:
         # normalize map
