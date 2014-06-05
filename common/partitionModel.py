@@ -10,7 +10,7 @@ import sys
 import numpy as np
 
 # local modules
-from Util import loadPickle, getAndCheckFilename, loadModel
+from Util import loadPickle, getAndCheckFilename
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
