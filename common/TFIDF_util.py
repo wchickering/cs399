@@ -21,13 +21,13 @@ def _getCosineSimFactors(vector1, vector2):
 def computeCosineSim(item1, item2, tfidfs, shortCoeff=0.0, bigramsCoeff=0.0):
     innerProd, normSqr1, normSqr2 = _getCosineSimFactors(tfidfs['terms'][item1],
                                                          tfidfs['terms'][item2])
-    if shortCoeff > 0.0:
+    if shortCoeff > 0.0 and 'short' in tfidfs:
         ip, ns1, ns2 = _getCosineSimFactors(tfidfs['short'][item1],
                                             tfidfs['short'][item2])
         innerProd += shortCoeff*ip
         normSqr1 += shortCoeff*ns1
         normSqr2 += shortCoeff*ns2
-    if bigramsCoeff > 0.0:
+    if bigramsCoeff > 0.0 and 'bigrams' in tfidfs:
         ip, ns1, ns2 = _getCosineSimFactors(tfidfs['bigrams'][item1],
                                             tfidfs['bigrams'][item2])
         innerProd += bigramsCoeff*ip
@@ -42,10 +42,10 @@ def _getInnerProd(vector1, vector2):
 
 def computeInnerProd(item1, item2, tfidfs, shortCoeff=0.0, bigramsCoeff=0.0):
     innerProd = _getInnerProd(tfidfs['terms'][item1], tfidfs['terms'][item2])
-    if shortCoeff > 0.0:
+    if shortCoeff > 0.0 and 'short' in tfidfs:
         innerProd += shortCoeff*_getInnerProd(tfidfs['short'][item1],
                                               tfidfs['short'][item2])
-    if bigramsCoeff > 0.0:
+    if bigramsCoeff > 0.0 and 'bigrams' in tfidfs:
         innerProd += bigramsCoeff*_getInnerProd(tfidfs['bigrams'][item1],
                                                 tfidfs['bigrams'][item2])
     return innerProd
