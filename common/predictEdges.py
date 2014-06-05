@@ -14,6 +14,7 @@ from sklearn.preprocessing import normalize
 from Util import loadPickle, getAndCheckFilename, loadModel
 from Prediction_util import makeEdges, filterByPopularity
 from KNNSearchEngine import KNNSearchEngine
+from TFIDF_SimilarityCache import TFIDF_SimilarityCache
 
 def getParser(usage=None):
     parser = OptionParser(usage=usage)
@@ -28,7 +29,7 @@ def getParser(usage=None):
         default='predictEdges.pickle', help='Pickle to dump predicted edges.',
         metavar='FILE')
     parser.add_option('--popdict', dest='popdict', default=None,
-        help='Picked popularity dictionary.', metavar='FILE')
+        help='Pickled popularity dictionary.', metavar='FILE')
     parser.add_option('--min-pop', type='float', dest='minPop',
         default=0.0, help='Minimum popularity to be included in search engine.',
         metavar='FLOAT')
@@ -45,6 +46,16 @@ def getParser(usage=None):
         default=None,
         help=('Number of nearest neighbors in latent space to consider before '
               'applying popularity weighting.'), metavar='NUM')
+    parser.add_option('--tau', type='float', dest='tau', default=None,
+        help='Coefficiennt for TF-IDF inner product term in KNN search.',
+        metavar='FLOAT')
+    parser.add_option('--tfidfs', dest='tfidfs', default=None,
+        help='Pickled TF-IDF vectors.', metavar='FILE')
+    parser.add_option('--short-coeff', type='float', dest='shortCoeff',
+        default=0.0,
+        help='Coefficient for TF-IDF vectors from short descriptions.')
+    parser.add_option('--bigrams-coeff', type='float', dest='bigramsCoeff',
+        default=0.0, help='Coefficient for TF-IDF vectors from bigrams.')
     return parser
 
 def main():
@@ -59,13 +70,6 @@ def main():
     modelFilename1 = getAndCheckFilename(args[1])
     modelFilename2 = getAndCheckFilename(args[2])
 
-    # get popularity dictionary
-    if options.popdict:
-        print 'Loading popularity dictionary from %s. . .' % options.popdict
-        popDictionary = loadPickle(options.popdict)
-    else:
-        popDictionary = None
-
     # load topic map
     print 'Loading topic map from %s. . .' % topicMapFilename
     topicMap = loadPickle(topicMapFilename)
@@ -75,6 +79,20 @@ def main():
     data1, dictionary1 = loadModel(modelFilename1)
     print 'Loading model2 from %s. . .' % modelFilename2
     data2, dictionary2 = loadModel(modelFilename2)
+
+    if options.popdict:
+        # load popularity dictionary
+        print 'Loading popularity dictionary from %s. . .' % options.popdict
+        popDictionary = loadPickle(options.popdict)
+    else:
+        popDictionary = None
+
+    if options.tfidfs:
+        # load TF-IDF vectors
+        print 'Loading TF-IDF vectors from %s. . .' % options.tfidfs
+        tfidfs = loadPickle(options.tfidfs)
+    else:
+        tfidfs = None
 
     # transform each model to other's space
     print 'Transforming topic spaces. . .'
@@ -109,6 +127,41 @@ def main():
     if options.symmetric:
         searchEngine1 = KNNSearchEngine(data1, dictionary1)
 
+    if tfidfs is not None and options.tau is not None:
+        # precompute TF-IDF similarities
+        print 'Computing item similarities in TF-IDF space. . .'
+        simCache2 = TFIDF_SimilarityCache(
+            tfidfs,
+            shortCoeff=options.shortCoeff,
+            bigramsCoeff=options.bigramsCoeff,
+            useCosine=False
+        )
+        transformedItems1 =\
+            [item for idx, item in sorted(transformedDictionary1.items(),
+                                          key=lambda tup: tup[0])]
+        items2 =\
+            [item for idx, item in sorted(dictionary2.items(),
+                                          key=lambda tup: tup[0])]
+        simCache2.preComputeSims(transformedItems1, items2)
+        # scale similarities by options.tau ceofficient
+        simCache2.sims *= options.tau
+        if options.symmetric:
+            simCache1 = TFIDF_SimilarityCache(
+                tfidfs,
+                shortCoeff=options.shortCoeff,
+                bigramsCoeff=options.bigramsCoeff,
+                useCosine=False
+            )
+            transformedItems2 =\
+                [item for idx, item in sorted(transformedDictionary2.items(),
+                                              key=lambda tup: tup[0])]
+            items1 =\
+                [item for idx, item in sorted(dictionary1.items(),
+                                              key=lambda tup: tup[0])]
+            simCache1.preComputeSims(transformedItems2, items1)
+            # scale similarities by options.tau ceofficient
+            simCache1.sims *= options.tau
+
     # make predictions
     if popDictionary is not None and options.weightOut:
         # choose outgoing edge nodes based on popularity
@@ -130,10 +183,20 @@ def main():
                     totalPopularity
             ))
             if numPredictions > 0:
+                # create addTerms dictionary
+                if tfidfs is not None and options.tau is not None:
+                    addTerms = dict(
+                        [(dictionary2[idx], sim)\
+                         for (idx, sim) in enumerate(simCache2.sims[i,:])]
+                    )
+                else:
+                    addTerms = None
+                # compute edge predictions
                 _, n = searchEngine2.kneighbors(
                     transformedData1[i,:],
                     numPredictions,
                     weights=popDictionary if options.weightIn else None,
+                    addTerms=addTerms,
                     neighborLimit=options.neighborLimit
                 )
                 neighbors1.append(n[0])
@@ -147,10 +210,20 @@ def main():
                         totalPopularity
                 ))
                 if numPredictions > 0:
+                    # create addTerms dictionary
+                    if tfidfs is not None and options.tau is not None:
+                        addTerms = dict(
+                            [(dictionary1[idx], sim)\
+                             for (idx, sim) in enumerate(simCache1.sims[i,:])]
+                        )
+                    else:
+                        addTerms = None
+                    # compute edge predictions
                     _, n = searchEngine1.kneighbors(
                         transformedData2[i,:],
                         numPredictions,
                         weights=popDictionary if options.weightIn else None,
+                        addTerms=addTerms,
                         neighborLimit=options.neighborLimit
                     )
                     neighbors2.append(n[0])
@@ -159,6 +232,7 @@ def main():
     else:
         # choose outgoing edge nodes uniformly
         print 'Predicting edges (uniform outgoing). . .'
+        # TODO: Implement addTerm for uniform outgoing edge prediction
         _, neighbors1 = searchEngine2.kneighbors(
             transformedData1,
             int(options.edgesPerNode),

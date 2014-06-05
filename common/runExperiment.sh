@@ -45,6 +45,7 @@ while test $# -gt 0; do
             echo "--bigrams-coeff=FLOAT     Coeff for TF-IDF from bigrams"
             echo "--alpha=FLOAT             Popularity scaling factor."
             echo "--beta=FLOAT              Sigmoid parameter for mapTopics."
+            echo "--tau=FLOAT               Coefficient for TF-IDF in KNN search"
             echo "--no-weight-in            Exclude popularity from KNN search"
             echo "--no-weight-out           Predict outgoing edges uniformaly"
             echo "--no-benchmarks           Don't run benchmark predictors"
@@ -144,6 +145,11 @@ while test $# -gt 0; do
             export BETA=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_float $BETA
             export BETA_OPT="--beta=$BETA"
+            shift
+            ;;
+        --tau*)
+            export TAU=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_float $TAU
             shift
             ;;
         --no-weight-in)
@@ -372,11 +378,17 @@ else
     MODEL_ONE2=$LSI_ONE2
 fi
 
-# tfidf and maps
+# TF-IDF and maps
 TFIDF=$DATA/tfidf${CAT// /_}.pickle
 MAP=$DATA/topicMap_${EXPMT}.pickle
 IDENT_MAP=$DATA/identMap_${NUM_TOPICS}.pickle
 RAND_MAP=$DATA/randMap_${NUM_TOPICS}.pickle
+
+# tau parameter used to incorporate TF-IDF directly into predictEdges.py
+if [[ ! -z "$TAU" ]]; then
+    TAU_OPT="--tfidfs=$TFIDF --short-coeff=$SHORT_COEFF\
+             --bigrams-coeff=$BIGRAMS_COEFF --tau=$TAU"
+fi
 
 POP_DICT=$DATA/popDict${CAT// /_}${SEED_EXT}.pickle
 
@@ -550,8 +562,8 @@ if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
     echo "** Predicting with mapping between models. . ."
     CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES\
         --edges-per-node=$EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP\
-        $NEIGHBOR_LIMIT_OPT $WEIGHT_IN_OPT $WEIGHT_OUT_OPT $SYMMETRIC_OPT\
-        $SPHERE_OPT $MAP $MODEL1 $MODEL2"
+        $NEIGHBOR_LIMIT_OPT $WEIGHT_IN_OPT $WEIGHT_OUT_OPT $TAU_OPT\
+        $SYMMETRIC_OPT $SPHERE_OPT $MAP $MODEL1 $MODEL2"
     echo $CMD; eval $CMD; echo $CMDTERM
     echo
 fi

@@ -17,12 +17,12 @@ class KNNSearchEngine:
         self.nbrs = NearestNeighbors(algorithm=algorithm, leaf_size=leaf_size)
         self.nbrs.fit(data)
 
-    def kneighbors(self, query, n_neighbors=10, weights=None,
+    def kneighbors(self, query, n_neighbors=10, weights=None, addTerms=None,
                    neighborLimit=None):
 
         ### unweighted search ###
 
-        if weights is None:
+        if weights is None and addTerms is None:
             distances, indexes = self.nbrs.kneighbors(
                 query,
                 n_neighbors=min(n_neighbors, len(self.dictionary))
@@ -33,21 +33,27 @@ class KNNSearchEngine:
 
         ### weighted search ###
 
-        # recursive call without weights to get candidates
+        # recursive call without weights or addTerms to get candidates
         origDistances, origNeighbors = self.kneighbors(
             query,
             n_neighbors=neighborLimit if neighborLimit is not None\
                                       else len(self.dictionary)
         )
  
-        # apply weights to distances
+        # apply weights and addTerms to distances
         newDistances = np.zeros(origDistances.shape)
         for i in range(origDistances.shape[0]):
             for j in range(origDistances.shape[1]):
-                newDistances[i][j] =\
-                    origDistances[i][j]/weights[origNeighbors[i][j]]
+                newDistances[i][j] = origDistances[i][j]
+                if weights is not None:
+                    newDistances[i][j] /= weights[origNeighbors[i][j]]
+                if addTerms is not None:
+                    # include addTerms such that distance decreases with
+                    # increasing value
+                    newDistances[i][j] = 1.0/(1.0/newDistances[i][j] +\
+                                              addTerms[origNeighbors[i][j]])
 
-        # re-sort neighbors by weighted distance
+        # re-sort neighbors by new distances
         neighborDistances = np.dstack((newDistances, origNeighbors))
         h, w = neighborDistances.shape[0], neighborDistances.shape[1]
         mappedNeighborDistances = map(tuple, neighborDistances\
