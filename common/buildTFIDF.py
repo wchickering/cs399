@@ -6,7 +6,7 @@ treating each product as a "document".
 """
 
 from optparse import OptionParser
-from collections import defaultdict
+from collections import defaultdict, Counter
 from stemming.porter2 import stem
 import pickle
 import os
@@ -16,7 +16,7 @@ import sqlite3
 import string
 
 # local modules
-from Util import getAndCheckFilename, getStopwords
+from Util import getAndCheckFilename, getStopwords, loadPickle
 
 # db_params
 selectDescriptionStmt =\
@@ -45,6 +45,9 @@ def getParser(usage=None):
         default=False, help='Include TF-IDF vectors from short descriptions.')
     parser.add_option('--bigrams', action='store_true', dest='bigrams',
         default=False, help='Include TF-IDF vectors for bigrams.')
+    parser.add_option('--graph', dest='graph', default=None,
+        help='Pickled graph for creating neighbor TF-IDF vectors.',
+        metavar='FILE')
     return parser
 
 def getTerms(text, stopwords=None):
@@ -138,6 +141,16 @@ def getTFIDFs(db_conn, parentCategory, category, stopwords,
         )
     return tfidfs
 
+def getHoodTFIDF(tfidfs, graph):
+    tfidfs['hood'] = {}
+    for item in tfidfs['terms']:
+        if item not in graph:
+            continue
+        tfidfs['hood'][item] = Counter()
+        tfidfs['hood'][item].update(tfidfs['terms'][item])
+        for neighbor in graph[item][0]:
+            tfidfs['hood'][item].update(tfidfs['terms'][item])
+
 def main():
     # Parse options
     usage = 'Usage: %prog [options] database parentCategory category'
@@ -163,6 +176,13 @@ def main():
     tfidfs = getTFIDFs(db_conn, parentCategory, category, stopwords=stopwords,
                        includeShort=options.short,
                        includeBigrams=options.bigrams)
+
+    # get neighborhood graph
+    if options.graph is not None:
+        print 'Loading neighborhood graph from %s. . .' % options.graph
+        graph = loadPickle(options.graph)
+        print 'Constructing neighborhood TF-IDF vectors. . .'
+        getHoodTFIDF(tfidfs, graph)
 
     # save results to disk
     pickle.dump(tfidfs, open(options.savefile, 'w'))

@@ -56,6 +56,8 @@ def getParser(usage=None):
         help='Coefficient for TF-IDF vectors from short descriptions.')
     parser.add_option('--bigrams-coeff', type='float', dest='bigramsCoeff',
         default=0.0, help='Coefficient for TF-IDF vectors from bigrams.')
+    parser.add_option('--hood-coeff', type='float', dest='hoodCoeff',
+        default=0.0, help='Coefficient for TF-IDF vectors from neighborhood.')
     return parser
 
 def main():
@@ -134,6 +136,7 @@ def main():
             tfidfs,
             shortCoeff=options.shortCoeff,
             bigramsCoeff=options.bigramsCoeff,
+            hoodCoeff=options.hoodCoeff,
             useCosine=False
         )
         transformedItems1 =\
@@ -150,6 +153,7 @@ def main():
                 tfidfs,
                 shortCoeff=options.shortCoeff,
                 bigramsCoeff=options.bigramsCoeff,
+                hoodCoeff=options.hoodCoeff,
                 useCosine=False
             )
             transformedItems2 =\

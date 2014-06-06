@@ -18,7 +18,8 @@ def _getCosineSimFactors(vector1, vector2):
         normSqr2 += value2**2
     return innerProd, normSqr1, normSqr2
 
-def computeCosineSim(item1, item2, tfidfs, shortCoeff=0.0, bigramsCoeff=0.0):
+def computeCosineSim(item1, item2, tfidfs,
+                     shortCoeff=0.0, bigramsCoeff=0.0, hoodCoeff=0.0):
     innerProd, normSqr1, normSqr2 = _getCosineSimFactors(tfidfs['terms'][item1],
                                                          tfidfs['terms'][item2])
     if shortCoeff > 0.0 and 'short' in tfidfs:
@@ -33,6 +34,12 @@ def computeCosineSim(item1, item2, tfidfs, shortCoeff=0.0, bigramsCoeff=0.0):
         innerProd += bigramsCoeff*ip
         normSqr1 += bigramsCoeff*ns1
         normSqr2 += bigramsCoeff*ns2
+    if hoodCoeff > 0.0 and 'hood' in tfidfs:
+        ip, ns1, ns2 = _getCosineSimFactors(tfidfs['hood'][item1],
+                                            tfidfs['hood'][item2])
+        innerProd += hoodCoeff*ip
+        normSqr1 += hoodCoeff*ns1
+        normSqr2 += hoodCoeff*ns2
     return innerProd/math.sqrt(normSqr1*normSqr2)
 
 def _getInnerProd(vector1, vector2):
@@ -40,7 +47,8 @@ def _getInnerProd(vector1, vector2):
         [vector1[key1]*vector2[key1] for key1 in vector1 if key1 in vector2]
     )
 
-def computeInnerProd(item1, item2, tfidfs, shortCoeff=0.0, bigramsCoeff=0.0):
+def computeInnerProd(item1, item2, tfidfs,
+                     shortCoeff=0.0, bigramsCoeff=0.0, hoodCoeff=0.0):
     innerProd = _getInnerProd(tfidfs['terms'][item1], tfidfs['terms'][item2])
     if shortCoeff > 0.0 and 'short' in tfidfs:
         innerProd += shortCoeff*_getInnerProd(tfidfs['short'][item1],
@@ -48,4 +56,7 @@ def computeInnerProd(item1, item2, tfidfs, shortCoeff=0.0, bigramsCoeff=0.0):
     if bigramsCoeff > 0.0 and 'bigrams' in tfidfs:
         innerProd += bigramsCoeff*_getInnerProd(tfidfs['bigrams'][item1],
                                                 tfidfs['bigrams'][item2])
+    if hoodCoeff > 0.0 and 'hood' in tfidfs:
+        innerProd += hoodCoeff*_getInnerProd(tfidfs['hood'][item1],
+                                             tfidfs['hood'][item2])
     return innerProd

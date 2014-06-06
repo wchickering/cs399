@@ -31,6 +31,8 @@ def getParser(usage=None):
         help='Coefficient for TF-IDF vectors from short descriptions.')
     parser.add_option('--bigrams-coeff', type='float', dest='bigramsCoeff',
         default=0.0, help='Coefficient for TF-IDF vectors from bigrams.')
+    parser.add_option('--hood-coeff', type='float', dest='hoodCoeff',
+        default=0.0, help='Coefficient for TF-IDF vectors from neighborhood.')
     parser.add_option('--use-cosine', action='store_true',
         dest='useCosine', default=False, help='determine mapping by cosine')
     parser.add_option('--popdict', dest='popdict', default=None,
@@ -129,6 +131,7 @@ def predictEdges(simCache, items1, items2, edgesPerNode, symmetric=False,
         if symmetric:
             for item2 in items2:
                 neighbors = getTFIDFneighbors(
+                    simCache,
                     item2,
                     items1,
                     edgesPerNode,
@@ -173,6 +176,7 @@ def main():
         tfidfs,
         shortCoeff=options.shortCoeff,
         bigramsCoeff=options.bigramsCoeff,
+        hoodCoeff=options.hoodCoeff,
         useCosine=options.useCosine
     )
     simCache.preComputeSims(graph1.keys(), graph2.keys())

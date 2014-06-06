@@ -10,11 +10,13 @@ class TFIDF_SimilarityCache:
     A class for computing and caching item similarities in TF-IDF space.
     """
 
-    def __init__(self, tfidfs, shortCoeff=0.0, bigramsCoeff=0.0,
+    def __init__(self, tfidfs,
+                 shortCoeff=0.0, bigramsCoeff=0.0, hoodCoeff=0.0,
                  useCosine=False):
         self.tfidfs = tfidfs
         self.shortCoeff = shortCoeff
         self.bigramsCoeff = bigramsCoeff
+        self.hoodCoeff = hoodCoeff
         self.useCosine = useCosine
         self.computed = False
 
@@ -28,13 +30,15 @@ class TFIDF_SimilarityCache:
                     self.sims[i,j] = computeCosineSim(
                         items1[i], items2[j], self.tfidfs,
                         shortCoeff=self.shortCoeff,
-                        bigramsCoeff=self.bigramsCoeff
+                        bigramsCoeff=self.bigramsCoeff,
+                        hoodCoeff=self.hoodCoeff
                     )
                 else:
                     self.sims[i,j] = computeInnerProd(
                         items1[i], items2[j], self.tfidfs,
                         shortCoeff=self.shortCoeff,
-                        bigramsCoeff=self.bigramsCoeff
+                        bigramsCoeff=self.bigramsCoeff,
+                        hoodCoeff=self.hoodCoeff
                     )
         self.computed = True
 

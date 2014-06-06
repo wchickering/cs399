@@ -43,6 +43,7 @@ while test $# -gt 0; do
             echo "--no-ortho                Don't include --ortho for mapTopics"
             echo "--short-coeff=FLOAT       Coeff for TF-IDF from short descriptions"
             echo "--bigrams-coeff=FLOAT     Coeff for TF-IDF from bigrams"
+            echo "--hood-coeff=FLOAT        Coeff for TF-IDF from neighborhood"
             echo "--alpha=FLOAT             Popularity scaling factor."
             echo "--beta=FLOAT              Sigmoid parameter for mapTopics."
             echo "--tau=FLOAT               Coefficient for TF-IDF in KNN search"
@@ -134,6 +135,11 @@ while test $# -gt 0; do
         --bigrams-coeff*)
             export BIGRAMS_COEFF=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_float $BIGRAMS_COEFF
+            shift
+            ;;
+        --hood-coeff*)
+            export HOOD_COEFF=`echo $1 | sed -e 's/^[^=]*=//g'`
+            verify_float $HOOD_COEFF
             shift
             ;;
         --alpha*)
@@ -270,6 +276,10 @@ if [[ -z "$BIGRAMS_COEFF" ]]; then
     BIGRAMS_COEFF="0.3"
 fi
 
+if [[ -z "$HOOD_COEFF" ]]; then
+    HOOD_COEFF="0.0"
+fi
+
 if [[ -z "$ALPHA" ]]; then
     ALPHA="1.0"
 fi
@@ -335,6 +345,7 @@ GRAPH_BASE=$DATA/graph${CAT// /_}
 GRAPH=${GRAPH_BASE}.pickle
 GRAPH1=${GRAPH_BASE}${SEED_EXT}_1.pickle
 GRAPH2=${GRAPH_BASE}${SEED_EXT}_2.pickle
+COMBINED_GRAPHS=${GRAPH_BASE}${SEED_EXT}_combined.pickle
 RAND_GRAPH=${GRAPH_BASE}${SEED_EXT}_rand.pickle
 POP_GRAPH=${GRAPH_BASE}${SEED_EXT}_popsrc.pickle
 TFIDF_GRAPH=${GRAPH_BASE}${SEED_EXT}_tfidf.pickle
@@ -387,7 +398,8 @@ RAND_MAP=$DATA/randMap_${NUM_TOPICS}.pickle
 # tau parameter used to incorporate TF-IDF directly into predictEdges.py
 if [[ ! -z "$TAU" ]]; then
     TAU_OPT="--tfidfs=$TFIDF --short-coeff=$SHORT_COEFF\
-             --bigrams-coeff=$BIGRAMS_COEFF --tau=$TAU"
+             --bigrams-coeff=$BIGRAMS_COEFF --hood-coeff=$HOOD_COEFF\
+             --tau=$TAU"
 fi
 
 POP_DICT=$DATA/popDict${CAT// /_}${SEED_EXT}.pickle
@@ -416,18 +428,9 @@ RESULTS=$DATA/results_${EXPMT}_K${EVAL_K}.txt
 
 echo
 
-# Construct TF-IDF vectors for category items
-if [ $START_STAGE -le 1 -a $END_STAGE -ge 1 ]; then
-    echo "=== 1. Construct TF-IDF vectors for category items ==="
-    CMD="python $SRC/buildTFIDF.py --savefile=$TFIDF --stopwords=$STOPWORDS\
-        $SHORT_OPT --bigrams $DB '$PARENTCAT' '$CAT'"
-    echo $CMD; eval $CMD; echo $CMDTERM
-    echo
-fi
-
 # Construct recommendation graph from DB
-if [ $START_STAGE -le 2 -a $END_STAGE -ge 2 ]; then
-    echo "=== 2. Build directed recommender graph for category from DB ==="
+if [ $START_STAGE -le 1 -a $END_STAGE -ge 1 ]; then
+    echo "=== 1. Build directed recommender graph for category from DB ==="
     CMD="python $SRC/buildRecGraph.py --savefile=$GRAPH $DIRECTED_OPT\
         --min-component-size=$MIN_COMPONENT_SIZE\
         --parent-category='$PARENTCAT' --category='$CAT' $DB"
@@ -436,11 +439,23 @@ if [ $START_STAGE -le 2 -a $END_STAGE -ge 2 ]; then
 fi
 
 # Partition graph
-if [ $START_STAGE -le 3 -a $END_STAGE -ge 3 ]; then
-    echo "=== 3. Partition category graph ==="
+if [ $START_STAGE -le 2 -a $END_STAGE -ge 2 ]; then
+    echo "=== 2. Partition category graph ==="
     CMD="python $SRC/partitionGraph.py --graph1=$GRAPH1 --graph2=$GRAPH2\
         --lost_edges=$LOST_EDGES $SEED_OPT $PARTITION_BY_BRAND_OPT\
         --min-component-size=$MIN_COMPONENT_SIZE $DB $GRAPH"
+    echo $CMD; eval $CMD; echo $CMDTERM
+    CMD="python $SRC/augmentGraph.py --savefile=$COMBINED_GRAPHS $GRAPH1\
+        $GRAPH2"
+    echo $CMD; eval $CMD; echo $CMDTERM
+    echo
+fi
+
+# Construct TF-IDF vectors for category items
+if [ $START_STAGE -le 3 -a $END_STAGE -ge 3 ]; then
+    echo "=== 3. Construct TF-IDF vectors for category items ==="
+    CMD="python $SRC/buildTFIDF.py --savefile=$TFIDF --stopwords=$STOPWORDS\
+        --graph=$COMBINED_GRAPHS $SHORT_OPT --bigrams $DB '$PARENTCAT' '$CAT'"
     echo $CMD; eval $CMD; echo $CMDTERM
     echo
 fi
@@ -496,7 +511,7 @@ if [[ "$TOURNEY_MAPPER" ]]; then
 else
     # Map topic spaces using TF-IDF vectors
     if [ $START_STAGE -le 6 -a $END_STAGE -ge 6 ]; then
-        echo "=== 6. Construct topic maps from model1 to model2 ==="
+        echo "=== 6. Map topic spaces ==="
         CMD="python $SRC/mapTopics.py --savefile=$RAND_MAP --random\
             $SEED_OPT $NORMALIZE_OPT $ORTHO_OPT $TFIDF $MODEL1 $MODEL2"
         echo $CMD; eval $CMD; echo $CMDTERM
@@ -505,7 +520,8 @@ else
         echo $CMD; eval $CMD; echo $CMDTERM
         CMD="python $SRC/mapTopics.py --savefile=$MAP\
             --short-coeff=$SHORT_COEFF --bigrams-coeff=$BIGRAMS_COEFF\
-            $NORMALIZE_OPT $ORTHO_OPT $BETA_OPT $TFIDF $MODEL1 $MODEL2"
+            --hood-coeff=$HOOD_COEFF $NORMALIZE_OPT $ORTHO_OPT\
+            $BETA_OPT $TFIDF $MODEL1 $MODEL2"
         echo $CMD; eval $CMD; echo $CMDTERM
         echo
     fi
@@ -514,7 +530,7 @@ fi
 if [[ -z "$POPULARITY_FLAG" ]]; then
     if [ $START_STAGE -le 7 -a $END_STAGE -ge 7 ]; then
         # Construct popularity dictionary
-        echo "=== 7. Popularity Dictionary ==="
+        echo "=== 7. Construct popularity dictionary ==="
         CMD="python $SRC/buildPopDictionary.py --savefile=$POP_DICT\
             --alpha=$ALPHA $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
@@ -541,7 +557,7 @@ if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
             --edges-per-node=$EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP\
             $WEIGHT_IN_OPT $WEIGHT_OUT_OPT $SYMMETRIC_OPT\
             --short-coeff=$SHORT_COEFF --bigrams-coeff=$BIGRAMS_COEFF\
-            $TFIDF $GRAPH1 $GRAPH2"
+            --hood-coeff=$HOOD_COEFF $TFIDF $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
         echo "** Predicting using random map. . ."
         CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_RANDMAP\

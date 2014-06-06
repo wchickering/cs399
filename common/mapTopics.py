@@ -30,6 +30,8 @@ def getParser(usage=None):
         help='Coefficient for TF-IDF vectors from short descriptions.')
     parser.add_option('--bigrams-coeff', type='float', dest='bigramsCoeff',
         default=0.0, help='Coefficient for TF-IDF vectors from bigrams.')
+    parser.add_option('--hood-coeff', type='float', dest='hoodCoeff',
+        default=0.0, help='Coefficient for TF-IDF vectors from neighborhood.')
     parser.add_option('--use-cosine', action='store_true',
         dest='useCosine', default=False, help='determine mapping by cosine')
     parser.add_option('--normalize', action='store_true', dest='normalize',
@@ -114,6 +116,7 @@ def main():
             tfidfs,
             shortCoeff=options.shortCoeff,
             bigramsCoeff=options.bigramsCoeff,
+            hoodCoeff=options.hoodCoeff,
             useCosine=options.useCosine
         )
         simCache.preComputeSims(items1, items2)
