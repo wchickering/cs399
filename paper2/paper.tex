@@ -1,0 +1,358 @@
+\documentclass[11pt]{article}
+
+% =========================================================================
+% document style changes
+% =========================================================================
+
+\usepackage{amsmath}                    % AMS math packages
+\usepackage{amssymb}                    %
+\usepackage[]{graphpap}
+\usepackage[T1]{fontenc}                % for \mathrm{}
+\usepackage{courier}                    % for \texttt{}
+\usepackage{bbm}                        % for \mathbbm{1} (indicator function)
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage[font={small}]{caption}
+\usepackage{subcaption}
+
+%\setlength{\parskip}{\baselineskip}     % skip line following paragraphs
+%\pagestyle{empty}                       % No page numbers
+\setlength{\topmargin}{-.5in}
+\setlength{\textheight}{9in}
+\setlength{\oddsidemargin}{.125in}
+\setlength{\textwidth}{6.25in}
+
+\newcommand{\spc}{\vspace{0.25in}}      % Shortcut commands
+\newcommand{\ds}{\displaystyle}         %\newcommand{\ds}[1]{\displaystyle{#1}}
+\newcommand{\ra}{\rightarrow}
+\newcommand{\Cov}{\mathrm{Cov}}
+\DeclareMathOperator*{\argmax}{arg\!\max}
+\DeclareMathOperator*{\argmin}{arg\!\min}
+
+\begin{document}                        % This is where the document begins
+
+\title{A Technique for Inter-Catalogue Recommendations}
+\author{Bill Chickering and Jamie Irvine\\
+CS 399 with Anand Rajaraman\\
+Stanford University}
+\renewcommand{\today}{June 12, 2014}
+\maketitle
+
+\section*{Abstract}
+\emph{Abstracts are abstract. They confront you. There was a reviewer a
+while back who wrote that my papers didn't have any beginning or any end. He
+didn't mean it as a compliment, but it was.} --Jackson Pollock
+
+\section*{Introduction}
+Recommender systems have become a critical component for online retailers in
+nearly every space of retail. Whether the products are movies or clothes or research
+articles, large retailer tend to have a way of recommending products based on
+other previously viewed or purchased products.
+
+These recomendations usually come from a combination of content-based
+information and collaborative filtering techniques. The content-based approach
+uses information about the products, such as category or descriptioin, to
+connect related products. Alone, however, this approach is usually unable to
+capture the subtle ways products may actually be related. Collaborative
+filtering, on the other hand, learns relations from aggregated user behavior. 
+Such recommendation often have explicit ttiles like ``People who liked 
+this product also liked these products''. Collaborative filtering has proven to
+be effective at recommending products, given that there is a large amount of user 
+data.
+
+Since each retailer only has user data within their site, these user-based
+recommender systems are good at learning connections between products in
+one catalogue, but they do little to learn how these products may relate to
+other products outside of the retailer's inventory. This type of information is
+valuable in a number of situations. Retailers such as department stores
+want to know which new products make the most sense to add to their catalogue.
+This is essentially a question of recommending the best outside products based
+on current in-house ones. In a different scenario, two retailers may merge and 
+want to construct a unified recommender system between the two catalgoues.
+
+We model this as a problem of connecting recommender systems between disjoint
+catalogues. The goal is to construct good recommendations from products in one
+catalogue to products in the other. These catalogues may be from competing 
+retailers who don't have access to each other's user data. Thus, to keep the 
+problem general, we do not assume that we have any private internal data. 
+Instead, we constrain ourselves to use only the product information and internal
+recommendations that are posted publicly to all users.
+
+This is a difficult problem. What makes a good recommendation is hard to define
+objectively. One can say that if users co-purchase or co-view products together,
+then these products should be recommended for each other. But without any user 
+data, it is hard to simulate this kind of user behavior. The connections between 
+co-viewed products are often less tangible than simple metrics of similarity. 
+
+In this paper, we outline a technique that leverages the intra-catalogue 
+recommendations of each catalogue to construct inter-catalgoue recommendations
+between them. We focus on the clothing retailers, since they tend to all have
+public recommendations for each product. Specifically, the data used for this
+project was all collected from the public product webpages for Macy's.
+
+\section*{Experiment}
+To measure the success of constructing recommendations, we design the following
+experiment:
+
+First, we scrape all of the clothing products from Macy's website at 
+www.macys.com. For each product we get its image, what category of clothing it
+is in, its description, and a list of other products recommended for it.
+
+Next, we simulate the catalogues of two different retailers by partitioning all
+of the products into two disjoint collections of products. To make this
+partition realistic, we ensure that no brand has products in both catalogue. We
+remove all recommendations between products from one partition to the other,
+thus creating two entirely disjoint and unconnected catalogues.
+
+Now, for each product in each catalogue, we choose which products to recommend
+in the other catalogue, using the recommendation method to be tested. To make
+this problem slightly simpler, we restrict recommendations to be within the same
+category. In this way, connecting up entire catalogues becomes a series of
+smaller tasks of connecting the products in each category.
+
+We still have all of the true inter-catalogue recommendations from the
+unpartitioned products. Although we don't use this information for constructing
+recommendations between the partitioned graphs, we can use the original
+recommendations as a gold-standard to test the construct ones. Using these
+gold-standard recommendations, we can evaluate the precision and recall of the
+predicted inter-catalogue recommendations.
+
+For the Macy's catalogue, each product has four recommendations. This means that
+on average, there are only two gold-standard inter-catalogue recommendations
+from each product. However, since there potentially are other good
+recommendations besides these two, we create another metric that expands our
+notion of a correct recommendation. Here we look at recommendations of
+recommendations. For example, if Product B is recommended for Product A and
+Product C is recommended for Product B, we say that Product C is a good
+recommendation for Product A. This leads us to the notion of 2-precision and
+2-recall.
+
+For a rigorous definition of 2-precision and 2-recall, we first propose the idea
+of a recommender graph. A recommender graph has products as nodes and
+recommendations as edges. If Product B is recommended for Product A, there is an
+edge between node A and node B in the graph. For simplicity, we define our
+recommender graphs to be undirected, but we note that they could be interpreted
+as directed graphs as well. With this terminology, our problem becomes one of
+connecting two disjoint recommender graphs by adding edges between them. 
+
+2-precision is defined as the percentage of predicted edges that are within two
+steps in the original, unpartitioned recommender graph. In the example above,
+Product A and Product C are within two steps in the original graph, thus an edge
+between A and C is considered correct and increases precision. 2-recall is
+defined analogously. Here, we consider the new recommender graph consisting of
+the two partitioned recommender graphs connected by the predicted edges.
+2-recall is then the percentage of gold-standard edges that are within two steps
+in the predicted recommender graph.
+
+\section*{Constructing Recommendations}
+Recommending products between different catalogues is a daunting task.
+Traditionally, constructing recommendations is done by leveraging user behavior
+using a collaborative filtering technique. At the most basic level, If a large
+number of users view or purchase both Product A and Product B, the two are
+connected with a recommendation. Unfortunately, for this problem there are no
+user data between the two unconnected catalogues.
+
+\subsection*{Content Based Similarity}
+A simple approach for this problem is to recommend products that have similar
+content. The products have both a short and long description which we can use to
+construct a content-based similarity function. To do this, we represent each
+product as a vector of tf-idf values for each word in its descriptions. By using
+tf-idf, we reduce the relevance of frequent words and boost that of rare ones.
+The vectors are the length of the dictionary, with zeros for all absent words
+from the descriptions. To determine the content-based similarity between two
+products, we simply take the dot product of the two tf-idf vectors. 
+
+This similarity function yields the following recommendation algorithm: For each
+product, scan through the products in the opposite catalogue and calculate the
+content-based similarity score with each. Predict recommendations between this
+product and each of the top k most similar products in the other catalogue.
+
+While this is a quadric-time operation, it can be sped up using matrix
+multiplication. Furthermore, the division into different categories reduces the
+impact of the quadratic effect. For instance, Macy's entire catalogue consists
+of over one million products, making a quadratic time algorithm infeasible.
+However, the average category has 2000 products, which is significantly more
+manageable.
+
+\subsection*{Leveraging Recommendations}
+The simple content-based recommender is limited for a few reasons. It attempts
+to capture similarity between products by looking exclusively at the words used
+to describe them. One limitation here is that different brands often use
+different vocabularies to describe the same thing, such as ``off-white'' versus
+``ivory.'' Another issue is that the best recommendation for a product is often
+more subtle than simply the most similar other product. For instance, a striped
+black-and-white button up shirt may be an excellent recommendation for a blue
+checkered button-up, even though the two have ostensibly different patterns and
+colors. 
+
+We can alleviate some of these issues by leveraging the recommendations we
+already have between products in the same catalogue. One approach is to consider
+the neighborhood of each product in their recommender graphs, that is a product
+along with each of the products it is recommended with in its own catalogue.
+When comparing two products in different catalogues, we use the same tf-idf
+similarity function from before to compare each pair of products between the two
+neighborhoods. Mathematically, we construct the similarity function
+NeighborhoodSimilarity defined as:
+
+where...
+
+Assuming the recommendations are good within each of the catalogues, this
+approach can help both of the issues brought up with the simple content-based
+recommender. Since a neighborhood has many products, each describing themselves
+with potentially different vocabularies, there is a higher likelihood that the
+neighborhood contains multiple synonyms and thus decreases the potential of
+missing due to different vocabularies. Furthermore, the recommender graphs
+capture some of the user behavior not expressed in product descriptions. Looking
+back on the dress-shirts example, the neighborhood of a striped shirt may
+include checkered shirts and vise-versa. In this case, the two neighborhoods
+would share the words ``striped'' and ``checkered'' and thus the two previously
+dissimilar shirts would be considered similar.
+
+\subsection*{Latent Concepts}
+Although the NeighborhoodSimilarity method alleviates some of the issues of
+content-similarity, it is still fundamentally based on the descriptions of
+products. Ideally, we would like to recommend products that are similar in more
+fundamental ways than their descriptions. If a dress is elegant and modern, we
+want to recommend another dress that is elegant and modern, even if those words
+are not explicitly in the descriptions of either. These types of latent concepts
+can be intangible and difficult to define. However, if we assume that the given
+recommendations are based on these concepts, we can attempt to learn the latent
+concepts by reverse-engineering the graphs.
+
+One approach to learning latent concepts is Latent Semantic Indexing or LSI. In
+traditional LSI, a dataset consists of documents, each containing terms.
+Singular Value Decomposition (SVD) is applied to the term-document matrix and
+the resulting three matrices are truncated to the number of latent concepts
+desired. The resulting left matrix is a term-concept matrix, where each row is a
+term represented in concept space.
+
+We apply the same idea to the product catalogues in order to learn the latent
+concepts of each product. Analogous to documents containing terms, we look at
+user sessions which contain the products viewed by that user. Although we do not
+have actual user data, we can simulate user sessions by traversing the
+recommender graphs. 
+
+To simulate user sessions, we use a random walk technique on the graph. We
+assume that the edges of a recommender graph indeed connect products that a user
+would co-view. Thus traversing the edges of a graph is a reasonable simulation
+of a user session. For details on these random walks, see the section titled
+Random Walks below.
+
+With the simulated user sessions, we can implement LSI on each of the catalogues
+to learn the latent concepts for each product. We want to find the products from
+one catalogue that are most similar in latent concept space to products in the
+other catalogue. However, since the user sessions are disjoint, we must learn
+different latent spaces for each catalogue. The problem is therefore reduced to
+finding a mapping from one concept space to the other. If this can be done, we
+can map the concepts of each product into concepts of the other catalogue and
+then find its nearest neighbors in that catalogue's concept space. 
+
+To map concepts from one catalogue to another, we must revisit
+content-similarity. In this case, we represent each concept as a vector of
+words. To calculate the value for a word w for concept c, we sum the tf-idf
+value of w across all products, weighted by how much that product is represented
+by concept c. Thus if a concept could be described as formal, the words
+``sophisticated'' or ``official'' may have high value since products with those
+descriptive words would also have a high amount of the formal concept in their
+concept representations. Using these vector representation for concepts, we can
+simply calculate the dot product between two concepts to find how similar they
+are, in a relative sense. This can be used to create a mapping from one set of
+concepts to another.
+
+In all, the LSI approach consists of four phases. First we simulate user
+sessions by randomly walking the recommender graphs. Second we learn concept
+spaces for products in each catalogue via SVD. Third we find a mapping between
+concept spaces. And lastly we find the nearest neighbors of each product in the
+other catalogue's concept space. These nearest neighbors are the predicted
+recommendations between products in different catalogues.
+
+\section*{Implementation}
+Here are some of the details for implementing the LSI method for constructing
+inter-catalogue recommendations.
+
+\subsection*{Random Walks}
+Topic-specific random walk starting from each product
+Parameters needed and the ones chosen
+
+\subsection*{Singular Value Decomposition}
+Subtract mean before hand (why this is good here but not usually)
+Number of concepts to use
+
+\subsection*{Concept Mapping}
+Issue of normalization - normalize each column (L1 and L2), orthogonalize, map
+to sphere
+Bigrams
+
+\subsection*{Popularity}
+Important - definition, popularity breakdown of graphs
+Model of popularity and similarity
+Removing popularity from random walks
+Adding popularity to nearest neighbors / modifying number of predictions
+Baseline popularity methods
+Number of products mapped to in different methods
+
+\section*{Performance}
+\subsection*{Baselines}
+Random, tfidf, one model (explain), most popular
+
+\subsection*{Results}
+\begin{center}
+\begin{tabular}{ | l | c | c | c |}
+\hline
+Normalization & 2-Precision & 2-Recall & 2-F1 Score \\ \hline\hline
+L1 normalize each column of matrix &&&\\ \hline
+L2 normalize each column of matrix &&&\\ \hline
+Orthogonalize matrix &&&\\ \hline
+Normalize products in concept space &&&\\ \hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tabular}{ | l | c | c | c |}
+\hline
+Method & 2-Precision & 2-Recall & 2-F1 Score \\ \hline\hline
+Random &&&\\ \hline
+Simple Content-based &&&\\ \hline
+Neighborhood Content-based &&&\\ \hline
+One Model &&&\\ \hline
+Popularity Baselines &&&\\ \hline
+\hspace*{0.5cm} Map to most popular &&&\\ \hline
+\hspace*{0.5cm} Random concept mapping &&&\\ \hline
+LSI &&&\\ \hline
+\hspace*{0.5cm} + Normalized concept mapping &&&\\ \hline
+\hspace*{0.5cm} + Zero-mean SVD &&&\\ \hline
+\hspace*{0.5cm} + Bigrams from descriptions &&&\\ \hline
+\hspace*{0.5cm} + Discounted popularity from random walks &&&\\ \hline
+\hspace*{0.5cm} + Popularity for finding nearest neighbors &&&\\ \hline
+\hspace*{0.5cm} + Number of recommendations based on popularity &&&\\ \hline
+
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tabular}{ | l | c | c | c | c | c | c |}
+\hline
+Category & 1-Precision & 1-Recall & 1-F1 Score & 2-Precision & 2-Recall & 2-F1 Score \\ \hline\hline
+Men's Shirts &&&&&&\\ \hline
+Women's Dresses &&&&&&\\ \hline
+\end{tabular}
+\end{center}
+
+Analysis/descriptions for each of these tables
+
+\section*{Conclusion}
+We tried a few different methods for creating recommendations between
+retailers. We find that this one is the best.
+The last method uses an unconventional approach that adds some value in the
+process. These results could be used in real life for these problems, since all
+of the data exists.
+
+\section*{Future Work}
+Incorporate more data such as customer reviews. Use computer vision techniques.
+Focus more on popular hubs model.
+
+\begin{thebibliography}{9}
+
+\end{thebibliography}
+
+\end{document}
