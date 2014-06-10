@@ -35,7 +35,7 @@
 \author{Bill Chickering and Jamie Irvine\\
 CS 399 with Anand Rajaraman\\
 Stanford University}
-\renewcommand{\today}{June 12, 2014}
+\renewcommand{\today}{June 11, 2014}
 \maketitle
 
 \section*{Abstract}
@@ -73,7 +73,7 @@ We model this as a problem of connecting recommender systems between disjoint
 catalogues. The goal is to construct good recommendations from products in one
 catalogue to products in the other. These catalogues may be from competing
 retailers who don't have access to each other's user data. Thus, to keep the
-problem general, we do not assume that we have any private internal data.
+problem general, we do not assume that we have any private data.
 Instead, we constrain ourselves to use only the product information and internal
 recommendations that are posted publicly to all users.
 
@@ -85,7 +85,7 @@ co-viewed products are often less tangible than simple metrics of similarity.
 
 In this paper, we outline a technique that leverages the intra-catalogue
 recommendations of each catalogue to construct inter-catalgoue recommendations
-between them. We focus on the clothing retailers, since they tend to all have
+between them. We focus on clothing retailers, since they tend to all have
 public recommendations for each product. Specifically, the data used for this
 project was all collected from the public product webpages for Macy's.
 
@@ -103,22 +103,21 @@ in the case of Macy's---that are displayed on a product's details page under the
 heading ``Customers Also Shopped''. The presence of these recommendations
 implicitly forms a directed graph over the product catalogue, in which the nodes
 are the {\em products} or {\em items} and the edges are the {\em
-recommendations}. These graphs play a central role in this study.
+recommendations}. We call these types of graphs {\em recommendation graphs} and they play a central role in this study.
 
 \section*{Experiments}
 Our goal is to develop methods for connecting initially disconnected
-recommendation graphs. That is, given two online retailers, each with a website
-that displays items in their respective catalogue, where each item is
-accompanied by several {\em recommended} items, we are presented with two
-disconnected recommendation graphs. We would like to associate ``good''
-recommendations for items in one catalogue with items in the other catalogue. In
-this way, we are effectively introducing edges that connect the two
-recommendation graphs. Formulating this inter-retailer recommendations problem
-in terms of graphs offers insight in how to evaluate our recommendation choices
-as well as how to choose ``good'' recommendations. Leveraging the graph
-structure for evaluation is discussed in this section while exploiting the graph
-for the purpose of making better recommendations is addressed in a subsequent
-section.
+recommendation graphs. Given two online retailers, each with a website
+displaying their items along with several other {\em recommended} items from
+their catalogue, we are presented with two disconnected recommendation graphs. 
+We would like to associate ``good'' recommendations for items in one catalogue 
+with items in the other catalogue. In this way, we are effectively introducing 
+edges that connect the two recommendation graphs. Formulating this inter-retailer
+recommendations problem in terms of graphs offers insight in how to evaluate our 
+recommendation choices as well as how to choose ``good'' recommendations. 
+Leveraging the graph structure for evaluation is discussed in this section while 
+exploiting the graph for the purpose of making better recommendations is addressed 
+in a subsequent section.
 
 To evaluate our inter-retailer recommendation methods, we simulate the problem
 by randomly partitioning Macy's products into two disjoint sets. Given the
@@ -128,10 +127,10 @@ this cut with high precision and recall.
 
 Precision, recall, and $F_1$ score are well-known metrics for evaluating
 prediction algorithms.  Together, these metrics capture how effective one is at
-guessing the items within a target set. Consider a typical Macy's category, for
-example, Dresses, which contains about $3,500$ items. Randomly partitioning
-results in two sets, each with about $1,750$ items. For each interset
-recommendation, we must therefore choose two nodes, one from each of the two
+guessing items within a target set. Consider a typical Macy's category, for
+example, Dresses, which contains approximately $3,500$ items. Randomly 
+partitioning results in two sets, each with about $1,750$ items. For each 
+interset recommendation, we must therefore choose two nodes, one from each of the two
 sets. That is, we have $1,750 \times 1,750 > 3 \times 10^6$ choices. Choosing
 the correct edges is a formidable challenge to say the least. It is therefore
 worth asking: Are some prediction errors better or worse than others? The graph
@@ -150,10 +149,10 @@ defined as
 2-recall}}{\text{\em 2-precision} + \text{\em 2-recall}}
 \end{align}
 where $P$ is the set of predicted edges, $L$ is the set of lost edges (i.e.
-those in the cut resulting from the partition), and $d_L(u,v)$ is the distance
-between nodes $u$ and $v$ in the original unpartitioned graph, and $d_P(u,v)$ is
-the distance between nodes $u$ and $v$ in the new graph formed using the
-predicted edges in $P$.
+those in the cut resulting from the partition), $d_L(u,v)$ is the shortest
+distance between nodes $u$ and $v$ in the original unpartitioned graph, and 
+$d_P(u,v)$ is the shortest distance between nodes $u$ and $v$ in the new graph 
+formed using the predicted edges in $P$.
 
 
 In these experiments, we perform the partitioning on a per-category basis. 
@@ -555,7 +554,7 @@ The second mapping-related baseline is the Random Mapper Recommender. As the
 name suggests, this recommender is identical to the LSI Recommender, except that
 it uses a randomly generated linear transformation to map between concept
 spaces. These two baselines represent (not strict) upper and lower bounds on how
-well the concept mapping performs. The results shows how much of a bottleneck
+well the concept mapping performs. The results show how much of a bottleneck
 this step is.
 
 \subsection*{Results}
@@ -579,9 +578,8 @@ Random &&&\\ \hline
 Simple Content-based &&&\\ \hline
 Neighborhood Content-based &&&\\ \hline
 One Model &&&\\ \hline
-Popularity Baselines &&&\\ \hline
-\hspace*{0.5cm} Map to most popular &&&\\ \hline
-\hspace*{0.5cm} Random concept mapping &&&\\ \hline
+Random concept mapping &&&\\ \hline
+Popularity &&&\\ \hline
 LSI &&&\\ \hline
 \hspace*{0.5cm} + Normalized concept mapping &&&\\ \hline
 \hspace*{0.5cm} + Zero-mean SVD &&&\\ \hline
