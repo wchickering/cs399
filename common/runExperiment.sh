@@ -50,6 +50,13 @@ while test $# -gt 0; do
             echo "--no-weight-in            Exclude popularity from KNN search"
             echo "--no-weight-out           Predict outgoing edges uniformaly"
             echo "--no-benchmarks           Don't run benchmark predictors"
+            echo "--benchmark-random        Only do random benchmark"
+            echo "--benchmark-popular       Only do popular benchmark"
+            echo "--benchmark-tfidf-nopop   Only do TF-IDF NoPop benchmark"
+            echo "--benchmark-tfidf         Only do TF-IDF benchmark"
+            echo "--benchmark-randommap     Only do random-map benchmark"
+            echo "--benchmark-onemodel      Only do OneModel benchmark"
+            echo "--no-main                 Don't do main experiment"
             echo "--no-popularity-added     Don't add popularity back into graph"
             echo "--no-popularity-removed   Don't remove popularity in graph traversal"
             echo "--lda (BROKEN!)           Use lda instead of lsi for latent space"
@@ -167,7 +174,70 @@ while test $# -gt 0; do
             shift
             ;;
         --no-benchmarks)
-            export BENCHMARKS=0
+            export BENCHMARK_RANDOM=0
+            export BENCHMARK_POPULAR=0
+            export BENCHMARK_TFIDF_NOPOP=0
+            export BENCHMARK_TFIDF=0
+            export BENCHMARK_RANDMAP=0
+            export BENCHMARK_ONE=0
+            shift
+            ;;
+        --benchmark-random)
+            export BENCHMARK_RANDOM=1
+            export BENCHMARK_POPULAR=0
+            export BENCHMARK_TFIDF_NOPOP=0
+            export BENCHMARK_TFIDF=0
+            export BENCHMARK_RANDMAP=0
+            export BENCHMARK_ONE=0
+            shift
+            ;;
+        --benchmark-popular)
+            export BENCHMARK_RANDOM=0
+            export BENCHMARK_POPULAR=1
+            export BENCHMARK_TFIDF_NOPOP=0
+            export BENCHMARK_TFIDF=0
+            export BENCHMARK_RANDMAP=0
+            export BENCHMARK_ONE=0
+            shift
+            ;;
+        --benchmark-tfidf-nopop)
+            export BENCHMARK_RANDOM=0
+            export BENCHMARK_POPULAR=0
+            export BENCHMARK_TFIDF_NOPOP=1
+            export BENCHMARK_TFIDF=0
+            export BENCHMARK_RANDMAP=0
+            export BENCHMARK_ONE=0
+            shift
+            ;;
+        --benchmark-tfidf)
+            export BENCHMARK_RANDOM=0
+            export BENCHMARK_POPULAR=0
+            export BENCHMARK_TFIDF_NOPOP=0
+            export BENCHMARK_TFIDF=1
+            export BENCHMARK_RANDMAP=0
+            export BENCHMARK_ONE=0
+            shift
+            ;;
+        --benchmark-randonmap)
+            export BENCHMARK_RANDOM=0
+            export BENCHMARK_POPULAR=0
+            export BENCHMARK_TFIDF_NOPOP=0
+            export BENCHMARK_TFIDF=0
+            export BENCHMARK_RANDMAP=1
+            export BENCHMARK_ONE=0
+            shift
+            ;;
+        --benchmark-onemodel)
+            export BENCHMARK_RANDOM=0
+            export BENCHMARK_POPULAR=0
+            export BENCHMARK_TFIDF_NOPOP=0
+            export BENCHMARK_TFIDF=0
+            export BENCHMARK_RANDMAP=0
+            export BENCHMARK_ONE=1
+            shift
+            ;;
+        --no-main)
+            export MAIN_EXPERIMENT=0
             shift
             ;;
         --no-popularity-added)
@@ -292,8 +362,32 @@ if [[ -z "$WEIGHT_OUT" ]]; then
     WEIGHT_OUT_OPT="--weight-out"
 fi
 
-if [[ -z "$BENCHMARKS" ]]; then
-    BENCHMARKS=1
+if [[ -z "$BENCHMARK_RANDOM" ]]; then
+    BENCHMARK_RANDOM=1
+fi
+
+if [[ -z "$BENCHMARK_POPULAR" ]]; then
+    BENCHMARK_POPULAR=1
+fi
+
+if [[ -z "$BENCHMARK_TFIDF_NOPOP" ]]; then
+    BENCHMARK_TFIDF_NOPOP=1
+fi
+
+if [[ -z "$BENCHMARK_TFIDF" ]]; then
+    BENCHMARK_TFIDF=1
+fi
+
+if [[ -z "$BENCHMARK_RANDMAP" ]]; then
+    BENCHMARK_RANDMAP=1
+fi
+
+if [[ -z "$BENCHMARK_ONE" ]]; then
+    BENCHMARK_ONE=1
+fi
+
+if [[ -z "$MAIN_EXPERIMENT" ]]; then
+    MAIN_EXPERIMENT=1
 fi
 
 if [[ -z "$MODEL_TYPE" ]]; then
@@ -355,6 +449,7 @@ GRAPH2=${GRAPH_BASE}${SEED_EXT}_2.pickle
 COMBINED_GRAPHS=${GRAPH_BASE}${SEED_EXT}_combined.pickle
 RAND_GRAPH=${GRAPH_BASE}${SEED_EXT}_rand.pickle
 POP_GRAPH=${GRAPH_BASE}${SEED_EXT}_popsrc.pickle
+TFIDF_NOPOP_GRAPH=${GRAPH_BASE}${SEED_EXT}_tfidfNoPop.pickle
 TFIDF_GRAPH=${GRAPH_BASE}${SEED_EXT}_tfidf.pickle
 RANDMAP_GRAPH=${GRAPH_BASE}${SEED_EXT}_randmap.pickle
 ONE_GRAPH=${GRAPH_BASE}${SEED_EXT}_one.pickle
@@ -416,6 +511,7 @@ LOST_EDGES=$DATA/lostEdges${ESC_CAT}${SEED_EXT}.pickle
 PREDICTED_BASE=$DATA/predictedEdges_${EXPMT}
 PREDICTED_RAND=${PREDICTED_BASE}_rand.pickle
 PREDICTED_POP=${PREDICTED_BASE}_pop.pickle
+PREDICTED_TFIDF_NOPOP=${PREDICTED_BASE}_tfidfNoPop.pickle
 PREDICTED_TFIDF=${PREDICTED_BASE}_tfidf.pickle
 PREDICTED_RANDMAP=${PREDICTED_BASE}_randmap.pickle
 PREDICTED_ONE=${PREDICTED_BASE}_one.pickle
@@ -426,6 +522,7 @@ PROX_MAT_BASE=$DATA/proxMat${ESC_CAT}K${EVAL_K}${SEED_EXT}
 TARGET_PROX_MAT=${PROX_MAT_BASE}_tgt.npz
 RAND_PROX_MAT=${PROX_MAT_BASE}_rand.npz
 POP_PROX_MAT=${PROX_MAT_BASE}_pop.npz
+TFIDF_NOPOP_PROX_MAT=${PROX_MAT_BASE}_tfidfNoPop.npz
 TFIDF_PROX_MAT=${PROX_MAT_BASE}_tfidf.npz
 RANDMAP_PROX_MAT=${PROX_MAT_BASE}_randmap.npz
 ONE_PROX_MAT=${PROX_MAT_BASE}_one.npz
@@ -550,16 +647,28 @@ fi
 # Predict edges
 if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
     echo "=== 8. Predict edges ==="
-    if [ $BENCHMARKS -eq 1 ]; then
+    if [ $BENCHMARK_RANDOM -eq 1 ]; then
         echo "** Predicting randomly. . ."
         CMD="python $SRC/predictEdgesRandomly.py --savefile=$PREDICTED_RAND\
             $SEED_OPT --edges-per-node=$EDGES_PER_NODE $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
+    fi
+    if [ $BENCHMARK_POPULAR -eq 1 ]; then
         echo "** Predicting based on popularity. . ."
         CMD="python $SRC/predictEdgesPopular.py --savefile=$PREDICTED_POP\
             $SEED_OPT -v --topn=3 --edges-per-node=$EDGES_PER_NODE\
             $WEIGHT_OUT_OPT $SYMMETRIC_OPT $POP_DICT $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
+    fi
+    if [ $BENCHMARK_TFIDF_NOPOP -eq 1 ]; then
+        echo "** Predicting using item-item TF-IDF without popularity. . ."
+        CMD="python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF_NOPOP\
+            --edges-per-node=$EDGES_PER_NODE $SYMMETRIC_OPT\
+            --short-coeff=$SHORT_COEFF --bigrams-coeff=$BIGRAMS_COEFF\
+            --hood-coeff=$HOOD_COEFF $TFIDF $GRAPH1 $GRAPH2"
+        echo $CMD; eval $CMD; echo $CMDTERM
+    fi
+    if [ $BENCHMARK_TFIDF -eq 1 ]; then
         echo "** Predicting using item-item TF-IDF. . ."
         CMD="python $SRC/predictEdgesTfidf.py --savefile=$PREDICTED_TFIDF\
             --edges-per-node=$EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP\
@@ -567,12 +676,16 @@ if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
             --short-coeff=$SHORT_COEFF --bigrams-coeff=$BIGRAMS_COEFF\
             --hood-coeff=$HOOD_COEFF $TFIDF $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
+    fi
+    if [ $BENCHMARK_RANDMAP -eq 1 ]; then
         echo "** Predicting using random map. . ."
         CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_RANDMAP\
             --edges-per-node=$EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP\
             $NEIGHBOR_LIMIT_OPT $WEIGHT_IN_OPT $WEIGHT_OUT_OPT $SYMMETRIC_OPT\
             $SPHERE_OPT $RAND_MAP $MODEL1 $MODEL2"
         echo $CMD; eval $CMD; echo $CMDTERM
+    fi
+    if [ $BENCHMARK_ONE -eq 1 ]; then
         echo "** Predicting using one model. . ."
         CMD="python $SRC/partitionModel.py --model1=$MODEL_ONE1\
             --model2=$MODEL_ONE2 $MODEL $GRAPH1 $GRAPH2"
@@ -583,38 +696,55 @@ if [ $START_STAGE -le 8 -a $END_STAGE -ge 8 ]; then
             $SPHERE_OPT $IDENT_MAP $MODEL_ONE1 $MODEL_ONE2"
         echo $CMD; eval $CMD; echo $CMDTERM
     fi
-    echo "** Predicting with mapping between models. . ."
-    CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES\
-        --edges-per-node=$EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP\
-        $NEIGHBOR_LIMIT_OPT $WEIGHT_IN_OPT $WEIGHT_OUT_OPT $TAU_OPT\
-        $SYMMETRIC_OPT $SPHERE_OPT $MAP $MODEL1 $MODEL2"
-    echo $CMD; eval $CMD; echo $CMDTERM
+    if [ $MAIN_EXPERIMENT -eq 1 ]; then
+        echo "** Predicting with mapping between models. . ."
+        CMD="python $SRC/predictEdges.py --savefile=$PREDICTED_EDGES\
+            --edges-per-node=$EDGES_PER_NODE $POP_DICT_OPT --min-pop=$MIN_POP\
+            $NEIGHBOR_LIMIT_OPT $WEIGHT_IN_OPT $WEIGHT_OUT_OPT $TAU_OPT\
+            $SYMMETRIC_OPT $SPHERE_OPT $MAP $MODEL1 $MODEL2"
+        echo $CMD; eval $CMD; echo $CMDTERM
+    fi
     echo
 fi
 
 # Construct source graphs
 if [ $START_STAGE -le 9 -a $END_STAGE -ge 9 ]; then
     echo "=== 9. Construct source graphs ==="
-    if [ $BENCHMARKS -eq 1 ]; then
+    if [ $BENCHMARK_RANDOM -eq 1 ]; then
         CMD="python $SRC/augmentGraph.py --savefile=$RAND_GRAPH\
             --edges=$PREDICTED_RAND $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
+    fi
+    if [ $BENCHMARK_POPULAR -eq 1 ]; then
         CMD="python $SRC/augmentGraph.py --savefile=$POP_GRAPH\
             --edges=$PREDICTED_POP $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
+    fi
+    if [ $BENCHMARK_TFIDF_NOPOP -eq 1 ]; then
+        CMD="python $SRC/augmentGraph.py --savefile=$TFIDF_NOPOP_GRAPH\
+            --edges=$PREDICTED_TFIDF_NOPOP $GRAPH1 $GRAPH2"
+        echo $CMD; eval $CMD; echo $CMDTERM
+    fi
+    if [ $BENCHMARK_TFIDF -eq 1 ]; then
         CMD="python $SRC/augmentGraph.py --savefile=$TFIDF_GRAPH\
             --edges=$PREDICTED_TFIDF $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
+    fi
+    if [ $BENCHMARK_RANDMAP -eq 1 ]; then
         CMD="python $SRC/augmentGraph.py --savefile=$RANDMAP_GRAPH\
             --edges=$PREDICTED_RANDMAP $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
+    fi
+    if [ $BENCHMARK_ONE -eq 1 ]; then
         CMD="python $SRC/augmentGraph.py --savefile=$ONE_GRAPH\
             --edges=$PREDICTED_ONE $GRAPH1 $GRAPH2"
         echo $CMD; eval $CMD; echo $CMDTERM
     fi
-    CMD="python $SRC/augmentGraph.py --savefile=$SOURCE_GRAPH\
-        --edges=$PREDICTED_EDGES $GRAPH1 $GRAPH2"
-    echo $CMD; eval $CMD; echo $CMDTERM
+    if [ $MAIN_EXPERIMENT -eq 1 ]; then
+        CMD="python $SRC/augmentGraph.py --savefile=$SOURCE_GRAPH\
+            --edges=$PREDICTED_EDGES $GRAPH1 $GRAPH2"
+        echo $CMD; eval $CMD; echo $CMDTERM
+    fi
     echo
 fi
 
@@ -624,33 +754,48 @@ if [ $START_STAGE -le 10 -a $END_STAGE -ge 10 ]; then
     CMD="python $SRC/buildWalkMatrix.py --savefile=$TARGET_PROX_MAT\
         $SEED_OPT --type=proximity --maxdist=$EVAL_K $GRAPH"
     echo $CMD; eval $CMD; echo $CMDTERM
-    if [ $BENCHMARKS -eq 1 ]; then
+    if [ $BENCHMARK_RANDOM -eq 1 ]; then
         CMD="python $SRC/buildWalkMatrix.py --savefile=$RAND_PROX_MAT\
             $SEED_OPT --type=proximity --maxdist=$EVAL_K $RAND_GRAPH"
         echo $CMD; eval $CMD; echo $CMDTERM
+    fi
+    if [ $BENCHMARK_POPULAR -eq 1 ]; then
         CMD="python $SRC/buildWalkMatrix.py --savefile=$POP_PROX_MAT\
             $SEED_OPT --type=proximity --maxdist=$EVAL_K $POP_GRAPH"
         echo $CMD; eval $CMD; echo $CMDTERM
+    fi
+    if [ $BENCHMARK_TFIDF_NOPOP -eq 1 ]; then
+        CMD="python $SRC/buildWalkMatrix.py --savefile=$TFIDF_NOPOP_PROX_MAT\
+            $SEED_OPT --type=proximity --maxdist=$EVAL_K $TFIDF_NOPOP_GRAPH"
+        echo $CMD; eval $CMD; echo $CMDTERM
+    fi
+    if [ $BENCHMARK_TFIDF -eq 1 ]; then
         CMD="python $SRC/buildWalkMatrix.py --savefile=$TFIDF_PROX_MAT\
             $SEED_OPT --type=proximity --maxdist=$EVAL_K $TFIDF_GRAPH"
         echo $CMD; eval $CMD; echo $CMDTERM
+    fi
+    if [ $BENCHMARK_RANDMAP -eq 1 ]; then
         CMD="python $SRC/buildWalkMatrix.py --savefile=$RANDMAP_PROX_MAT\
             $SEED_OPT --type=proximity --maxdist=$EVAL_K $RANDMAP_GRAPH"
         echo $CMD; eval $CMD; echo $CMDTERM
+    fi
+    if [ $BENCHMARK_ONE -eq 1 ]; then
         CMD="python $SRC/buildWalkMatrix.py --savefile=$ONE_PROX_MAT\
             $SEED_OPT --type=proximity --maxdist=$EVAL_K $ONE_GRAPH"
         echo $CMD; eval $CMD; echo $CMDTERM
     fi
-    CMD="python $SRC/buildWalkMatrix.py --savefile=$SOURCE_PROX_MAT\
-        $SEED_OPT --type=proximity --maxdist=$EVAL_K $SOURCE_GRAPH"
-    echo $CMD; eval $CMD; echo $CMDTERM
+    if [ $MAIN_EXPERIMENT -eq 1 ]; then
+        CMD="python $SRC/buildWalkMatrix.py --savefile=$SOURCE_PROX_MAT\
+            $SEED_OPT --type=proximity --maxdist=$EVAL_K $SOURCE_GRAPH"
+        echo $CMD; eval $CMD; echo $CMDTERM
+    fi
     echo
 fi
 
 # Evaluate predictions
 if [ $START_STAGE -le 11 -a $END_STAGE -ge 11 ]; then
     echo "=== 11. Evaluate predictions ===" | tee $RESULTS
-    if [ $BENCHMARKS -eq 1 ]; then
+    if [ $BENCHMARK_RANDOM -eq 1 ]; then
         echo | tee -a $RESULTS
         EXPNAME="RANDOM"
         echo "  $EXPNAME PREDICTIONS" | tee -a $RESULTS
@@ -659,6 +804,8 @@ if [ $START_STAGE -le 11 -a $END_STAGE -ge 11 ]; then
             $RAND_PROX_MAT $LOST_EDGES $PREDICTED_RAND"
         echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
         echo $CMDTERM | tee -a $RESULTS
+    fi
+    if [ $BENCHMARK_POPULAR -eq 1 ]; then
         echo | tee -a $RESULTS
         EXPNAME="POPULAR"
         echo "  $EXPNAME PREDICTIONS" | tee -a $RESULTS
@@ -667,6 +814,18 @@ if [ $START_STAGE -le 11 -a $END_STAGE -ge 11 ]; then
             $POP_PROX_MAT $LOST_EDGES $PREDICTED_POP"
         echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
         echo $CMDTERM | tee -a $RESULTS
+    fi
+    if [ $BENCHMARK_TFIDF_NOPOP -eq 1 ]; then
+        echo | tee -a $RESULTS
+        EXPNAME="TF-IDF NOPOP"
+        echo "  $EXPNAME PREDICTIONS" | tee -a $RESULTS
+        CMD="python $SRC/evalPredictedEdges.py --append-file=$APPENDFILE\
+            --data='$EXPNAME,$ESC_CAT' -k $EVAL_K $TARGET_PROX_MAT\
+            $TFIDF_NOPOP_PROX_MAT $LOST_EDGES $PREDICTED_TFIDF_NOPOP"
+        echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
+        echo $CMDTERM | tee -a $RESULTS
+    fi
+    if [ $BENCHMARK_TFIDF -eq 1 ]; then
         echo | tee -a $RESULTS
         EXPNAME="TF-IDF"
         echo "  $EXPNAME PREDICTIONS" | tee -a $RESULTS
@@ -675,6 +834,8 @@ if [ $START_STAGE -le 11 -a $END_STAGE -ge 11 ]; then
             $TFIDF_PROX_MAT $LOST_EDGES $PREDICTED_TFIDF"
         echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
         echo $CMDTERM | tee -a $RESULTS
+    fi
+    if [ $BENCHMARK_RANDMAP -eq 1 ]; then
         echo | tee -a $RESULTS
         EXPNAME="RANDOM MAP"
         echo "  $EXPNAME PREDICTIONS" | tee -a $RESULTS
@@ -682,6 +843,8 @@ if [ $START_STAGE -le 11 -a $END_STAGE -ge 11 ]; then
            --data='$EXPNAME,$ESC_CAT' -k $EVAL_K $TARGET_PROX_MAT\
            $RANDMAP_PROX_MAT $LOST_EDGES $PREDICTED_RANDMAP"
         echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
+    fi
+    if [ $BENCHMARK_ONE -eq 1 ]; then
         echo $CMDTERM | tee -a $RESULTS
         EXPNAME="ONE MODEL"
         echo "  $EXPNAME PREDICTIONS" | tee -a $RESULTS
@@ -691,13 +854,15 @@ if [ $START_STAGE -le 11 -a $END_STAGE -ge 11 ]; then
         echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
         echo $CMDTERM | tee -a $RESULTS
     fi
-    echo | tee -a $RESULTS
-    EXPNAME="MAPPING MODEL"
-    echo "  $EXPNAME PREDICTIONS" | tee -a $RESULTS
-    CMD="python $SRC/evalPredictedEdges.py --append-file=$APPENDFILE\
-         --data='$EXPNAME,$ESC_CAT' -k $EVAL_K $TARGET_PROX_MAT\
-         $SOURCE_PROX_MAT $LOST_EDGES $PREDICTED_EDGES"
-    echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
-    echo $CMDTERM | tee -a $RESULTS
+    if [ $MAIN_EXPERIMENT -eq 1 ]; then
+        echo | tee -a $RESULTS
+        EXPNAME="MAPPING MODEL"
+        echo "  $EXPNAME PREDICTIONS" | tee -a $RESULTS
+        CMD="python $SRC/evalPredictedEdges.py --append-file=$APPENDFILE\
+             --data='$EXPNAME,$ESC_CAT' -k $EVAL_K $TARGET_PROX_MAT\
+             $SOURCE_PROX_MAT $LOST_EDGES $PREDICTED_EDGES"
+        echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
+        echo $CMDTERM | tee -a $RESULTS
+    fi
     echo
 fi
