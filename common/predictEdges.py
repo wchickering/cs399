@@ -146,8 +146,6 @@ def main():
             [item for idx, item in sorted(dictionary2.items(),
                                           key=lambda tup: tup[0])]
         simCache2.preComputeSims(transformedItems1, items2)
-        # scale similarities by options.tau ceofficient
-        simCache2.sims *= options.tau
         if options.symmetric:
             simCache1 = TFIDF_SimilarityCache(
                 tfidfs,
@@ -163,8 +161,6 @@ def main():
                 [item for idx, item in sorted(dictionary1.items(),
                                               key=lambda tup: tup[0])]
             simCache1.preComputeSims(transformedItems2, items1)
-            # scale similarities by options.tau ceofficient
-            simCache1.sims *= options.tau
 
     # make predictions
     if popDictionary is not None and options.weightOut:
@@ -190,7 +186,8 @@ def main():
                 # create addTerms dictionary
                 if tfidfs is not None and options.tau is not None:
                     addTerms = dict(
-                        [(dictionary2[idx], sim)\
+                        [(dictionary2[idx],
+                          options.tau*popDictionary[dictionary2[idx]]*sim)\
                          for (idx, sim) in enumerate(simCache2.sims[i,:])]
                     )
                 else:
@@ -217,7 +214,8 @@ def main():
                     # create addTerms dictionary
                     if tfidfs is not None and options.tau is not None:
                         addTerms = dict(
-                            [(dictionary1[idx], sim)\
+                            [(dictionary1[idx],
+                              options.tau*popDictionary[dictionary1[idx]]*sim)\
                              for (idx, sim) in enumerate(simCache1.sims[i,:])]
                         )
                     else:
