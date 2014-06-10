@@ -44,65 +44,77 @@ while back who wrote that my papers didn't have any beginning or any end. He
 didn't mean it as a compliment, but it was.} --Jackson Pollock
 
 \section*{Introduction}
-Recommender systems have become a critical component for online retailers in
-nearly every space of retail. Whether the products are movies or clothes or
-research articles, large retailers tend to have a way of recommending products
-based on others previously viewed or purchased products.
+A key challenge in retail is choosing which items to incorporate into one's
+collection of offered goods and services. These decisions can significantly
+impact a retailer's revenue in the short run as well as affect customer
+experience, and hence, their relationship with the retailer. Several factors
+must be considered including the number of product lines, the variety of
+products in each line, as well as the consistency and relationships between
+products. In this study, we focus on the latter and explore techniques that
+leverage publicly available product recommendation information for the purpose
+of improving product assortment decisions.
 
-These recomendations usually come from a combination of content-based
-information and collaborative filtering techniques. The content-based approach
-uses information about the products, such as category or description, to connect
-related products. Alone, however, this approach is usually unable to capture the
-subtle ways products may actually be related. Collaborative filtering, on the
-other hand, learns relations from aggregated user behavior.  Such
-recommendations often have explicit titles like ``People who liked this product
-also liked these products''. Collaborative filtering has proven to be effective
-at recommending products, given that there is a large amount of user data.
+It has become standard practice for online retailers to recommend one or more
+products to prospective customers who have viewed or purchased an item. These
+recommendations are generally derived from either content-based approaches or
+via collaborative filtering, utilizing data-mining techniques \cite{Ricci2011}.
+Importantly, these recommendations provide a source of publicly available
+business intelligence by relating the items in their respective catalogue.
+Specifically, these online recommendations logically form a directed graph in
+which the nodes are products and an edge pointing from item $A$ to item $B$
+indicates that customers who view or purchase item $A$ are recommended item $B$.
+Given the recommendation graphs of two or more distinct retailers, our goal is
+to determine new, meaningful edges that connect these graphs in a way that would
+allow one retailer to relate their products to those of another.
 
-Since each retailer only has user data within their site, these user-based
-recommender systems are good at learning connections between products in one
-catalogue, but they do little to learn how these products may relate to other
-products outside of the retailer's inventory. This type of information is
-valuable in a number of situations. Retailers such as department stores want to
-know which new products make the most sense to add to their catalogue.  This is
-essentially a question of recommending the best outside products based on
-current in-house ones. In a different scenario, two retailers may merge and want
-to construct a unified recommender system between the two catalgoues.
+Content-based approaches and collaborative filtering have distinct challenges,
+and therefore, offer unique advantages as solutions to the general recommender
+problem.  An effective content-based solution requires a detailed analysis of
+item and/or user profile information. A well-known, successful example is the
+Music Genome Project, which powers the music service Pandora \cite{mgp}. Such an
+approach can be difficult, however, since necessary user and/or item information
+might be unavailable or the required domain expertise might be too costly. The
+alternative method is that of collaborative filtering (CF), which leverages the
+correlations within user purchase or rating data. The idea is that two items
+that tend to be purchased or highly rated by the same users can be considered
+related such that if a new user likes one they will probably like the other. A
+key advantage of this approach is that it effectively outsources the
+recommendation problem to the retailer's customers. Online retailers such as
+Amazon.com and Netflix are known to employ recommender systems based on CF
+\cite{Koren2009}. At the same time, CF notoriously suffers from what is known as
+the {\em cold start}---without user-item data of sufficient quantity and
+diversity these systems fail to yield accurate results.
 
-We model this as a problem of connecting recommender systems between disjoint
-catalogues. The goal is to construct good recommendations from products in one
-catalogue to products in the other. These catalogues may be from competing
-retailers who don't have access to each other's user data. Thus, to keep the
-problem general, we do not assume that we have any private data.
-Instead, we constrain ourselves to use only the product information and internal
-recommendations that are posted publicly to all users.
+The problem we examine here is, in many ways, more difficult than that of the
+standard recommendation problem. Essentially, we would like to recommend an item
+from retailer $X$ based solely on a known preference for an item from retailer
+$Y$. For the product assortment problem, user purchase and rating information is
+presumably known for one of the two retailers. In this study, however, we
+simplify the scenario by making it symmetric. No user purchase or rating
+information will be leveraged for either retailer. Instead, the algorithms
+investigated here are limited to publicly available information, which includes
+product descriptions and online product recommendations. Given the lack of
+inter-retailer user data, a CF technique is ostensibly not an option. The
+obvious approach is therefore content-based.
 
-This is a difficult problem. What makes a good recommendation is hard to define
-objectively. One can say that if users co-purchase or co-view products together,
-then these products should be recommended for each other. But without any user
-data, it is hard to simulate this kind of user behavior. The connections between
-co-viewed products are often less tangible than simple metrics of similarity. 
+In this report. . . . (BREIFLY OUTLINE THE PAPER HERE.)
 
-In this paper, we outline a technique that leverages the intra-catalogue
-recommendations of each catalogue to construct inter-catalgoue recommendations
-between them. We focus on clothing retailers, since they tend to all have
-public recommendations for each product. Specifically, the data used for this
-project was all collected from the public product webpages for Macy's.
+
 
 \section*{Data}
-For this work, we utilize most of the product catalog of Macy's as presented at
-www.macys.com. This catalog consists of numerous categories of mostly apparel,
-each of which includes hundreds to thousands of items. We confine this study to
-the 49 categories within the two main parent categories ``Men'' and ``Women''
-that contain at least 200 items that are associated to multiple brands. In
-total, this dataset consists of 66,071 items in 49 categories with some items
-listed in multiple categories. For each item we record its description, all
-categories within which it is listed, and its associated recommendations. By
-{\em recommendations}, we are referring to the items---there are typically four
-in the case of Macy's---that are displayed on a product's details page under the
-heading ``Customers Also Shopped''. The presence of these recommendations
-implicitly forms a directed graph over the product catalogue, in which the nodes
-are the {\em products} or {\em items} and the edges are the {\em
+For this work, we utilize most of the product catalogue of Macy's as presented
+at www.macys.com. This catalogue consists of numerous categories of mostly
+apparel, each of which includes hundreds to thousands of items. We confine this
+study to the 49 categories within the two main parent categories ``Men'' and
+``Women'' that contain at least 200 items that are associated to multiple
+brands. In total, this dataset consists of 66,071 items in 49 categories with
+some items listed in multiple categories. For each item we record its
+description, all categories within which it is listed, and its associated
+recommendations. By {\em recommendations}, we are referring to the items---there
+are typically four in the case of Macy's---that are displayed on a product's
+details page under the heading ``Customers Also Shopped''. The presence of these
+recommendations implicitly forms a directed graph over the product catalogue, in
+which the nodes are the {\em products} or {\em items} and the edges are the {\em
 recommendations}. We call these types of graphs {\em recommendation graphs} and
 they play a central role in this study.
 
@@ -612,8 +624,21 @@ Focus more on popular hubs model.
 
 \begin{thebibliography}{9}
 
+\bibitem{Ricci2011}
+    Francesco Ricci, Lior Rokach, and Bracha Shapira.
+    \emph{Introduction to Recommender Systems Handbook}, Springer, 1-35, 2011.
+
+\bibitem{mgp}
+    For information on the Music Genome Project, visit
+    http://www.pandora.com/about/mgp
+
+\bibitem{Koren2009}
+    Yehuda Koren, Robert Bell, and Chris Volinsky.
+    ``Matrix factorization techniques for recommender systems.''
+    \emph{Computer} 42.8, 2009. 30-37.
+
 \bibitem{Powers2011}
-    Powers, David M W.
+    David M W Powers.
     ``Evaluation: From Precision, Recall and F-Measure to ROC, Informedness,
 Markedness \& Correlation.''
     \emph{Journal of Machine Learning Technologies} \textbf{2}, 37-63, 2011.
