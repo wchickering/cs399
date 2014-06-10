@@ -103,42 +103,81 @@ in the case of Macy's---that are displayed on a product's details page under the
 heading ``Customers Also Shopped''. The presence of these recommendations
 implicitly forms a directed graph over the product catalogue, in which the nodes
 are the {\em products} or {\em items} and the edges are the {\em
-recommendations}. We call these types of graphs {\em recommendation graphs} and they play a central role in this study.
+recommendations}. We call these types of graphs {\em recommendation graphs} and
+they play a central role in this study.
+
+To simplify the present study, we transform these directed recommendation graphs
+into undirected graphs. This is consistently done using the following policy:
+For each pair of items connected by a single directed edge, replace this edge
+with a single undirected edge. For each pair of items connected by two
+oppositely directed edges, replace both edges with a single undirected edge.
+Working with undirected graphs simplifies both the prediction algorithms as well
+as the evaluation of their performance. At the same time, by ignoring the
+directionality of the original edges, we are discarding important information.
+It would therefore be worthwhile to consider the more difficult problem of
+connecting directed recommendation graphs in a future study.
 
 \section*{Experiments}
 Our goal is to develop methods for connecting initially disconnected
 recommendation graphs. Given two online retailers, each with a website
 displaying their items along with several other {\em recommended} items from
-their catalogue, we are presented with two disconnected recommendation graphs. 
-We would like to associate ``good'' recommendations for items in one catalogue 
-with items in the other catalogue. In this way, we are effectively introducing 
-edges that connect the two recommendation graphs. Formulating this inter-retailer
-recommendations problem in terms of graphs offers insight in how to evaluate our 
-recommendation choices as well as how to choose ``good'' recommendations. 
-Leveraging the graph structure for evaluation is discussed in this section while 
-exploiting the graph for the purpose of making better recommendations is addressed 
-in a subsequent section.
+their catalogue, we are presented with two disconnected recommendation graphs.
+We would like to associate ``good'' recommendations for items in one catalogue
+with items in the other catalogue. In this way, we are effectively introducing
+edges that connect the two recommendation graphs. Formulating this
+inter-retailer recommendations problem in terms of graphs offers insight in how
+to evaluate our recommendation choices as well as how to choose ``good''
+recommendations.  Leveraging the graph structure for evaluation is discussed in
+this section while exploiting the graph for the purpose of making better
+recommendations is addressed in a subsequent section.
 
 To evaluate our inter-retailer recommendation methods, we simulate the problem
 by randomly partitioning Macy's products into two disjoint sets. Given the
 original recommendation graph, each partition therefore corresponds to a graph
-cut. Our premise is that an ideal recommendation method could guess the edges in
-this cut with high precision and recall.
+cut. The edges in this graph cut form a {\em gold-standard} since it is assumed
+that these are indeed ``good'' recommendations. Our premise is that an ideal
+recommendation method could guess these gold-standard edges with high precision
+and recall.
 
+For each experiment, we choose a particular category from the Macy's catalogue
+(e.g. Women Activewear, Men Dress Shirts, etc.). Since most recommendations are
+between items in a common category, very few, though some, edges are lost by
+confining ourselves to an individual category. Edges that are lost in this way
+do not participate in the experiment and are not considered during evaluation.
+Also, we randomly partition the items in the category such that all items
+associated with a particular brand are entirely within a single partition. In
+this way, we preclude the easiest method of associating two items: recognizing
+a common brand. This is done to increase the difficulty and realism of the
+experiments.
+
+Having partitioned the graph of items, we now predict recommendation relations
+between items across the partitions. Each prediction algorithm has knowledge of
+all items in each partition, including their descriptions and all
+recommendations (i.e.  edges) between items in a common partition. In addition,
+the algorithms may exploit the fact that most items listed at www.macys.com are
+accompanied by four recommended items. The algorithms do not have knowledge of
+the recommendations (i.e. edges) between items across partitions. Each
+prediction algorithm is then free to choose an arbitrary number of edges as long
+as 1) the items connected by the predicted edge are not in the same partition
+and 2) at most one edge is predicted for a particular pair of items.
+
+\section*{Evaluation}
 Precision, recall, and $F_1$ score are well-known metrics for evaluating
-prediction algorithms.  Together, these metrics capture how effective one is at
-guessing items within a target set. Consider a typical Macy's category, for
-example, Dresses, which contains approximately $3,500$ items. Randomly 
-partitioning results in two sets, each with about $1,750$ items. For each 
-interset recommendation, we must therefore choose two nodes, one from each of the two
-sets. That is, we have $1,750 \times 1,750 > 3 \times 10^6$ choices. Choosing
-the correct edges is a formidable challenge to say the least. It is therefore
-worth asking: Are some prediction errors better or worse than others? The graph
-nature of our problem reveals that the answer is yes. It is better to guess an
-edge that connects two items that are separated by two edges in the original
-graph than to connect two items that are separated by five edges. We therefore
-introduce the notion of {\em 2-precision}, {\em 2-recall}, and {\em 2-}$F_1$ are
-defined as
+prediction algorithms \cite{Powers2011}. Together, these metrics capture how
+effective one is at guessing items within a target set. Consider a typical
+Macy's category, for example, Dresses, which contains approximately $3,500$
+items. Suppose that randomly partitioning results in two sets, each with about
+$1,750$ items. For each interset recommendation, we must therefore choose two
+nodes, one from each of the two sets. That is, we have $1,750 \times 1,750 > 3
+\times 10^6$ choices. Choosing the correct edges is a formidable challenge to
+say the least. It is therefore worth asking: Are some prediction errors better
+or worse than others?
+
+The graph nature of our problem reveals that the answer to this question is
+yes. For instance, it is better to guess an edge that connects two items that
+are separated by two edges in the original graph than to connect two items that
+are separated by five edges. We therefore introduce the notion of {\em
+2-precision}, {\em 2-recall}, and {\em 2-}$F_1$ are defined as
 
 \begin{align}
 \text{\em 2-precision} &= \left|\left\{(u,v) \in P | d_L(u,v) \leq 2
@@ -154,72 +193,28 @@ distance between nodes $u$ and $v$ in the original unpartitioned graph, and
 $d_P(u,v)$ is the shortest distance between nodes $u$ and $v$ in the new graph 
 formed using the predicted edges in $P$.
 
+The following definitions will prove helpful. Let $G$ be the original
+unpartitioned graph formed from the partitions together with the lost edges $L$
+and let $G^{\prime}$ be the new graph formed from the partitions together with
+the predicted edges $P$.  In the context of {\em 2-precision}, an edge in $P$
+that connects items $A$ and $B$ is considered correct if 1) $A$ and $B$ share an
+edge within $G$ or 2) $A$ shares an edge with a direct neighbor of $B$ within
+$G$ or 3) a direct neighbor of $A$ shares an edge with $B$ within $G$.
+Meanwhile, in the context of {\em 2-recall}, an edge in $L$ that connects items
+$C$ and $D$ is considered recalled if 1) $C$ and $D$ share an edge within
+$G^{\prime}$ or 2) $C$ shares an edge with a direct neighbor of $D$ within
+$G^{\prime}$ or 3) a direct neighbor of $C$ shares an edge with $D$ within
+$G^{\prime}$.
 
-In these experiments, we perform the partitioning on a per-category basis. 
-
-
-
-
-
-
-
-
-
-
-Next, for each category (e.g. Women Activewear, Men Dress Shirts, etc.), we
-partition the products into two disjoint sets to simulate the catalogues of two
-distinct retailers. Importantly, we ensure that the items of each brand are
-entirely within a single partition. In this way, we preclude the easiest method
-of associating two items: recongnizing a common brand. This is done to increase
-the difficulty and realism of our experiment.
-
-To make this partition realistic, we
-ensure that no brand has products in both catalogue. We remove all
-recommendations between products from one partition to the other, thus creating
-two entirely disjoint and unconnected catalogues.
-
-Now, we can use this partition to test a method for constructing recommendation.
-For each product in each of the two catalogues, we use our recommender to choose
-which products to recommend in the other catalogue. To make this problem
-slightly simpler, we restrict recommendations to be within the same category,
-such as Women's Dresses or Men's Shoes. In this way, connecting up entire
-catalogues becomes a series of smaller tasks of connecting the products in each
-category.
-
-For this experiment, we have access to all of the true inter-catalogue
-recommendations from the unpartitioned Macy's catalogue. Although we don't use
-this information for constructing recommendations between the partitioned
-graphs, we can use the original recommendations as a gold-standard to test the
-construct ones. Using these gold-standard recommendations, we can evaluate the
-precision and recall of the predicted inter-catalogue recommendations.
-
-For the Macy's catalogue, each product has four recommendations. This means that
-on average, there are only two gold-standard inter-catalogue recommendations
-from each product. Since there potentially are other good
-recommendations besides these two, we create another metric that expands our
-notion of a correct recommendation. Here we extend the definition of a good
-connection to include recommendations of recommendations in the original
-catalgoue. For example, if Product B is recommended for Product A and 
-Product C is recommended for Product B, we say that Product C is still a good 
-recommendation for Product A. This leads us to the notions of 2-precision and 
-2-recall.
-
-For a rigorous definition of 2-precision and 2-recall, we first propose the idea
-of a recommender graph. A recommender graph has products as nodes and
-recommendations as edges. If Product B is recommended for Product A, there is an
-edge between node A and node B in the graph. For simplicity, we define our
-recommender graphs to be undirected, but we note that they could be interpreted
-as directed graphs as well. With this terminology, our problem becomes one of
-connecting two disjoint recommender graphs by adding edges between them. 
-
-2-precision is defined as the percentage of predicted edges that are within two
-steps in the original, unpartitioned recommender graph. In the example above,
-Product A and Product C are within two steps in the original graph, thus an edge
-between A and C is considered correct and increases precision. 2-recall is
-defined analogously. Here, we consider the new recommender graph, consisting of
-the two partitioned recommender graphs connected by the predicted
-recommendations. 2-recall is then the percentage of gold-standard edges that 
-are within two steps in the predicted recommender graph.
+We use both traditional precision, recall, and $F_1$ score as well as {\em
+2-precision}, {\em 2-recall}, and {\em 2-}$F_1$ score to evaluate our prediction
+algorithms. Including the latter set of metrics provides a more complete picture
+of algorithmic performance. These additional metrics also accommodate the fact
+that the edges of $G$ do not necessarily correspond to the only or even the best
+item-item recommendations. We therefore suggest that while traditional precision
+and recall are relevant metrics, relative performance as measured by {\em
+2-precision} and {\em 2-recall} better captures the effectiveness of these
+prediction algorithms.
 
 \section*{Constructing Recommendations}
 Recommending products between different catalogues is a daunting task.
@@ -616,6 +611,12 @@ Focus more on popular hubs model.
 \section*{Appendix}
 
 \begin{thebibliography}{9}
+
+\bibitem{Powers2011}
+    Powers, David M W.
+    ``Evaluation: From Precision, Recall and F-Measure to ROC, Informedness,
+Markedness \& Correlation.''
+    \emph{Journal of Machine Learning Technologies} \textbf{2}, 37-63, 2011.
 
 \end{thebibliography}
 
