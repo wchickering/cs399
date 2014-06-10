@@ -2,3 +2,5 @@
 *.pdf
 *.log
 *.fdb_latexmk
+*.fls
+*.dvi

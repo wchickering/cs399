@@ -45,78 +45,154 @@ didn't mean it as a compliment, but it was.} --Jackson Pollock
 
 \section*{Introduction}
 Recommender systems have become a critical component for online retailers in
-nearly every space of retail. Whether the products are movies or clothes or research
-articles, large retailer tend to have a way of recommending products based on
-other previously viewed or purchased products.
+nearly every space of retail. Whether the products are movies or clothes or
+research articles, large retailers tend to have a way of recommending products
+based on others previously viewed or purchased products.
 
 These recomendations usually come from a combination of content-based
 information and collaborative filtering techniques. The content-based approach
-uses information about the products, such as category or descriptioin, to
-connect related products. Alone, however, this approach is usually unable to
-capture the subtle ways products may actually be related. Collaborative
-filtering, on the other hand, learns relations from aggregated user behavior. 
-Such recommendation often have explicit ttiles like ``People who liked 
-this product also liked these products''. Collaborative filtering has proven to
-be effective at recommending products, given that there is a large amount of user 
-data.
+uses information about the products, such as category or description, to connect
+related products. Alone, however, this approach is usually unable to capture the
+subtle ways products may actually be related. Collaborative filtering, on the
+other hand, learns relations from aggregated user behavior.  Such
+recommendations often have explicit titles like ``People who liked this product
+also liked these products''. Collaborative filtering has proven to be effective
+at recommending products, given that there is a large amount of user data.
 
 Since each retailer only has user data within their site, these user-based
-recommender systems are good at learning connections between products in
-one catalogue, but they do little to learn how these products may relate to
-other products outside of the retailer's inventory. This type of information is
-valuable in a number of situations. Retailers such as department stores
-want to know which new products make the most sense to add to their catalogue.
-This is essentially a question of recommending the best outside products based
-on current in-house ones. In a different scenario, two retailers may merge and 
-want to construct a unified recommender system between the two catalgoues.
+recommender systems are good at learning connections between products in one
+catalogue, but they do little to learn how these products may relate to other
+products outside of the retailer's inventory. This type of information is
+valuable in a number of situations. Retailers such as department stores want to
+know which new products make the most sense to add to their catalogue.  This is
+essentially a question of recommending the best outside products based on
+current in-house ones. In a different scenario, two retailers may merge and want
+to construct a unified recommender system between the two catalgoues.
 
 We model this as a problem of connecting recommender systems between disjoint
 catalogues. The goal is to construct good recommendations from products in one
-catalogue to products in the other. These catalogues may be from competing 
-retailers who don't have access to each other's user data. Thus, to keep the 
-problem general, we do not assume that we have any private internal data. 
+catalogue to products in the other. These catalogues may be from competing
+retailers who don't have access to each other's user data. Thus, to keep the
+problem general, we do not assume that we have any private internal data.
 Instead, we constrain ourselves to use only the product information and internal
 recommendations that are posted publicly to all users.
 
 This is a difficult problem. What makes a good recommendation is hard to define
 objectively. One can say that if users co-purchase or co-view products together,
-then these products should be recommended for each other. But without any user 
-data, it is hard to simulate this kind of user behavior. The connections between 
+then these products should be recommended for each other. But without any user
+data, it is hard to simulate this kind of user behavior. The connections between
 co-viewed products are often less tangible than simple metrics of similarity. 
 
-In this paper, we outline a technique that leverages the intra-catalogue 
+In this paper, we outline a technique that leverages the intra-catalogue
 recommendations of each catalogue to construct inter-catalgoue recommendations
 between them. We focus on the clothing retailers, since they tend to all have
 public recommendations for each product. Specifically, the data used for this
 project was all collected from the public product webpages for Macy's.
 
-\section*{Experiment}
-To measure the success of constructing recommendations, we design the following
-experiment:
+\section*{Data}
+For this work, we utilize most of the product catalog of Macy's as presented at
+www.macys.com. This catalog consists of numerous categories of mostly apparel,
+each of which includes hundreds to thousands of items. We confine this study to
+the 49 categories within the two main parent categories ``Men'' and ``Women''
+that contain at least 200 items that are associated to multiple brands. In
+total, this dataset consists of 66,071 items in 49 categories with some items
+listed in multiple categories. For each item we record its description, all
+categories within which it is listed, and its associated recommendations. By
+{\em recommendations}, we are referring to the items---there are typically four
+in the case of Macy's---that are displayed on a product's details page under the
+heading ``Customers Also Shopped''. The presence of these recommendations
+implicitly forms a directed graph over the product catalogue, in which the nodes
+are the {\em products} or {\em items} and the edges are the {\em
+recommendations}. These graphs play a central role in this study.
 
-First, we scrape all of the clothing products from Macy's website at 
-www.macys.com. For each product we save its image, what category of clothing it
-is in, its description, and a list of other products recommended for it.
+\section*{Experiments}
+Our goal is to develop methods for connecting initially disconnected
+recommendation graphs. That is, given two online retailers, each with a website
+that displays items in their respective catalogue, where each item is
+accompanied by several {\em recommended} items, we are presented with two
+disconnected recommendation graphs. We would like to associate ``good''
+recommendations for items in one catalogue with items in the other catalogue. In
+this way, we are effectively introducing edges that connect the two
+recommendation graphs. Formulating this inter-retailer recommendations problem
+in terms of graphs offers insight in how to evaluate our recommendation choices
+as well as how to choose ``good'' recommendations. Leveraging the graph
+structure for evaluation is discussed in this section while exploiting the graph
+for the purpose of making better recommendations is addressed in a subsequent
+section.
 
-Next, we partition all of the Macy's products into two disjoint sets to simulate 
-the catalogues of two different retailers. To make this partition realistic, 
-we ensure that no brand has products in both catalogue. We remove all 
-recommendations between products from one partition to the other, thus creating 
+To evaluate our inter-retailer recommendation methods, we simulate the problem
+by randomly partitioning Macy's products into two disjoint sets. Given the
+original recommendation graph, each partition therefore corresponds to a graph
+cut. Our premise is that an ideal recommendation method could guess the edges in
+this cut with high precision and recall.
+
+Precision, recall, and $F_1$ score are well-known metrics for evaluating
+prediction algorithms.  Together, these metrics capture how effective one is at
+guessing the items within a target set. Consider a typical Macy's category, for
+example, Dresses, which contains about $3,500$ items. Randomly partitioning
+results in two sets, each with about $1,750$ items. For each interset
+recommendation, we must therefore choose two nodes, one from each of the two
+sets. That is, we have $1,750 \times 1,750 > 3 \times 10^6$ choices. Choosing
+the correct edges is a formidable challenge to say the least. It is therefore
+worth asking: Are some prediction errors better or worse than others? The graph
+nature of our problem reveals that the answer is yes. It is better to guess an
+edge that connects two items that are separated by two edges in the original
+graph than to connect two items that are separated by five edges. We therefore
+introduce the notion of {\em 2-precision}, {\em 2-recall}, and {\em 2-}$F_1$ are
+defined as
+
+\begin{align}
+\text{\em 2-precision} &= \left|\left\{(u,v) \in P | d_L(u,v) \leq 2
+\right\}\right|
+\\\text{\em 2-recall} &= \left|\left\{(u,v) \in L | d_P(u,v) \leq 2
+\right\}\right|
+\\\text{\em 2-}F_1 &= 2\cdot \frac{\text{\em 2-precision} \cdot \text{\em
+2-recall}}{\text{\em 2-precision} + \text{\em 2-recall}}
+\end{align}
+where $P$ is the set of predicted edges, $L$ is the set of lost edges (i.e.
+those in the cut resulting from the partition), and $d_L(u,v)$ is the distance
+between nodes $u$ and $v$ in the original unpartitioned graph, and $d_P(u,v)$ is
+the distance between nodes $u$ and $v$ in the new graph formed using the
+predicted edges in $P$.
+
+
+In these experiments, we perform the partitioning on a per-category basis. 
+
+
+
+
+
+
+
+
+
+
+Next, for each category (e.g. Women Activewear, Men Dress Shirts, etc.), we
+partition the products into two disjoint sets to simulate the catalogues of two
+distinct retailers. Importantly, we ensure that the items of each brand are
+entirely within a single partition. In this way, we preclude the easiest method
+of associating two items: recongnizing a common brand. This is done to increase
+the difficulty and realism of our experiment.
+
+To make this partition realistic, we
+ensure that no brand has products in both catalogue. We remove all
+recommendations between products from one partition to the other, thus creating
 two entirely disjoint and unconnected catalogues.
 
 Now, we can use this partition to test a method for constructing recommendation.
-For each product in each of the two catalogues, we use our recommender to choose 
-which products to recommend in the other catalogue. To make this problem slightly
-simpler, we restrict recommendations to be within the same category, such as
-Women's Dresses or Men's Shoes. In this way, connecting up entire catalogues 
-becomes a series of smaller tasks of connecting the products in each category.
+For each product in each of the two catalogues, we use our recommender to choose
+which products to recommend in the other catalogue. To make this problem
+slightly simpler, we restrict recommendations to be within the same category,
+such as Women's Dresses or Men's Shoes. In this way, connecting up entire
+catalogues becomes a series of smaller tasks of connecting the products in each
+category.
 
-For this experiment, we have access to all of the true inter-catalogue 
-recommendations from the unpartitioned Macy's catalogue. Although we don't
-use this information for constructing recommendations between the partitioned 
-graphs, we can use the original recommendations as a gold-standard to test the 
-construct ones. Using these gold-standard recommendations, we can evaluate 
-the precision and recall of the predicted inter-catalogue recommendations.
+For this experiment, we have access to all of the true inter-catalogue
+recommendations from the unpartitioned Macy's catalogue. Although we don't use
+this information for constructing recommendations between the partitioned
+graphs, we can use the original recommendations as a gold-standard to test the
+construct ones. Using these gold-standard recommendations, we can evaluate the
+precision and recall of the predicted inter-catalogue recommendations.
 
 For the Macy's catalogue, each product has four recommendations. This means that
 on average, there are only two gold-standard inter-catalogue recommendations
