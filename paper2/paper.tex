@@ -352,35 +352,214 @@ other catalogue's concept space. These nearest neighbors are the predicted
 recommendations between products in different catalogues.
 
 \section*{Implementation}
-Here are some of the details for implementing the LSI method for constructing
-inter-catalogue recommendations.
+Let us dig deeper into the details of the LSI approach described above. There 
+are a number of implementation decisions that, in all, dramatically affect the
+performance of this method.
 
 \subsection*{Random Walks}
-Topic-specific random walk starting from each product
-Parameters needed and the ones chosen
+The first step of the LSI approach is to simulate user sessions by randomly
+walking the recommender graphs. There are a few ways this could be implemented.
+One method is to randomly assign a random walker a starting node and then allow
+it to randomly walk the edges, with a probability of termination at each step.
+Running this many times is a straight-forward model of user sessions.
+
+To speed up the simulation, we calculate a series of product-specific stationary
+distributions. As with any random walk technique, we first interpret the 
+recommender graph as a transition matrix. In this walk, for each product we create a
+product-specific transition matrix which has added teleportation edges back the
+that product. We calculate the stationary distributions of each of these
+matrices, one per product. We use these product-specific stationary
+distributions as our user sessions. Since there is only one user session per 
+product, we have many fewer sessions than we would with a real dataset. However,
+each of these stationary distributions can be interpreted as an aggregation of
+an infinite number of random walkers starting at each node and travelling until
+a random termination time, as in the original model.
+
+This process requires a couple of parameters. The first is the number of steps used to
+approximate each product-specific statinary distribution. The second parameter
+is the likelihood of teleporting to the special product. For our purposes we use
+30 steps and a teleportation probability of 5\%.
 
 \subsection*{Singular Value Decomposition}
-Subtract mean before hand (why this is good here but not usually)
-Number of concepts to use
+Unlike Principal Compenent Analysis, standard LSI does not include any
+preprocessing of the data, such as subtracting the mean from each column of the
+product-session matrix. A major reason for this is that LSI is typically applied
+to natural language processing problems, where the rows are terms, and there is
+one term per word in the vocabulary. This otherwise sparse matrix becomes dense
+if the mean is subtracted, making many NLP datasets untractable to work with. 
+Our datast, on the other hand, has significantly fewer rows and columns and is
+already dense. Therefore, there is little added cost to subtracting the
+means. We include this preprocessing step and find that we get better results
+because of it.
+
+Another design decision is in the size of the truncation of the matrices learned
+from SVD. This number dictates the number of latent concepts learned for LSI.
+Too few concepts fail to capture enough detail to make accurate representations
+of each product. Too many make mapping between concepts challenging. We found a
+good balance at 16 concepts. 
+
+[Graphs of concepts]
 
 \subsection*{Concept Mapping}
-Issue of normalization - normalize each column (L1 and L2), orthogonalize, map
-to sphere
-Bigrams
+A tricky operation of this procedure is the concept mapping. We attempt to find
+the best linear transformation from one concept space to the other. We do this
+by representing each concept as a vector of words in the vocabulary, each
+weighted with how well it represents the concept. We construct this by weighing
+the tfidf of each word in a product's description by how well that word
+represents the concept. Note that products can have a positive or negative value
+for each concept, thus the word representation of concpets are also positive and
+negative. 
+
+With these concept representations, we construct an innner-product matrix. The 
+value of a cell (i, j) in the matrix is the dot product of concept i in the first 
+space with concept j in the second. The columns and rows of the resulting matrix
+represent the relative similarity of the descriptive words between two concepts.
+But the scale of this matrix can be very large. If the inner-product matrix is
+used without any normalization as the linear transformation between the concept
+spaces, the scale of the transformed products will be inconsistent with those
+originally in that space. 
+
+One way to normalize is to normalize each column of the inner-product matrix by
+the L1 norm. This preserves the L1 norm of products after the transformation,
+but does not preserve the L2 norm. Similarly, we can normalize the columns by
+the L2 norm. Neither of these methods preserve the L2 norm, which would be ideal
+as we find the nearest neighbors in the other concept space by their L2
+distance.
+
+Another approach is to orthogonalize the inner-product matrix. That is, find the
+orthogonal matrix nearest to the inner-product matrix. Nearness is defined by
+the NORM FUNCTION on the difference of the two matrices. This orthogonal matrix
+does perserve the L2 norm of the vectors it transforms, however the
+transformation is an approximation of the ideal inner-product matrix and can
+distort the relative mapping from one concept to the others.
+
+A third approach to normalizing aims to preserve the angle of the inner-product
+transformation. For this approach, we remove the issue of scale by normalizing
+all products in the mapped-to space to be unit lenght. Then, after transforming
+the products from the other catalogue, we normmalize them as well. Thus the
+scales for both sets of products are the same and the angles of the
+inner-product transformation are preserved, at the expense of discarding the
+norms of all products in their product spaces. This is equivalent to calculating
+the cosine similarity between products without any normalization, as cosine
+similarity is indeifferent to scale. We find that this method of normalization
+performs the best.
+
+Further gains can be seen if we consider bigrams in the description as well as
+the unigrams. Here, we treat bigrams as a separate set dimensions to represent
+each concept. These are included in the inner product between two concepts,
+weighted compared to the unigrams by a parameter $\beta$. $\beta = 0.3$ improves the
+performance of the concept mapping.
 
 \subsection*{Popularity}
-Important - definition, popularity breakdown of graphs
-Model of popularity and similarity
-Removing popularity from random walks
-Adding popularity to nearest neighbors / modifying number of predictions
-Baseline popularity methods
-Number of products mapped to in different methods
+The most effective addition to the LSI procedure is incorporating the popularity
+of products. We do not know a priori how popular an item is as we do not have
+explicit user data. However, we can use the recommendation graphs to model the
+popularity of each item. The assumption is that a retailer will recommend
+popular products more frequently than unpopular ones.
+
+We imagine that recommender graphs are constructed as follows: A retailer first
+builds a similarity matrix, using a collaborative filtering method. In this
+matrix, all similarity relationships are symmetric. Next, the retailer modifies
+the values of the matrix to include popularity. As a simple model, we say that
+the popularity-modified similarity score from Product i to Proudct j is the
+simple similarity score at (i, j) multiplied by the popularity of Product j. In
+this way, more popular items are more frequently recommended. 
+
+We see signs of this in the undirected recommender graphs. Although each product
+has at most four outgoing recommendations on macys.com, we see that some
+products have over one hundred incoming recommendations. With this in mind, we
+approximate the popularity of each product as the logarithm of the degree of
+that product in its undirected recommender graph. We choose to model it as the
+logarithm because a few of the products tend to have degrees in the hundreds.
+Without some way of scaling back these popularities, these few very popular
+products tend to take over all recommendations.
+
+[Graph of popularity]
+
+Assuming this model of recommender graph construction, which separates similarity
+from popularity, we seek to isolate similarity from the recommender graph. Since
+popular products were promoted for popularity, we demote them when walking the
+graphs to create user sessions. In practice, we divide the likelihood of walking
+an edge by the popularity of the product on the other side of that edge. Thus
+the concepts learned on that matrix better represent products independent of
+popularity. 
+
+Proceeding as before, we find the nearest products in concept space. However,
+before deeming the nearest neighbors to be the best recommendations, we divide
+the distance to each product by its popularity. Since we model distance in 
+concept space to be inversely proportional to similarity, this reincorporation
+of popularity is analagous to multiplying similarity by popularity, as done in
+the original construction of the recommender graph.
+
+A final way in which we incorporate popularity is in the number of
+recommendations alotted per product. Since we model the recommender graph as an
+undirected graph, different nodes have different degrees. A product that is
+popular within its catalogue is likely to be more popular across catalogues as
+well. Therefore, we allow popular products to have more recommendations across
+the two catalogues, proportional to their popularity.
+
+In all, these popularity additions significantly boost performance in the
+experiment. The results of this, along with the other modifications outlined in
+this section, can be seen in the following section on performance.
 
 \section*{Performance}
 \subsection*{Baselines}
-Random, tfidf, one model (explain), most popular
+To understand how well our LSI recommender performs, we need good baselines
+for comparison.  The simplest and easiest to beat baseline is the Random 
+Recommender. This recommender randomly picks pairs of products, one from 
+each catalogue, and recommends them together. This should obviously be the 
+worst performing recommender but it gives us some sense of whether we are 
+doing anything intelligent in our choices of recommendation.
+
+A more impressive baseline is that of the Simple Content-Based approach, 
+outlined earlier in the paper. This recommender uses information exclusively
+from the descriptions of the products and ignores the recommender graphs 
+entirely. A third, somewhat similar baseline comes from the Neighborhood 
+Content-based variant, which looks at the content similarity between 
+neighborhoods of products.
+
+We construct a couple of other baselines to show that our performance is not
+exclusively due to any single feature of the recommender. One such baseline
+tests the effects of popularity alone. Incorporating popularity has a large 
+impact on the performance of any recommender and part of this is due simply 
+to the evaluation metric. Any time we connect to a popular product, we are 
+now two away from many more products, increasing the likelihood of getting a
+correct recommendation by the 2-precision standard. To ensure that these kinds 
+of effects are not the sole reason that our recommender performs well, 
+we construct the Popularity Recommender. This recommender simply recommends 
+that every product in one catalogue be connected to the two most popular 
+products from the other catalogue. This baseline shows how much of the LSI 
+recommender's performance is due simply to leveraging popularity and how 
+much is due to other factors, such as intelligently learning and mapping 
+latent concepts.
+
+It is also informative to test the efficacy of the concept mapping, since this
+such a hard task. As in product-product content-similarity, it is difficult to
+capture similarity using descriptions alone. It is not even clear that a mapping 
+necessarily exists between two seperately learned concept spaces. The concepts 
+may represent fundamentally different things, which cannot be well mapped to 
+each other. We can measure the efficacy of the mapping by comparing it to a 
+couple of baselines. 
+
+The first baseline is in fact an upper bound of sorts on the mapping. This
+baseline recommender is called the One Model Recommender. Unlike the other
+baselines, this recommender is not a valid one, as it cheats by using
+information from the unpartitioned graph. The One Model Recommender learns a
+latent concept space over the entire recommender graph by allowing the random
+walkers to traverse it before it is partitioned. In every other respect, it is
+the same as the LSI Recommender. However, since products from both catalogues
+are represented in the same concept space, there is no need for a mapping
+between concept spaces.
+
+The second mapping-related baseline is the Random Mapper Recommender. As the
+name suggests, this recommender is identical to the LSI Recommender, except that
+it uses a randomly generated linear transformation to map between concept
+spaces. These two baselines represent (not strict) upper and lower bounds on how
+well the concept mapping performs. The results shows how much of a bottleneck
+this step is.
 
 \subsection*{Results}
+[Number of products mapped to in different methods]
 \begin{center}
 \begin{tabular}{ | l | c | c | c |}
 \hline
@@ -435,6 +614,8 @@ of the data exists.
 \section*{Future Work}
 Incorporate more data such as customer reviews. Use computer vision techniques.
 Focus more on popular hubs model.
+
+\section*{Appendix}
 
 \begin{thebibliography}{9}
 
