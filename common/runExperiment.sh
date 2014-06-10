@@ -333,15 +333,22 @@ SEED_OPT="--seed=$SEED"
 ######
 # Setup environment
 ##############
-CMDTERM='-----'
 SRC=../common
-SEED_EXT=Seed${SEED}
-EXPMT=${MODEL_TYPE}_${NUM_TOPICS}_${CAT// /_}_$SEED_EXT
 DB=$DATA/macys.db
 STOPWORDS=$DATA/stopwords.txt
+SEED_EXT=Seed${SEED}
+CMDTERM='-----'
+
+# escape/replace special characters in category
+ESC_CAT=${PARENTCAT}_${CAT}
+ESC_CAT=${ESC_CAT// /_}
+ESC_CAT=${ESC_CAT//,/}
+ESC_CAT=${ESC_CAT//&/AND}
+
+EXPMT=${MODEL_TYPE}_${NUM_TOPICS}_${ESC_CAT}_$SEED_EXT
 
 # graphs
-GRAPH_BASE=$DATA/graph${CAT// /_}
+GRAPH_BASE=$DATA/graph${ESC_CAT}
 GRAPH=${GRAPH_BASE}.pickle
 GRAPH1=${GRAPH_BASE}${SEED_EXT}_1.pickle
 GRAPH2=${GRAPH_BASE}${SEED_EXT}_2.pickle
@@ -354,7 +361,7 @@ ONE_GRAPH=${GRAPH_BASE}${SEED_EXT}_one.pickle
 SOURCE_GRAPH=${GRAPH_BASE}${SEED_EXT}_${NUM_TOPICS}_src.pickle
 
 # random walks
-RWALK_BASE=$DATA/randomWalk${CAT// /_}
+RWALK_BASE=$DATA/randomWalk${ESC_CAT}
 RWALK=${RWALK_BASE}.npz
 RWALK1=${RWALK_BASE}${SEED_EXT}_1.npz
 RWALK2=${RWALK_BASE}${SEED_EXT}_2.npz
@@ -390,7 +397,7 @@ else
 fi
 
 # TF-IDF and maps
-TFIDF=$DATA/tfidf${CAT// /_}.pickle
+TFIDF=$DATA/tfidf${ESC_CAT}.pickle
 MAP=$DATA/topicMap_${EXPMT}.pickle
 IDENT_MAP=$DATA/identMap_${NUM_TOPICS}.pickle
 RAND_MAP=$DATA/randMap_${NUM_TOPICS}.pickle
@@ -402,10 +409,10 @@ if [[ ! -z "$TAU" ]]; then
              --tau=$TAU"
 fi
 
-POP_DICT=$DATA/popDict${CAT// /_}${SEED_EXT}.pickle
+POP_DICT=$DATA/popDict${ESC_CAT}${SEED_EXT}.pickle
 
 # edges
-LOST_EDGES=$DATA/lostEdges${CAT// /_}${SEED_EXT}.pickle
+LOST_EDGES=$DATA/lostEdges${ESC_CAT}${SEED_EXT}.pickle
 PREDICTED_BASE=$DATA/predictedEdges_${EXPMT}
 PREDICTED_RAND=${PREDICTED_BASE}_rand.pickle
 PREDICTED_POP=${PREDICTED_BASE}_pop.pickle
@@ -415,7 +422,7 @@ PREDICTED_ONE=${PREDICTED_BASE}_one.pickle
 PREDICTED_EDGES=${PREDICTED_BASE}.pickle
 
 # proximity matrices
-PROX_MAT_BASE=$DATA/proxMat${CAT// /_}K${EVAL_K}${SEED_EXT}
+PROX_MAT_BASE=$DATA/proxMat${ESC_CAT}K${EVAL_K}${SEED_EXT}
 TARGET_PROX_MAT=${PROX_MAT_BASE}_tgt.npz
 RAND_PROX_MAT=${PROX_MAT_BASE}_rand.npz
 POP_PROX_MAT=${PROX_MAT_BASE}_pop.npz
@@ -425,6 +432,7 @@ ONE_PROX_MAT=${PROX_MAT_BASE}_one.npz
 SOURCE_PROX_MAT=${PROX_MAT_BASE}_${NUM_TOPICS}_src.npz
 
 RESULTS=$DATA/results_${EXPMT}_K${EVAL_K}.txt
+APPENDFILE=$DATA/experimentResults.csv
 
 echo
 
@@ -644,39 +652,51 @@ if [ $START_STAGE -le 11 -a $END_STAGE -ge 11 ]; then
     echo "=== 11. Evaluate predictions ===" | tee $RESULTS
     if [ $BENCHMARKS -eq 1 ]; then
         echo | tee -a $RESULTS
-        echo "  RANDOM PREDICTIONS " | tee -a $RESULTS
-        CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
+        EXPNAME="RANDOM"
+        echo "  $EXPNAME PREDICTIONS" | tee -a $RESULTS
+        CMD="python $SRC/evalPredictedEdges.py --append-file=$APPENDFILE\
+            --data='$EXPNAME,$ESC_CAT' -k $EVAL_K $TARGET_PROX_MAT\
             $RAND_PROX_MAT $LOST_EDGES $PREDICTED_RAND"
         echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
         echo $CMDTERM | tee -a $RESULTS
         echo | tee -a $RESULTS
-        echo "  POPULAR PREDICTIONS " | tee -a $RESULTS
-        CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
+        EXPNAME="POPULAR"
+        echo "  $EXPNAME PREDICTIONS" | tee -a $RESULTS
+        CMD="python $SRC/evalPredictedEdges.py --append-file=$APPENDFILE\
+            --data='$EXPNAME,$ESC_CAT' -k $EVAL_K $TARGET_PROX_MAT\
             $POP_PROX_MAT $LOST_EDGES $PREDICTED_POP"
         echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
         echo $CMDTERM | tee -a $RESULTS
         echo | tee -a $RESULTS
-        echo "  TFIDF PREDICTIONS " | tee -a $RESULTS
-        CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
+        EXPNAME="TF-IDF"
+        echo "  $EXPNAME PREDICTIONS" | tee -a $RESULTS
+        CMD="python $SRC/evalPredictedEdges.py --append-file=$APPENDFILE\
+            --data='$EXPNAME,$ESC_CAT' -k $EVAL_K $TARGET_PROX_MAT\
             $TFIDF_PROX_MAT $LOST_EDGES $PREDICTED_TFIDF"
         echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
         echo $CMDTERM | tee -a $RESULTS
         echo | tee -a $RESULTS
-        echo "  RANDOM MAP PREDICTIONS " | tee -a $RESULTS
-        CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
-            $RANDMAP_PROX_MAT $LOST_EDGES $PREDICTED_RANDMAP"
+        EXPNAME="RANDOM MAP"
+        echo "  $EXPNAME PREDICTIONS" | tee -a $RESULTS
+        CMD="python $SRC/evalPredictedEdges.py --append-file=$APPENDFILE\
+           --data='$EXPNAME,$ESC_CAT' -k $EVAL_K $TARGET_PROX_MAT\
+           $RANDMAP_PROX_MAT $LOST_EDGES $PREDICTED_RANDMAP"
         echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
         echo $CMDTERM | tee -a $RESULTS
-        echo "  ONE MODEL PREDICTIONS " | tee -a $RESULTS
-        CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
+        EXPNAME="ONE MODEL"
+        echo "  $EXPNAME PREDICTIONS" | tee -a $RESULTS
+        CMD="python $SRC/evalPredictedEdges.py --append-file=$APPENDFILE\
+            --data='$EXPNAME,$ESC_CAT' -k $EVAL_K $TARGET_PROX_MAT\
             $ONE_PROX_MAT $LOST_EDGES $PREDICTED_ONE"
         echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
         echo $CMDTERM | tee -a $RESULTS
     fi
     echo | tee -a $RESULTS
-    echo "  MAPPING MODEL PREDICTIONS " | tee -a $RESULTS
-    CMD="python $SRC/evalPredictedEdges.py -k $EVAL_K $TARGET_PROX_MAT\
-        $SOURCE_PROX_MAT $LOST_EDGES $PREDICTED_EDGES"
+    EXPNAME="MAPPING MODEL"
+    echo "  $EXPNAME PREDICTIONS" | tee -a $RESULTS
+    CMD="python $SRC/evalPredictedEdges.py --append-file=$APPENDFILE\
+         --data='$EXPNAME,$ESC_CAT' -k $EVAL_K $TARGET_PROX_MAT\
+         $SOURCE_PROX_MAT $LOST_EDGES $PREDICTED_EDGES"
     echo $CMD | tee -a $RESULTS; eval $CMD | tee -a $RESULTS
     echo $CMDTERM | tee -a $RESULTS
     echo

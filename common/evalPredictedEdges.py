@@ -10,6 +10,7 @@ import os
 import sys
 import math
 import numpy as np
+import csv
 
 # local modules
 from Util import loadPickle, getAndCheckFilename
@@ -20,6 +21,10 @@ def getParser(usage=None):
         help='Distance away in original graph to consider correct')
     parser.add_option('--directed', action='store_true', dest='directed',
         default=False, help='Treat graphs as directed.')
+    parser.add_option('--data', dest='data', default=None,
+        help='Comma-separated data to include in CSV record.', metavar='CSV')
+    parser.add_option('--append-file', dest='appendFile', default=None,
+        help='Append CSV record to file.', metavar='FILE')
     return parser
 
 def getMatrix(filename):
@@ -82,24 +87,34 @@ def main():
                                sourceDict, options.k)
 
     # get results
-    numCorrectPredictions = len(predictedEdges)
+    totalPredictions = len(predictedEdges)
     numLostEdges = len(lostEdges)
     if not options.directed:
         recalledEdges /= 2
         numLostEdges /= 2
 
     # compute metrics
-    precision = float(correctPredictions) / numCorrectPredictions
+    precision = float(correctPredictions) / totalPredictions
     recall = float(recalledEdges) / numLostEdges
     if precision == 0.0 and recall == 0.0:
         f1score = 0.0
     else:
         f1score = 2*precision*recall/(precision + recall)
 
+    # append CSV record to file
+    if options.appendFile is not None:
+        if options.data is not None:
+            row = options.data.split(',')
+        row += [options.k, correctPredictions, totalPredictions, recalledEdges,
+                numLostEdges]
+        with open(options.appendFile, 'a') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(row)
+
     # display results
     print '==============================================='
     print 'Correct predictions \t : %d' % correctPredictions
-    print 'Total predictions \t : %d' % len(predictedEdges)
+    print 'Total predictions \t : %d' % totalPredictions
     print '%d-Precision \t\t : %0.3f' % (options.k, precision)
     print 'Recalled Edges (k=%d)\t : %d' % (options.k, recalledEdges)
     print 'Withheld edges \t\t : %d' % numLostEdges
