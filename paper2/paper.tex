@@ -222,41 +222,46 @@ recommendations. 2-recall is then the percentage of gold-standard edges that
 are within two steps in the predicted recommender graph.
 
 \section*{Constructing Recommendations}
-Recommending products between different catalogues is a daunting task.
-Traditionally, constructing recommendations is done by leveraging user behavior
-using a collaborative filtering technique. At the most basic level, If a large
-number of users view or purchase both Product A and Product B, the two are
-connected with a recommendation. Unfortunately, for this problem there are no
+Recommending products between different catalogues is a difficult task.
+Typically, recommendations are constructed by leveraging user behavior
+with a collaborative filtering technique. At the most basic level, If a large
+number of users view or purchase both Product A and Product B, the two products
+are recommended for each other. Unfortunately, for this problem there are no
 user data between the two unconnected catalogues.
 
 \subsection*{Content Based Similarity}
-A simple approach for this problem is to recommend products that have similar
-content. The products have both a short and long description which we can use to
-construct a textual content-based similarity function. To do this, we represent each
+A simple approach is to recommend products that have similar content. Each product
+has includes a short description which we can use to construct a textual 
+content-based similarity function. To do this, we represent each
 product as a vector of tf-idf values for each word in its descriptions. By using
-tf-idf, we reduce the relevance of frequent words and boost that of rare ones,
-thus emphasizing the more words that are more descriptive of a product versus
-all the other ones in the catalogue. The vector representations are the length 
-of the dictionary, with zeros for all words not in the descriptions. To determine
-the content-based similarity between two products, we simply take the dot 
-product of the two tf-idf vectors. 
+tf-idf, we reduce the relevance of frequent words and boost that of rare ones.
+This emphasizes the words that better explain this product versus all the other 
+ones in the catalogue. The vector representations are the length of the
+vocabulary. They are very sparse as most words do not appear in any given
+product description. With this tf-idf represenation, we can define the 
+$ContentSimiarity$ functoin as follows:
 
-Mathematical definition of content-based similairty...
+\begin{align}
+ContentSimilarity(P_1, P_2) &= v_1 \cdot v_2
+\end{align}
+where $P_1$ and $P_2$ are the products being compared and $v_1$ and $v_2$ are
+their representations as tf-idf vectors.
 
-This similarity function yields the following recommendation algorithm: For each
+This similarity function yields the following recommendation algorithm which we
+call the $ContentBased Recommender$: For each
 product, scan through the products in the opposite catalogue and calculate the
 content-based similarity score with each. Predict recommendations between this
 product and each of the top k most similar products in the other catalogue.
 
 While this is a quadric-time operation, it can be sped up using matrix
 multiplication. Furthermore, the division into different categories reduces the
-impact of the quadratic effect. For instance, Macy's entire catalogue consists
-of over ONE MILLION products, making a quadratic time algorithm infeasible.
-However, the average category has 2000 products, which is significantly more
-manageable.
+impact of the quadratic effect. In our case, Macy's entire catalogue consists
+of over $60,000$ products, making a quadratic time algorithm very slow.
+However, the average category has only one or two thousand products, which is 
+significantly more manageable size for quadratic operations.
 
 \subsection*{Leveraging Recommendations}
-The simple content-based recommender is limited for a few reasons. It attempts
+This $ContentBased Recommender$ is limited in a few ways. For one, it attempts
 to capture similarity between products by looking exclusively at the words used
 to describe them. One limitation here is that different brands often use
 different vocabularies to describe the same thing, such as ``off-white'' versus
