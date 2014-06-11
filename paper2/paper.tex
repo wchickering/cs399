@@ -177,12 +177,17 @@ Precision, recall, and $F_1$ score are well-known metrics for evaluating
 prediction algorithms \cite{Powers2011}. Together, these metrics capture how
 effective one is at guessing items within a target set. Consider a typical
 Macy's category, for example, Dresses, which contains approximately $3,500$
-items. Suppose that randomly partitioning results in two sets, each with about
-$1,750$ items. For each interset recommendation, we must therefore choose two
-nodes, one from each of the two sets. That is, we have $1,750 \times 1,750 > 3
-\times 10^6$ choices. Choosing the correct edges is a formidable challenge to
-say the least. It is therefore worth asking: Are some prediction errors better
-or worse than others?
+items. Suppose that a random partition results in two sets with approximately
+$1,750$ items in each. Such a partition would cut approximately half of all the
+edges in the unpartioned graph. Since each node has on average eight edges
+before partitioning (four in and four out in the original directed graph) and
+each edge is shared by two nodes, there are originally a total of approximately
+$\left(8 \times 3,500\right) / 2 = 14,000$ edges. This implies that there are
+$7,000$ withheld edges in the cut. For each predicted recommendation, we must
+choose two nodes, one from each of the two sets. Therefore we have $\left(1,750 \times
+1,750\right)/2 > 1 \times 10^6$ choices and only $7,000$ of them are correct. Choosing the
+correct edges is a formidable challenge to say the least. It is therefore worth
+asking: Are some prediction errors better or worse than others?
 
 The graph nature of our problem reveals that the answer to this question is
 yes. For instance, it is better to guess an edge that connects two items that
@@ -205,19 +210,19 @@ $d_P(u,v)$ is the shortest distance between nodes $u$ and $v$ in the new graph
 formed using the predicted edges in $P$.
 
 The following definitions will prove helpful. Let $G$ be the original
-unpartitioned graph formed from the partitions together with the lost edges $L$
-and let $G^{\prime}$ be the new graph formed from the partitions together with
-the predicted edges $P$.  In the context of {\em 2-precision}, an edge in $P$
-that connects items $A$ and $B$ is considered correct if 1) $A$ and $B$ share an
-edge within $G$ or 2) $A$ shares an edge with a direct neighbor of $B$ within
+unpartitioned graph, formed from the partitions together with the lost edges
+$L$, and let $G^{\prime}$ be the new graph, formed from the partitions together
+with the predicted edges $P$.  In the context of {\em 2-precision}, an edge in
+$P$ that connects items $A$ and $B$ is considered correct if 1) $A$ and $B$
+share an edge in $G$ or 2) $A$ shares an edge with a direct neighbor of $B$ in
 $G$ or 3) a direct neighbor of $A$ shares an edge with $B$ within $G$.
 Meanwhile, in the context of {\em 2-recall}, an edge in $L$ that connects items
-$C$ and $D$ is considered recalled if 1) $C$ and $D$ share an edge within
-$G^{\prime}$ or 2) $C$ shares an edge with a direct neighbor of $D$ within
-$G^{\prime}$ or 3) a direct neighbor of $C$ shares an edge with $D$ within
+$C$ and $D$ is considered recalled if 1) $C$ and $D$ share an edge in
+$G^{\prime}$ or 2) $C$ shares an edge with a direct neighbor of $D$ in
+$G^{\prime}$ or 3) a direct neighbor of $C$ shares an edge with $D$ in
 $G^{\prime}$.
 
-We use both traditional precision, recall, and $F_1$ score as well as {\em
+We use traditional precision, recall, and $F_1$ score as well as {\em
 2-precision}, {\em 2-recall}, and {\em 2-}$F_1$ score to evaluate our prediction
 algorithms. Including the latter set of metrics provides a more complete picture
 of algorithmic performance. These additional metrics also accommodate the fact
