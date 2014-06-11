@@ -244,31 +244,30 @@ a common category, and choose recommendations between items with sufficiently
 high similarity.
 
 Toward this end, we borrow the concept of {\em Term Frequency--Inverse Document
-Frequency} (tfidf) from the information retrieval community. In using tfidf, we
+Frequency} (tf-idf) from the information retrieval community. In using tf-idf, we
 are considering each item description to be a ``document''.  Thus we define the
-tfidf of a term $t$ within an item description $d$ that's part of a combined
+tf-idf of a term $t$ within an item description $d$ that's part of a combined
 category catalogue $C$ (i.e. the catalogue consisting of all items in both
 retailers' catalogues for a particular common category) as
 \begin{align}
-\mathrm{tfidf}(t,d,C) = f(t,d) \times
+\textrm{tf-idf}(t,d,C) = f(t,d) \times
 \mathrm{log}\frac{\left|C\right|}{\left|\left\{d \in C : t \in
 d\right\}\right|},
 \end{align}
 where $f(t,d)$ is the number of occurances of term $t$ in item description $d$,
 and $\left|\left\{d \in C : t \in d\right\}\right|$ is the number of items in
 $C$ with descriptions containing at least one instance of term $t$.  We can now
-represent each item as a sparse vector of tfidf values, which has a nonzero
+represent each item as a sparse vector of tf-idf values, which has a nonzero
 element for each term in its description.
 
-A key feature of tfidf is that terms appearing in many item descriptions are
-discounted via the idf factor. Conversely, rare terms will have larger tfidf
+A key feature of tf-idf is that terms appearing in many item descriptions are
+discounted via the idf factor. Conversely, rare terms will have larger tf-idf
 values. These features help capture the most relevant words in each description.
 We now define the $ContentSimilarity$ between items $A$ and $B$ as
 \begin{align}
-ContentSimilarity(A,B) = v_A \cdot v_B
+ContentSimilarity(A,B) = \vec{\tau}(A) \cdot \vec{\tau}(B)
 \end{align}
-where $v_A$ and $v_B$ are the tfidf vector representations of items $A$ and $B$,
-respectively.
+where $\vec{\tau}(A)$ is the tf-idf vector representation of item $A$.
 
 Using this content-based similarity function, we construct the following
 inter-catalogue recommendation algorithm, which we call the $ContentBased
@@ -284,16 +283,16 @@ baseline against which to compare the performance of other more sophisticated
 algorithms.
 
 The $ContentBasedRecommender$ deserves a few more comments. For starters, the
-use of an inner product, which is bounded only by the length of the tfidf
+use of an inner product, which is bounded only by the length of the tf-idf
 vectors, is not fundamental to this algorithm. A bounded similarity function
 such as cosine similarity could have been used instead, without qualitatively
 changing the results discussed later in this report. This is because the lengths
 of the product descriptions have little variation, and therefore, the vector
-norms of the tfidf vectors have little variation. Finally, we mention that while
-this algorithm is quadratic in the number of items, it can be executed relatively
-efficiently using matrix multiplication, which trades time for space (i.e.
-memory). Furthermore, confining our experiments to individual categories reduces
-the impact of the quadratic time complexity. In our case, Macy's entire
+norms of the tf-idf vectors have little variation. Finally, we mention that
+while this algorithm is quadratic in the number of items, it can be executed
+relatively efficiently using matrix multiplication, which trades time for space
+(i.e.  memory). Furthermore, confining our experiments to individual categories
+reduces the impact of the quadratic time complexity. In our case, Macy's entire
 catalogue consists of over $60,000$ products, making a quadratic time algorithm
 challenging. However, the average category has about two thousand products,
 which is significantly more manageable.
@@ -319,9 +318,9 @@ create a new similarity function called $NeighborhoodSimilarity$. This function
 uses the $ContentSimilarity$ function from before to compare every pair of
 products between the two neighborhoods of a pair of products $A$ and $B$:
 \begin{align}
-NeighborhoodSimilarity(A, B) = \sum\limits_{S\in
-Neigh(A)}\sum\limits_{T\in Neigh(B)}
-ContentSimilarity(S, T) 
+NeighborhoodSimilarity(A, B) = \sum\limits_{i\in
+Neigh(A)}\sum\limits_{j\in Neigh(B)}
+ContentSimilarity(i, j) 
 \end{align}
 where $Neigh(A)$ is the set of items that share edges with item $A$. We use this
 similarity function to construct the $NeighborhoodRecommender$, which is
@@ -348,7 +347,7 @@ striped shirt may include checkered shirts and vice versa.  In this case, the
 two neighborhoods might share the words ``striped'' and ``checkered'' and thus
 the two previously dissimilar shirts would now be considered more similar.
 
-\subsection*{\em LatentConceptRecommender}
+\subsection*{\em LatentFeatureRecommender}
 Although the $NeighborhoodRecommender$ leverages the information contained in
 the recommendation graphs to some extent, it is still primarily based on product
 descriptions. Presumably, the graphs are derivative of a collaborative filtering
@@ -407,13 +406,13 @@ entries).  Using SVD, we factor our user-item matrix as
 M = U \Sigma V^T,
 \end{align}
 where the rows of the $N \times N$ matrix $U$ and the $N \times N$ matrix $V$
-are the items and users represented in an $N$-dimensional concept-space,
+are the items and users represented in an $N$-dimensional concept space,
 respectively, and the $N$ diagonal entries of $\Sigma$ are the singular values
 associated with each concept.
 
-Having transformed our items into concept-space, we now discard all but the $k$
+Having transformed our items into concept space, we now discard all but the $k$
 leftmost columns of the matrix $U$. The idea is that these leftmost columns are
-the most significant eigenvectors of concept-space and capture most, if not all,
+the most significant eigenvectors of concept space and capture most, if not all,
 of the relevant latent features. Meanwhile, the discarded columns are presumed
 to contain mostly noise. This rank-reduction process yields matrices that are
 typically written as
@@ -421,7 +420,7 @@ typically written as
 M \approx U_k \Sigma_k V^T_k,
 \end{align}
 where the rows of $U_k$ and $V_k$ are the items and users represented in a
-$k$-dimensional concept-space, respectively.  Rank-reducing following the
+$k$-dimensional concept space, respectively.  Rank-reducing following the
 application of SVD in this way is a common technique used in information
 retrieval and is often referred to as {\em Latent Semantec Indexing} (LSI)
 \cite{Deerwester1990}.
@@ -443,44 +442,34 @@ might be possible to learn a mapping between these latent spaces.
 If a mapping between the latent spaces associated with two catalogues were
 known, we could translate all items into a common space and then choose
 inter-catalogue edges between item pairs that are nearest to one another in
-concept-space. To learn these mapping, we must revisit the notion of content
+concept space. To learn these mapping, we must revisit the notion of content
 similarity. Once again, we utilize tf-idf vectors. This time, however, we weight
-an item's tf-idf vector by the elements in the item's latent feature vector. In
-this way, we construct a dense tf-idf vector for each concept for each graph
-partition. Formally, we say that each concept $j$ is represented by 
+an item $i$'s tf-idf vector $\vec{\tau}(i)$ by the elements in its latent
+feature vector $\vec{v}(i)$. In this way, we construct a dense {\em
+super-tf-idf} vector for each concept for each catalogue. Formally, we say that
+a concept $j$ of a catalogue $C$ is represented by the super-tf-idf vector
 \begin{align}
-EXPRESSION FOR A CONCEPT'S TF-IDF VECTOR
+\vec{s}(j,C) = \sum_{i \in C}{v(i)_j \cdot \vec{\tau}(i)},
 \end{align}
+where $v(i)_j$ is the $j$\textsuperscript{th} component of item $i$'s latent
+feature vector. These super-tf-idf vectors act as a proxy for the concept. We
+approximate the mapping between two concept spaces by taking inner products of
+super-tf-idf vectors. The details of this mapping process are provided in a
+subsequent section.
 
-In this case, we represent each concept (rather than each product) as a vector
-of words. To represent a concept in terms of the vocabulary, we calculate the
-value of each word by summing the tf-idf of that word for each product $P$,
-weighted by the projection of $P$ on our concept in concept-space. That is:
-\begin{align}
-C_w = \sum\limits_{P} \text{tfidf}(w)\times P_C
-\end{align}
-where $C_w$ is the value of concept $C$'s representation in dimension $w$, the
-sum is over all products $P$ in the catalgoue, tfidf($w$) is the tfidf score
-for word $w$, and $P_C$ is the projection of $P$ on concpet $C$'s axis in
-concept-space.
+Together, these steps comprise the $LatentFeatureRecommender$. First, we
+simulate user sessions by randomly walking the recommendation graphs. Second, we
+learn concept spaces for products in each catalogue via LSI. Third, we find a
+mapping between concept spaces using weighted tf-idf vector representations of
+the products. And lastly, we find the nearest neighbors of each product from one
+catalogue within the concept space of another catalogue. These nearest neighbors
+are then the predicted recommendations between products across the two
+catalogues.
 
-Now for a concept such as {\em formal}, the words ``sophisticated'' or
-``official'' may have high value since products with those descriptive words
-would also have a large amount of the {\em formal} concept in their
-concept-representations. Using these vector representation, we calculate the
-inner product between two concepts to find how similar they are to eachother.
-This can be used to create a mapping from one set of concepts to another as it
-captures the relative breakdown of a concept from one space to the concepts in
-the other.
-
-In all, the latent-concept approach consists of four phases. First, we simulate
-user sessions by randomly walking the recommendation graphs. Second, we learn
-concept spaces for products in each catalogue via SVD. Third, we find a mapping
-between concept-spaces using the aggregated descriptions of all products. And
-lastly, we find the nearest neighbors of each product in the concept-space of
-the other catalogue concept-space. These nearest neighbors become the predicted
-recommendations between products across the two catalogues. We call this method
-the $LatentConceptRecommender$
+%Now for a concept such as {\em formalness}, the words ``sophisticated'' or
+%``classy'' may have high value since products with those descriptive words would
+%also have a large amount of the {\em formalness} concept in their latent feature
+%vectors. 
 
 \section*{Implementation}
 Let us dig deeper into the details of the LSI approach described above. There 
@@ -534,28 +523,28 @@ good balance at 16 concepts.
 
 \subsection*{Concept Mapping}
 A tricky operation of this procedure is the concept mapping. We attempt to find
-the best linear transformation from one concept-space to the other. We do this
+the best linear transformation from one concept space to the other. We do this
 by representing each concept as a vector of words in the vocabulary, each
 weighted with how well it represents the concept. We construct this by weighing
-the tfidf of each word in a product's description by how well that word
+the tf-idf of each word in a product's description by how well that word
 represents the concept. Note that products can have a positive or negative value
 for each concept, thus the word representation of concpets are also positive and
 negative. 
 
-With these concept representations, we construct an innner-product matrix. The 
-value of a cell (i, j) in the matrix is the dot product of concept i in the first 
-space with concept j in the second. The columns and rows of the resulting matrix
-represent the relative similarity of the descriptive words between two concepts.
-But the scale of this matrix can be very large. If the inner-product matrix is
-used without any normalization as the linear transformation between the concept
-spaces, the scale of the transformed products will be inconsistent with those
-originally in that space. 
+With these concept representations, we construct an innner-product matrix. The
+value of a cell (i, j) in the matrix is the dot product of concept i in the
+first space with concept j in the second. The columns and rows of the resulting
+matrix represent the relative similarity of the descriptive words between two
+concepts.  But the scale of this matrix can be very large. If the inner-product
+matrix is used without any normalization as the linear transformation between
+the concept spaces, the scale of the transformed products will be inconsistent
+with those originally in that space. 
 
 One way to normalize is to normalize each column of the inner-product matrix by
 the L1 norm. This preserves the L1 norm of products after the transformation,
 but does not preserve the L2 norm. Similarly, we can normalize the columns by
 the L2 norm. Neither of these methods preserve the L2 norm, which would be ideal
-as we find the nearest neighbors in the other concept-space by their L2
+as we find the nearest neighbors in the other concept space by their L2
 distance.
 
 Another approach is to orthogonalize the inner-product matrix. That is, find the
@@ -616,10 +605,10 @@ an edge by the popularity of the product on the other side of that edge. Thus
 the concepts learned on that matrix better represent products independent of
 popularity. 
 
-Proceeding as before, we find the nearest products in concept-space. However,
+Proceeding as before, we find the nearest products in concept space. However,
 before deeming the nearest neighbors to be the best recommendations, we divide
 the distance to each product by its popularity. Since we model distance in 
-concept-space to be inversely proportional to similarity, this reincorporation
+concept space to be inversely proportional to similarity, this reincorporation
 of popularity is analagous to multiplying similarity by popularity, as done in
 the original construction of the recommendation graph.
 
@@ -668,7 +657,7 @@ latent concepts.
 It is also informative to test the efficacy of the concept mapping, since this
 such a hard task. As in product-product content-similarity, it is difficult to
 capture similarity using descriptions alone. It is not even clear that a mapping 
-necessarily exists between two seperately learned concept-spaces. The concepts 
+necessarily exists between two seperately learned concept spaces. The concepts 
 may represent fundamentally different things, which cannot be well mapped to 
 each other. We can measure the efficacy of the mapping by comparing it to a 
 couple of baselines. 
@@ -677,11 +666,11 @@ The first baseline is in fact an upper bound of sorts on the mapping. This
 baseline recommender is called the One Model Recommender. Unlike the other
 baselines, this recommender is not a valid one, as it cheats by using
 information from the unpartitioned graph. The One Model Recommender learns a
-latent concept-space over the entire recommendation graph by allowing the random
+latent concept space over the entire recommendation graph by allowing the random
 walkers to traverse it before it is partitioned. In every other respect, it is
 the same as the LSI Recommender. However, since products from both catalogues
-are represented in the same concept-space, there is no need for a mapping
-between concept-spaces.
+are represented in the same concept space, there is no need for a mapping
+between concept spaces.
 
 The second mapping-related baseline is the Random Mapper Recommender. As the
 name suggests, this recommender is identical to the LSI Recommender, except that
@@ -699,7 +688,7 @@ Normalization & 2-Precision & 2-Recall & 2-F1 Score \\ \hline\hline
 L1 normalize each column of matrix &&&\\ \hline
 L2 normalize each column of matrix &&&\\ \hline
 Orthogonalize matrix &&&\\ \hline
-Normalize products in concept-space &&&\\ \hline
+Normalize products in concept space &&&\\ \hline
 \end{tabular}
 \end{center}
 
