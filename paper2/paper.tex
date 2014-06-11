@@ -275,15 +275,15 @@ vocabularies to describe the their products. One may refer to a color as
 ``off-white'' while another calls the same color ``ivory.'' To the $ContentBased
 Recommender$, these words are as different as ``black'' and ``white.'' Another 
 issue is that the best recommendation for a product may not be the most similar
-other product. For instance, a striped black-and-white button-up shirt could be 
+product. For instance, a striped black-and-white button-up shirt could be 
 an excellent recommendation for a blue checkered button-up, even though the two 
 have ostensibly different descriptions.
 
 We can alleviate some of these issues by leveraging the recommendations we
 already have between products within the same catalogue. One approach is to 
-consider the {\emph neighborhood} of each product, that is that product along 
-with each of its neighbors in the recommendation graph. With this we create a
-new similarity function, $NeighborhoodSimilarity$. This function uses the 
+consider the {\em neighborhood} of each product, that is a product along 
+with each of its neighbors in the recommendation graph. With this, we create a
+new similarity function called $NeighborhoodSimilarity$. This function uses the 
 $ContentSimilarity$ function from before to compare every pair of products 
 between the two neighborhoods:
 
@@ -312,7 +312,7 @@ be deemed similar.
 
 \subsection*{Latent Concepts}
 Although the $Neighborhood Recommender$ alleviates some of the issues of 
-content-based similarity, it is still fundamentally based on the descriptions of
+content-based similarity, it is still primarily based on the descriptions of
 products. Ideally, we would like to recommend products that are similar in more
 fundamental ways. If a dress is elegant and modern, we would like to recommend 
 another dress that is elegant and modern, even if those words are not explicitly
@@ -321,56 +321,68 @@ intangible and difficult to define. However, if we assume that the given
 recommendations are truly based on such latent concepts, we can attempt to learn 
 them by analyzing the graphs.
 
-One common approach to learning latent semantic factors is to apply Singular Value
-Decomposition to . In
-traditional LSI, used for Natural Language Processing, concepts are learned over 
-a dataset consists of documents, each containing terms. Singular Value 
-Decomposition (SVD) is applied to the term-document matrix and the resulting 
-three matrices are truncated to the number of latent concepts desired. The 
-resulting left matrix is a term-concept matrix, where each row is a term 
-represented in concept space.
+One common approach to learning latent semantic factors is to apply {\em
+Singular Value Decomposition} (SVD) to a matrix of user data, as in many 
+collaborative filtering methods [CITE]. This method requires a product-user
+matrix, where each column represents the products viewed in a user session.
+After SVD is applied to the matrix, the resulting three matrices are truncated
+to the number of latent concepts desired. The resulting left matrix becomes a
+product-concept matrix, where each row is a product represented in 
+{\em concept-space}
 
-We apply the same idea to the product catalogues in order to learn the latent
-concepts of each product. Analogous to documents containing terms, we look at
-user sessions which contain the products viewed by that user. Although we do not
-have actual user data, we can simulate user sessions by traversing the
-recommendation graphs. 
+In this experiment, there is no such product-user matrix to apply SVD.
+However, since the recommendation graphs are constructed from user behavior,
+we can use them to simulate user sessions. To do this, we use a random walk 
+technique on the graph. We assume that the edges of a recommendation graph 
+indeed connect products that a user would co-view. Thus traversing the edges 
+of a graph is a reasonable simulation of a user session. For details on these
+random walks, see the section titled Random Walks in the Implementation section
+below.
 
-To simulate user sessions, we use a random walk technique on the graph. We
-assume that the edges of a recommendation graph indeed connect products that a user
-would co-view. Thus traversing the edges of a graph is a reasonable simulation
-of a user session. For details on these random walks, see the section titled
-Random Walks in the Implementation section below.
-
-With the simulated user sessions, we can implement LSI on each of the catalogues
-and learn the latent concepts for each product. We want to find the products from
-one catalogue that are most similar in latent concept space to products in the
-other catalogue. However, since the user sessions (random walks) include
-products either from one catalogue or the other, we learn different latent 
-spaces for each catalogue. The problem is therefore reduced to finding a mapping
-from one concept space to the other. If this can be accomplished, we
-can map the concepts of each product into concepts of the other catalogue. This
-creates a concept representation in the other catalouge's concept space, meaning
-that we can then find nearest neighbors in that catalogue's concept space. 
+With simulated user data for each recommendation graph, we can apply SVD on the
+matrices from the two catalogues to learn the latent concepts for each product.
+We want to find the products from one catalogue that are most similar in latent
+concept-space to products in the other catalogue. However, since each user
+session/random walk includes products exclusively from one of the catalogues, we
+learn different latent spaces for each catalogue. Note that this would be an
+issue even if we had the actual user data used to construct the two
+recommendation graphs. The problem therefore becomes finding a mapping from one
+concept-space to the other. If this can be accomplished, we can represent each
+product of one catalogue in terms of concepts of the other catalogue and then
+find the nearest neighbors of that catalogue by distance in concept-space. 
 
 To map concepts from one catalogue to another, we must revisit
-content-similarity. In this case, we represent each concept as a vector of
-words. To calculate the value for a word w for concept c, we sum the tf-idf
-value of w across all products, weighted by how much that product is represented
-by concept c. Thus if a concept could be described as formal, the words
-``sophisticated'' or ``official'' may have high value since products with those
-descriptive words would also have a high amount of the formal concept in their
-concept representations. Using these vector representation for concepts, we can
-simply calculate the dot product between two concepts to find how similar they
-are, in a relative sense. This can be used to create a mapping from one set of
-concepts to another.
+content-similarity. In this case, we represent each concept (rather than each
+product) as a vector of words. To represent a concept in terms of the
+vocabulary, we calculate the value of each word by summing the
+tf-idf of that word for each product $P$, weighted by the projection of $P$ on
+our concept in concept-space. That is:
 
-In all, the LSI approach consists of four phases. First we simulate user
-sessions by randomly walking the recommendation graphs. Second we learn concept
-spaces for products in each catalogue via SVD. Third we find a mapping between
-concept spaces. And lastly we find the nearest neighbors of each product in the
-other catalogue's concept space. These nearest neighbors are the predicted
-recommendations between products in different catalogues.
+\begin{align}
+C_w = \sum\limits_{P} \text{tfidf}(w)\times P_C
+\end{align}
+where $C_w$ is the value of concept $C$'s representation in dimension $w$, the sum 
+is over all products $P$ in the catalgoue, tfidf($w$) is the tf-idf score for
+word $w$, and $P_C$ is the projection of $P$ on concpet $C$'s axis in
+concept-space.
+
+Now for a concept such as {\em formal}, the words ``sophisticated'' or
+``official'' may have high value since products with those descriptive words
+would also have a large amount of the {\em formal} concept in their
+concept-representations. Using these vector representation, we calculate the
+inner product between two concepts to find how similar they are to eachother.
+This can be used to create a mapping from one set of concepts to another as it
+captures the relative breakdown of a concept from one space to the concepts in the
+other.
+
+In all, the latent-concept approach consists of four phases. First, we simulate user
+sessions by randomly walking the recommendation graphs. Second, we learn concept
+spaces for products in each catalogue via SVD. Third, we find a mapping between
+concept-spaces using the aggregated descriptions of all products. And lastly, we
+find the nearest neighbors of each product in the concept-space of the other 
+catalogue concept-space. These nearest neighbors become the predicted
+recommendations between products across the two catalogues. We call this method
+the $LatentConcept Recommender$
 
 \section*{Implementation}
 Let us dig deeper into the details of the LSI approach described above. There 
@@ -423,7 +435,7 @@ good balance at 16 concepts.
 
 \subsection*{Concept Mapping}
 A tricky operation of this procedure is the concept mapping. We attempt to find
-the best linear transformation from one concept space to the other. We do this
+the best linear transformation from one concept-space to the other. We do this
 by representing each concept as a vector of words in the vocabulary, each
 weighted with how well it represents the concept. We construct this by weighing
 the tfidf of each word in a product's description by how well that word
@@ -444,7 +456,7 @@ One way to normalize is to normalize each column of the inner-product matrix by
 the L1 norm. This preserves the L1 norm of products after the transformation,
 but does not preserve the L2 norm. Similarly, we can normalize the columns by
 the L2 norm. Neither of these methods preserve the L2 norm, which would be ideal
-as we find the nearest neighbors in the other concept space by their L2
+as we find the nearest neighbors in the other concept-space by their L2
 distance.
 
 Another approach is to orthogonalize the inner-product matrix. That is, find the
@@ -505,10 +517,10 @@ an edge by the popularity of the product on the other side of that edge. Thus
 the concepts learned on that matrix better represent products independent of
 popularity. 
 
-Proceeding as before, we find the nearest products in concept space. However,
+Proceeding as before, we find the nearest products in concept-space. However,
 before deeming the nearest neighbors to be the best recommendations, we divide
 the distance to each product by its popularity. Since we model distance in 
-concept space to be inversely proportional to similarity, this reincorporation
+concept-space to be inversely proportional to similarity, this reincorporation
 of popularity is analagous to multiplying similarity by popularity, as done in
 the original construction of the recommendation graph.
 
@@ -557,7 +569,7 @@ latent concepts.
 It is also informative to test the efficacy of the concept mapping, since this
 such a hard task. As in product-product content-similarity, it is difficult to
 capture similarity using descriptions alone. It is not even clear that a mapping 
-necessarily exists between two seperately learned concept spaces. The concepts 
+necessarily exists between two seperately learned concept-spaces. The concepts 
 may represent fundamentally different things, which cannot be well mapped to 
 each other. We can measure the efficacy of the mapping by comparing it to a 
 couple of baselines. 
@@ -566,11 +578,11 @@ The first baseline is in fact an upper bound of sorts on the mapping. This
 baseline recommender is called the One Model Recommender. Unlike the other
 baselines, this recommender is not a valid one, as it cheats by using
 information from the unpartitioned graph. The One Model Recommender learns a
-latent concept space over the entire recommendation graph by allowing the random
+latent concept-space over the entire recommendation graph by allowing the random
 walkers to traverse it before it is partitioned. In every other respect, it is
 the same as the LSI Recommender. However, since products from both catalogues
-are represented in the same concept space, there is no need for a mapping
-between concept spaces.
+are represented in the same concept-space, there is no need for a mapping
+between concept-spaces.
 
 The second mapping-related baseline is the Random Mapper Recommender. As the
 name suggests, this recommender is identical to the LSI Recommender, except that
@@ -588,7 +600,7 @@ Normalization & 2-Precision & 2-Recall & 2-F1 Score \\ \hline\hline
 L1 normalize each column of matrix &&&\\ \hline
 L2 normalize each column of matrix &&&\\ \hline
 Orthogonalize matrix &&&\\ \hline
-Normalize products in concept space &&&\\ \hline
+Normalize products in concept-space &&&\\ \hline
 \end{tabular}
 \end{center}
 
