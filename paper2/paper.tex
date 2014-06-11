@@ -184,16 +184,17 @@ before partitioning (four in and four out in the original directed graph) and
 each edge is shared by two nodes, there are originally a total of approximately
 $\left(8 \times 3,500\right) / 2 = 14,000$ edges. This implies that there are
 $7,000$ withheld edges in the cut. For each predicted recommendation, we must
-choose two nodes, one from each of the two sets. Therefore we have $\left(1,750 \times
-1,750\right)/2 > 1 \times 10^6$ choices and only $7,000$ of them are correct. Choosing the
-correct edges is a formidable challenge to say the least. It is therefore worth
-asking: Are some prediction errors better or worse than others?
+choose two nodes, one from each of the two sets. Therefore we have $\left(1,750
+\times 1,750\right)/2 > 1 \times 10^6$ choices and only $7,000$ of them are
+correct. Choosing the correct edges is a formidable challenge to say the least.
+It is therefore worth asking: Are some prediction errors better or worse than
+others?
 
-The graph nature of our problem reveals that the answer to this question is
-yes. For instance, it is better to guess an edge that connects two items that
-are separated by two edges in the original graph than to connect two items that
-are separated by five edges. We therefore introduce the notion of {\em
-2-precision}, {\em 2-recall}, and {\em 2-}$F_1$ are defined as
+The graph nature of our problem reveals that the answer to this question is yes.
+For instance, it is better to guess an edge that connects two items that are
+separated by two edges in the original graph than to connect two items that are
+separated by five edges. We therefore introduce the notion of {\em 2-precision},
+{\em 2-recall}, and {\em 2-}$F_1$ are defined as
 
 \begin{align}
 \text{\em 2-precision} &= \left|\left\{(u,v) \in P | d_L(u,v) \leq 2
@@ -205,8 +206,8 @@ are separated by five edges. We therefore introduce the notion of {\em
 \end{align}
 where $P$ is the set of predicted edges, $L$ is the set of lost edges (i.e.
 those in the cut resulting from the partition), $d_L(u,v)$ is the shortest
-distance between nodes $u$ and $v$ in the original unpartitioned graph, and 
-$d_P(u,v)$ is the shortest distance between nodes $u$ and $v$ in the new graph 
+distance between nodes $u$ and $v$ in the original unpartitioned graph, and
+$d_P(u,v)$ is the shortest distance between nodes $u$ and $v$ in the new graph
 formed using the predicted edges in $P$.
 
 The following definitions will prove helpful. Let $G$ be the original
@@ -348,52 +349,114 @@ share the words ``striped'' and ``checkered'' and thus the two previously
 dissimilar shirts would now be considered more similar.
 
 \subsection*{\em LatentConceptRecommender}
-Although the $NeighborhoodRecommender$ alleviates some of the issues of 
-content-based similarity, it is still primarily based on the descriptions of
-products. Ideally, we would like to recommend products that are similar in more
-fundamental ways. If a dress is elegant and modern, we would like to recommend 
-another dress that is elegant and modern, even if those words are not explicitly
-in the descriptions of either. These types of underlying concepts can be 
-intangible and difficult to define. However, if we assume that the given
-recommendations are truly based on such latent concepts, we can attempt to learn 
-them by analyzing the graphs.
+Although the $NeighborhoodRecommender$ leverages the information contained in
+the recommendation graphs to some extent, it is still primarily based on product
+descriptions. Presumably, the graphs are derivative of a collaborative filtering
+scheme, and hence, reveal associations between products that are not evident
+from the language of their descriptions. For example, a dress's description
+might not capture if it is more conservative or more risque. Yet, this could be
+the salient feature it has in common with an associated recommendation.  These
+sort of abstract, perhaps ineffable, features can be essential to item-item
+relations. We must therefore ask whether we can more fully utilize the given
+graphical information to discover these latent features in order to choose
+better inter-catalogue associations.
 
-One common approach to learning latent semantic factors is to apply {\em
-Singular Value Decomposition} (SVD) to a matrix of user data, as in many 
-collaborative filtering methods [CITE]. This method requires a product-user
-matrix, where each column represents the products viewed in a user session.
-After SVD is applied to the matrix, the resulting three matrices are truncated
-to the number of latent concepts desired. The resulting left matrix becomes a
-product-concept matrix, where each row is a product represented in 
-{\em concept-space}
+A common approach to learning latent features is to apply matrix factorization
+techniques to user-item data, as in many CF methods \cite{Koren2009}. But,
+user-item data, a prerequisite for such techniques, in not available to us here.
+A key insight of the present work is that publicly available recommendation
+graphs, such as those found on Macy's website, can be used to simulate user-item
+data through the use of special random walks known as {\em Topic-Sensitive
+PageRank}, a technique typically associated with web search
+\cite{Haveliwala2002}.
 
-In this experiment, there is no such product-user matrix to apply SVD.
-However, since the recommendation graphs are constructed from user behavior,
-we can use them to simulate user sessions. To do this, we use a random walk 
-technique on the graph. We assume that the edges of a recommendation graph 
-indeed connect products that a user would co-view. Thus traversing the edges 
-of a graph is a reasonable simulation of a user session. For details on these
-random walks, see the section titled Random Walks in the Implementation section
-below.
+The idea is that a user with a preference for a particular product is more
+likely to also have a preference for one of its associated recommendations than
+another arbitrary product. We can simulate this with a random walker that, by
+construction has a preference for an item $A$, and therefore, begins her walk at
+that item on the recommendation graph. At each step in the walk, she is equally
+likely to visit any of the items that share an edge with the presently occupied
+item or stay at the present item. There is also a small chance at each step that
+the walker will teleport back to item $A$. In the language of Topic-Sensitive
+PageRank, item $A$ is the sole nonzero entry in the walker's personalization
+vector. We create our synthetic user-item data by performing such a random walk
+for each node in the graph. That is, each node has a random walk in which it is
+the sole nonzero entry in the walker's personalization vector. In this way, we
+simulate a user for each item in each graph partition.
 
-With simulated user data for each recommendation graph, we can apply SVD on the
-matrices from the two catalogues to learn the latent concepts for each product.
-We want to find the products from one catalogue that are most similar in latent
-concept-space to products in the other catalogue. However, since each user
-session/random walk includes products exclusively from one of the catalogues, we
-learn different latent spaces for each catalogue. Note that this would be an
-issue even if we had the actual user data used to construct the two
-recommendation graphs. The problem therefore becomes finding a mapping from one
-concept-space to the other. If this can be accomplished, we can represent each
-product of one catalogue in terms of concepts of the other catalogue and then
-find the nearest neighbors of that catalogue by distance in concept-space. 
+Constructing our random walk in this way provides an important benefit. In the
+context of the random walk, the recommendation graph may be considered a {\em
+discrete-time Markov chain}. By providing the walker a finite probability of
+staying at each item, our chain becomes {\em aperiodic}. And since our walker
+begins at $A$ and can only teleport to $A$, she is effectively confined to a
+strongly connected subgraph of the recommendation graph. This subgraph is
+therefore, by construction, {\em irreducible}.  Importantly, according to the
+{\em Fundamental Theorem of Markov Chains}, any finite, aperiodic, irreducible
+Markov chain has a unique stationary distribution \cite{Norris1998}.
 
-To map concepts from one catalogue to another, we must revisit
-content-similarity. In this case, we represent each concept (rather than each
+We may then construct a synthetic $N \times N$ user-item matrix $M$ with rows
+representing items and columns representing users, which are in fact the
+stationary distributions discovered from our random walks. This matrix has at
+least one notable advantage over most real user-item matrices---it is not
+sparse.  Rather, each synthetic user has a finite value associated with every
+item that is reachable from its origin item in the graph. Unlike the typical CF
+scenario, we may therefore employ SVD as our matrix factorization technique
+since our user-item matrix is virtually complete (i.e. nearly void of empty
+entries).  Using SVD, we factor our user-item matrix as
+\begin{align}
+M = U \Sigma V^T,
+\end{align}
+where the rows of the $N \times N$ matrix $U$ and the $N \times N$ matrix $V$
+are the items and users represented in an $N$-dimensional concept-space,
+respectively, and the $N$ diagonal entries of $\Sigma$ are the singular values
+associated with each concept.
+
+Having transformed our items into concept-space, we now discard all but the $k$
+leftmost columns of the matrix $U$. The idea is that these leftmost columns are
+the most significant eigenvectors of concept-space and capture most, if not all,
+of the relevant latent features. Meanwhile, the discarded columns are presumed
+to contain mostly noise. This rank-reduction process yields matrices that are
+typically written as
+\begin{align}
+M \approx U_k \Sigma_k V^T_k,
+\end{align}
+where the rows of $U_k$ and $V_k$ are the items and users represented in a
+$k$-dimensional concept-space, respectively.  Rank-reducing following the
+application of SVD in this way is a common technique used in information
+retrieval and is often referred to as {\em Latent Semantec Indexing} (LSI)
+\cite{Deerwester1990}.
+
+Using random walks to simulate user data, followed by the application of LSI, is
+indeed an effective way to encode information from a recommendation graph into a
+latent feature space. But what is the relationship between latent feature
+vectors derived from disconnected graph partitions? In principle, there is no
+guarantee of any relationship between such latent spaces in the same way that
+there is no guarantee of any relationship between two arbitrary, disconnected
+recommendation graphs. Nonetheless, our hypothesis is that a relationship
+between such latent spaces often will exist due to the effectiveness of the
+underlying CF techniques that generate the graphs to capture meaningful
+item-item associations. Put another way, we believe that the most fundamental
+latent dimensions along which products in a category such as Women's swimsuits
+vary will be common to many swimsuit catalogues. If this is indeed true, then it
+might be possible to learn a mapping between these latent spaces.
+
+If a mapping between the latent spaces associated with two catalogues were
+known, we could translate all items into a common space and then choose
+inter-catalogue edges between item pairs that are nearest to one another in
+concept-space. To learn these mapping, we must revisit the notion of content
+similarity. Once again, we utilize tf-idf vectors. This time, however, we weight
+an item's tf-idf vector by the elements in the item's latent feature vector. In
+this way, we construct a dense tf-idf vector for each concept for each graph
+partition. Formally, we say that each concept $j$ is represented by 
+\begin{align}
+EXPRESSION FOR A CONCEPT'S TF-IDF VECTOR
+\end{align}
+
+In this case, we represent each concept (rather than each
 product) as a vector of words. To represent a concept in terms of the
-vocabulary, we calculate the value of each word by summing the
-tf-idf of that word for each product $P$, weighted by the projection of $P$ on
-our concept in concept-space. That is:
+vocabulary, we calculate the value of each word by summing the tf-idf of that
+word for each product $P$, weighted by the projection of $P$ on our concept in
+concept-space. That is:
 
 \begin{align}
 C_w = \sum\limits_{P} \text{tfidf}(w)\times P_C
@@ -428,27 +491,28 @@ performance of this method.
 
 \subsection*{Random Walks}
 The first step of the LSI approach is to simulate user sessions by randomly
-walking the recommendation graphs. There are a few ways this could be implemented.
-One method is to randomly assign a random walker a starting node and then allow
-it to randomly walk the edges, with a probability of termination at each step.
-Running this many times is a straight-forward model of user sessions.
+walking the recommendation graphs. There are a few ways this could be
+implemented.  One method is to randomly assign a random walker a starting node
+and then allow it to randomly walk the edges, with a probability of termination
+at each step.  Running this many times is a straight-forward model of user
+sessions.
 
 To speed up the simulation, we calculate a series of product-specific stationary
-distributions. As with any random walk technique, we first interpret the 
-recommendation graph as a transition matrix. In this walk, for each product we create a
-product-specific transition matrix which has added teleportation edges back the
-that product. We calculate the stationary distributions of each of these
-matrices, one per product. We use these product-specific stationary
-distributions as our user sessions. Since there is only one user session per 
+distributions. As with any random walk technique, we first interpret the
+recommendation graph as a transition matrix. In this walk, for each product we
+create a product-specific transition matrix which has added teleportation edges
+back the that product. We calculate the stationary distributions of each of
+these matrices, one per product. We use these product-specific stationary
+distributions as our user sessions. Since there is only one user session per
 product, we have many fewer sessions than we would with a real dataset. However,
 each of these stationary distributions can be interpreted as an aggregation of
 an infinite number of random walkers starting at each node and travelling until
 a random termination time, as in the original model.
 
-This process requires a couple of parameters. The first is the number of steps used to
-approximate each product-specific statinary distribution. The second parameter
-is the likelihood of teleporting to the special product. For our purposes we use
-30 steps and a teleportation probability of 5\%.
+This process requires a couple of parameters. The first is the number of steps
+used to approximate each product-specific statinary distribution. The second
+parameter is the likelihood of teleporting to the special product. For our
+purposes we use 30 steps and a teleportation probability of 5\%.
 
 \subsection*{Singular Value Decomposition}
 Unlike Principal Compenent Analysis, standard LSI does not include any
@@ -706,6 +770,22 @@ Focus more on popular hubs model.
     ``Evaluation: From Precision, Recall and F-Measure to ROC, Informedness,
 Markedness \& Correlation.''
     \emph{Journal of Machine Learning Technologies} \textbf{2}, 37-63, 2011.
+
+\bibitem{Haveliwala2002}
+    Taher Haveliwala.
+    ``Topic-Sensitive PageRank.''
+    \emph{Proceedings of the Eleventh International World Wide Web Conference}
+(Honolulu, Hawaii) 2002.
+
+\bibitem{Norris1998}
+    James R. Norris.
+    \emph{Markov Chains}. Cambridge University Press, 1998.
+
+\bibitem{Deerwester1990}
+    Scott Deerwester, Susan T. Dumais, George W. Furnas, Thomas K. Landauer,
+Richard Harshman.
+    ``Indexing by Latent Semantex Analysis.''
+    \emph{American Society for Information Science} \textbf{41}, 391-407, 1990.
 
 \end{thebibliography}
 
