@@ -228,7 +228,7 @@ and recall are relevant metrics, relative performance as measured by {\em
 2-precision} and {\em 2-recall} better captures the effectiveness of these
 prediction algorithms.
 
-\section*{Algorithms}
+\section*{Recommender Algorithms}
 
 \subsection*{\em ContentBasedRecommender}
 The most straightforward approach to inter-retailer recommendations is a
@@ -256,7 +256,7 @@ represent each item as a sparse vector of tfidf values, which has a nonzero
 element for each term in its description.
 
 A key feature of tfidf that is useful here is how terms that appear in many item
-description are discounted via the idf factor. Conversely, rare terms will have
+descriptions are discounted via the idf factor. Conversely, rare terms will have
 larger tfidf values. We now define the $ContentSimilarity$ between items $A$ and
 $B$ as
 \begin{align}
@@ -291,53 +291,60 @@ memory). Furthermore, confining our experiments to individual categories reduces
 the impact of the quadratic time complexity. In our case, Macy's entire
 catalogue consists of over $60,000$ products, making a quadratic time algorithm
 challenging. However, the average category has about two thousand products,
-which is a significantly more manageable.
+which is significantly more manageable.
 
-\subsection*{Leveraging Recommendations}
-This $ContentBased Recommender$ is limited in a few ways. For one, it attempts
-to capture similarity between products by looking exclusively at the words in
-their descriptions. One issue here is that brands tend to use different 
-vocabularies to describe the their products. One may refer to a color as 
-``off-white'' while another calls the same color ``ivory.'' To the $ContentBased
-Recommender$, these words are as different as ``black'' and ``white.'' Another 
-issue is that the best recommendation for a product may not be the most similar
-product. For instance, a striped black-and-white button-up shirt could be 
-an excellent recommendation for a blue checkered button-up, even though the two 
-have ostensibly different descriptions.
+\subsection*{\em NeighborhoodRecommender}
+The $ContentBasedRecommender$ is limited in that it attempts to capture
+similarity between products by looking exclusively at the terms in their
+descriptions. One issue here is that brands tend to use different vocabularies
+to describe their products. One may refer to a color as ``off-white'' while
+another calls the same color ``ivory.'' To the $ContentBasedRecommender$ these
+terms are as different as ``black'' and ``white.'' Another issue is that the
+best recommendation for a product may not even be the most similar product. For
+instance, a striped black-and-white button-up shirt could be an excellent
+recommendation associated with a blue checkered button-up, even though the two
+products are clearly different and would presumably use signficantly different
+terms their descriptions.
 
-We can alleviate some of these issues by leveraging the recommendations we
-already have between products within the same catalogue. One approach is to 
-consider the {\em neighborhood} of each product, that is a product along 
-with each of its neighbors in the recommendation graph. With this, we create a
-new similarity function called $NeighborhoodSimilarity$. This function uses the 
-$ContentSimilarity$ function from before to compare every pair of products 
-between the two neighborhoods:
-
+We can begin to address these issues by leveraging the recommendations we
+already have between products within a single partition. One approach is to
+consider the {\em neighborhood} of each product, that is a product along with
+each of its immediate neighbors in the recommendation graph. With this, we
+create a new similarity function called $NeighborhoodSimilarity$. This function
+uses the $ContentSimilarity$ function from before to compare every pair of
+products between the two neighborhoods of a pair of products $A$ and $B$:
 \begin{align}
-NeighborhoodSimilarity(P_1, P_2) &= \sum\limits_{S\in
-Neigh(P_1)}\sum\limits_{T\in Neigh(P_2)}
+NeighborhoodSimilarity(A, B) = \sum\limits_{S\in
+Neigh(A)}\sum\limits_{T\in Neigh(B)}
 ContentSimilarity(S, T) 
 \end{align}
-where $Neigh(P)$ is the neighborhood of Product P. We use this similarity
-function to construct the $Neighborhood Recommender$, which is analgous to the
-$ContentBased Recommender$.
+where $Neigh(A)$ is the set of items that share edges with item $A$. We use this
+similarity function to construct the $NeighborhoodRecommender$, which is
+an extension of the $ContentBasedRecommender$. The algorithm is the same as
+before except now we choose a recommendation associated with items $A$ and $B$
+by maximnizing
+\begin{align}
+ContentSimilarity(A,B) + \eta \cdot NeighborhoodSimilarity(A, B),
+\end{align}
+where $\eta$ is a parameter. We find that $\eta = 0.1$ yields good results for
+this algorithm.
 
 Assuming that the edges of the recommendation graphs are in fact good
-recommendations, this approach can help both of the issues brought up with the
-$ContentBased Recommender$. Since a neighborhood has many products, each 
-describing themselves using potentially different vocabularies, there is a 
-higher likelihood that the neighborhood contains multiple synonyms for the
-underlying concept that describes their similarity. This decreases the
-likelihood of false negatives due to different vocabularies. Furthermore,
-the recommendation graphs capture some of the user behavior that cannot be
-expressed in product descriptions. Re-examining the button-up shirts example, 
-the neighborhood of a striped shirt may include checkered shirts and vise-versa.
-In this case, the two neighborhoods would share the words ``striped'' and 
-``checkered'' and thus the two previously dissimilar shirts would now correctly
-be deemed similar.
+recommendations, this approach can help both of the shortcomings of
+$ContentBasedRecommender$ previously mentioned. Since a neighborhood includes
+several items, each with descriptions that potentially use different
+vocabularies, there is a higher likelihood that the neighborhood contains
+multiple synonyms for the underlying concept that captures their similarity. At
+the same time, this decreases the likelihood of false negatives due to different
+vocabularies. Presumably, a retailer's recommendation graph include information
+from user behavior that is not expressed in product descriptions. Re-examining
+the button-up shirts example, the neighborhood of a striped shirt may include
+checkered shirts and vice versa.  In this case, the two neighborhoods might
+share the words ``striped'' and ``checkered'' and thus the two previously
+dissimilar shirts would now be considered more similar.
 
-\subsection*{Latent Concepts}
-Although the $Neighborhood Recommender$ alleviates some of the issues of 
+\subsection*{\em LatentConceptRecommender}
+Although the $NeighborhoodRecommender$ alleviates some of the issues of 
 content-based similarity, it is still primarily based on the descriptions of
 products. Ideally, we would like to recommend products that are similar in more
 fundamental ways. If a dress is elegant and modern, we would like to recommend 
@@ -387,9 +394,9 @@ our concept in concept-space. That is:
 \begin{align}
 C_w = \sum\limits_{P} \text{tfidf}(w)\times P_C
 \end{align}
-where $C_w$ is the value of concept $C$'s representation in dimension $w$, the sum 
-is over all products $P$ in the catalgoue, tfidf($w$) is the tf-idf score for
-word $w$, and $P_C$ is the projection of $P$ on concpet $C$'s axis in
+where $C_w$ is the value of concept $C$'s representation in dimension $w$, the
+sum is over all products $P$ in the catalgoue, tfidf($w$) is the tf-idf score
+for word $w$, and $P_C$ is the projection of $P$ on concpet $C$'s axis in
 concept-space.
 
 Now for a concept such as {\em formal}, the words ``sophisticated'' or
@@ -398,17 +405,17 @@ would also have a large amount of the {\em formal} concept in their
 concept-representations. Using these vector representation, we calculate the
 inner product between two concepts to find how similar they are to eachother.
 This can be used to create a mapping from one set of concepts to another as it
-captures the relative breakdown of a concept from one space to the concepts in the
-other.
+captures the relative breakdown of a concept from one space to the concepts in
+the other.
 
-In all, the latent-concept approach consists of four phases. First, we simulate user
-sessions by randomly walking the recommendation graphs. Second, we learn concept
-spaces for products in each catalogue via SVD. Third, we find a mapping between
-concept-spaces using the aggregated descriptions of all products. And lastly, we
-find the nearest neighbors of each product in the concept-space of the other 
-catalogue concept-space. These nearest neighbors become the predicted
+In all, the latent-concept approach consists of four phases. First, we simulate
+user sessions by randomly walking the recommendation graphs. Second, we learn
+concept spaces for products in each catalogue via SVD. Third, we find a mapping
+between concept-spaces using the aggregated descriptions of all products. And
+lastly, we find the nearest neighbors of each product in the concept-space of
+the other catalogue concept-space. These nearest neighbors become the predicted
 recommendations between products across the two catalogues. We call this method
-the $LatentConcept Recommender$
+the $LatentConceptRecommender$
 
 \section*{Implementation}
 Let us dig deeper into the details of the LSI approach described above. There 
