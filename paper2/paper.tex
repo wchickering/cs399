@@ -237,16 +237,16 @@ are recommended for each other. Unfortunately, for this problem there are no
 user data between the two unconnected catalogues.
 
 \subsection*{Content Based Similarity}
-A simple approach is to recommend products that have similar content. Each product
-has includes a short description which we can use to construct a textual 
-content-based similarity function. To do this, we represent each
-product as a vector of tf-idf values for each word in its descriptions. By using
-tf-idf, we reduce the relevance of frequent words and boost that of rare ones.
-This emphasizes the words that better explain this product versus all the other 
-ones in the catalogue. The vector representations are the length of the
-vocabulary. They are very sparse as most words do not appear in any given
-product description. With this tf-idf represenation, we can define the 
-$ContentSimiarity$ functoin as follows:
+A simple approach that does not rely on user data is to recommend products that
+have similar content. Each product page includes a short description which we 
+can use to construct a textual content-based similarity function. To do this, 
+we represent each product as a vector of tf-idf values for each word in its 
+description. By using tf-idf, we reduce the relevance of frequent words and 
+boost that of rare ones. This emphasizes the words that better represent this 
+product versus all the other ones in the catalogue. The vector representations 
+are the length of the vocabulary. These are sparse vectors as most words do 
+not appear in any given product description. With this tf-idf represenation,
+we can define the $ContentSimiarity$ functoin as follows:
 
 \begin{align}
 ContentSimilarity(P_1, P_2) &= v_1 \cdot v_2
@@ -255,64 +255,74 @@ where $P_1$ and $P_2$ are the products being compared and $v_1$ and $v_2$ are
 their representations as tf-idf vectors.
 
 This similarity function yields the following recommendation algorithm which we
-call the $ContentBased Recommender$: For each
-product, scan through the products in the opposite catalogue and calculate the
-content-based similarity score with each. Predict recommendations between this
-product and each of the top k most similar products in the other catalogue.
+call the $ContentBased Recommender$: For each product, calculate its
+$ContentSimilarity$ score with each of the products in the other catalogue.
+Predict recommendations between this product and the top 2 most similar products 
+in the other catalogue.  
 
-While this is a quadric-time operation, it can be sped up using matrix
-multiplication. Furthermore, the division into different categories reduces the
-impact of the quadratic effect. In our case, Macy's entire catalogue consists
-of over $60,000$ products, making a quadratic time algorithm very slow.
-However, the average category has only one or two thousand products, which is 
-significantly more manageable size for quadratic operations.
+While this is a quadric-time operation, it can be executed efficiently using 
+matrix multiplication. Furthermore, the division into different categories 
+reduces the impact of the quadratic effect. In our case, the entire Macy's 
+catalogue consists of over $60,000$ products, making a quadratic time algorithm 
+slow. However, the average category has only one to two thousand products, which
+is a significantly more manageable size for quadratic operations.
 
 \subsection*{Leveraging Recommendations}
 This $ContentBased Recommender$ is limited in a few ways. For one, it attempts
-to capture similarity between products by looking exclusively at the words used
-to describe them. One limitation here is that different brands often use
-different vocabularies to describe the same thing, such as ``off-white'' versus
-``ivory.'' Another issue is that the best recommendation for a product is often
-more subtle than simply the most similar other product. For instance, a striped
-black-and-white button-up shirt may be an excellent recommendation for a blue
-checkered button-up, even though the two have ostensibly different patterns and
-colors. 
+to capture similarity between products by looking exclusively at the words in
+their descriptions. One issue here is that brands tend to use different 
+vocabularies to describe the their products. One may refer to a color as 
+``off-white'' while another calls the same color ``ivory.'' To the $ContentBased
+Recommender$, these words are as different as ``black'' and ``white.'' Another 
+issue is that the best recommendation for a product may not be the most similar
+other product. For instance, a striped black-and-white button-up shirt could be 
+an excellent recommendation for a blue checkered button-up, even though the two 
+have ostensibly different descriptions.
 
 We can alleviate some of these issues by leveraging the recommendations we
-already have between products in the same catalogue. One approach is to consider
-the neighborhood of each product in their recommender graphs, that is a product
-along with each of the products it is recommended with in its own catalogue.
-When comparing two products in different catalogues, we use the same tf-idf
-similarity function from before to compare each pair of products between the two
-neighborhoods. Mathematically, we construct the similarity function
-NeighborhoodSimilarity defined as:
+already have between products within the same catalogue. One approach is to 
+consider the {\emph neighborhood} of each product, that is that product along 
+with each of its neighbors in the recommendation graph. With this we create a
+new similarity function, $NeighborhoodSimilarity$. This function uses the 
+$ContentSimilarity$ function from before to compare every pair of products 
+between the two neighborhoods:
 
-NeighborhoodSimilarity definition...
+\begin{align}
+NeighborhoodSimilarity(P_1, P_2) &= \sum\limits_{S\in
+Neigh(P_1)}\sum\limits_{T\in Neigh(P_2)}
+ContentSimilarity(S, T) 
+\end{align}
+where $Neigh(P)$ is the neighborhood of Product P. We use this similarity
+function to construct the $Neighborhood Recommender$, which is analgous to the
+$ContentBased Recommender$.
 
-Assuming the recommendations are good within each of the catalogues, this
-approach can help both of the issues brought up with the simple content-based
-recommender. Since a neighborhood has many products, each describing themselves
-with potentially different vocabularies, there is a higher likelihood that the
-neighborhood contains multiple synonyms and thus decreases the potential of
-missing due to different vocabularies. Furthermore, the recommender graphs
-capture some of the user behavior not expressed in product descriptions.
-Re-examining the button-up shirts example, the neighborhood of a striped shirt may
-include checkered shirts and vise-versa. In this case, the two neighborhoods
-would share the words ``striped'' and ``checkered'' and thus the two previously
-dissimilar shirts would now be considered similar.
+Assuming that the edges of the recommendation graphs are in fact good
+recommendations, this approach can help both of the issues brought up with the
+$ContentBased Recommender$. Since a neighborhood has many products, each 
+describing themselves using potentially different vocabularies, there is a 
+higher likelihood that the neighborhood contains multiple synonyms for the
+underlying concept that describes their similarity. This decreases the
+likelihood of false negatives due to different vocabularies. Furthermore,
+the recommendation graphs capture some of the user behavior that cannot be
+expressed in product descriptions. Re-examining the button-up shirts example, 
+the neighborhood of a striped shirt may include checkered shirts and vise-versa.
+In this case, the two neighborhoods would share the words ``striped'' and 
+``checkered'' and thus the two previously dissimilar shirts would now correctly
+be deemed similar.
 
 \subsection*{Latent Concepts}
-Although the NeighborhoodSimilarity method alleviates some of the issues of
-content-similarity, it is still fundamentally based on the descriptions of
+Although the $Neighborhood Recommender$ alleviates some of the issues of 
+content-based similarity, it is still fundamentally based on the descriptions of
 products. Ideally, we would like to recommend products that are similar in more
-fundamental ways than their descriptions. If a dress is elegant and modern, we
-want to recommend another dress that is elegant and modern, even if those words
-are not explicitly in the descriptions of either. These types of latent concepts
-can be intangible and difficult to define. However, if we assume that the given
-recommendations are truly based on these underlying concepts, we can attempt to 
-learn the latent concepts by analyzing the graphs.
+fundamental ways. If a dress is elegant and modern, we would like to recommend 
+another dress that is elegant and modern, even if those words are not explicitly
+in the descriptions of either. These types of underlying concepts can be 
+intangible and difficult to define. However, if we assume that the given
+recommendations are truly based on such latent concepts, we can attempt to learn 
+them by analyzing the graphs.
 
-One approach to learning latent concepts is Latent Semantic Indexing or LSI. In
+One common approach to learning latent semantic factors is to apply Singular Value
+Decomposition to . In
 traditional LSI, used for Natural Language Processing, concepts are learned over 
 a dataset consists of documents, each containing terms. Singular Value 
 Decomposition (SVD) is applied to the term-document matrix and the resulting 
@@ -324,10 +334,10 @@ We apply the same idea to the product catalogues in order to learn the latent
 concepts of each product. Analogous to documents containing terms, we look at
 user sessions which contain the products viewed by that user. Although we do not
 have actual user data, we can simulate user sessions by traversing the
-recommender graphs. 
+recommendation graphs. 
 
 To simulate user sessions, we use a random walk technique on the graph. We
-assume that the edges of a recommender graph indeed connect products that a user
+assume that the edges of a recommendation graph indeed connect products that a user
 would co-view. Thus traversing the edges of a graph is a reasonable simulation
 of a user session. For details on these random walks, see the section titled
 Random Walks in the Implementation section below.
@@ -356,7 +366,7 @@ are, in a relative sense. This can be used to create a mapping from one set of
 concepts to another.
 
 In all, the LSI approach consists of four phases. First we simulate user
-sessions by randomly walking the recommender graphs. Second we learn concept
+sessions by randomly walking the recommendation graphs. Second we learn concept
 spaces for products in each catalogue via SVD. Third we find a mapping between
 concept spaces. And lastly we find the nearest neighbors of each product in the
 other catalogue's concept space. These nearest neighbors are the predicted
@@ -369,14 +379,14 @@ performance of this method.
 
 \subsection*{Random Walks}
 The first step of the LSI approach is to simulate user sessions by randomly
-walking the recommender graphs. There are a few ways this could be implemented.
+walking the recommendation graphs. There are a few ways this could be implemented.
 One method is to randomly assign a random walker a starting node and then allow
 it to randomly walk the edges, with a probability of termination at each step.
 Running this many times is a straight-forward model of user sessions.
 
 To speed up the simulation, we calculate a series of product-specific stationary
 distributions. As with any random walk technique, we first interpret the 
-recommender graph as a transition matrix. In this walk, for each product we create a
+recommendation graph as a transition matrix. In this walk, for each product we create a
 product-specific transition matrix which has added teleportation edges back the
 that product. We calculate the stationary distributions of each of these
 matrices, one per product. We use these product-specific stationary
@@ -468,7 +478,7 @@ explicit user data. However, we can use the recommendation graphs to model the
 popularity of each item. The assumption is that a retailer will recommend
 popular products more frequently than unpopular ones.
 
-We imagine that recommender graphs are constructed as follows: A retailer first
+We imagine that recommendation graphs are constructed as follows: A retailer first
 builds a similarity matrix, using a collaborative filtering method. In this
 matrix, all similarity relationships are symmetric. Next, the retailer modifies
 the values of the matrix to include popularity. As a simple model, we say that
@@ -476,19 +486,19 @@ the popularity-modified similarity score from Product i to Proudct j is the
 simple similarity score at (i, j) multiplied by the popularity of Product j. In
 this way, more popular items are more frequently recommended. 
 
-We see signs of this in the undirected recommender graphs. Although each product
+We see signs of this in the undirected recommendation graphs. Although each product
 has at most four outgoing recommendations on macys.com, we see that some
 products have over one hundred incoming recommendations. With this in mind, we
 approximate the popularity of each product as the logarithm of the degree of
-that product in its undirected recommender graph. We choose to model it as the
+that product in its undirected recommendation graph. We choose to model it as the
 logarithm because a few of the products tend to have degrees in the hundreds.
 Without some way of scaling back these popularities, these few very popular
 products tend to take over all recommendations.
 
 [Graph of popularity]
 
-Assuming this model of recommender graph construction, which separates similarity
-from popularity, we seek to isolate similarity from the recommender graph. Since
+Assuming this model of recommendation graph construction, which separates similarity
+from popularity, we seek to isolate similarity from the recommendation graph. Since
 popular products were promoted for popularity, we demote them when walking the
 graphs to create user sessions. In practice, we divide the likelihood of walking
 an edge by the popularity of the product on the other side of that edge. Thus
@@ -500,10 +510,10 @@ before deeming the nearest neighbors to be the best recommendations, we divide
 the distance to each product by its popularity. Since we model distance in 
 concept space to be inversely proportional to similarity, this reincorporation
 of popularity is analagous to multiplying similarity by popularity, as done in
-the original construction of the recommender graph.
+the original construction of the recommendation graph.
 
 A final way in which we incorporate popularity is in the number of
-recommendations alotted per product. Since we model the recommender graph as an
+recommendations alotted per product. Since we model the recommendation graph as an
 undirected graph, different nodes have different degrees. A product that is
 popular within its catalogue is likely to be more popular across catalogues as
 well. Therefore, we allow popular products to have more recommendations across
@@ -524,7 +534,7 @@ doing anything intelligent in our choices of recommendation.
 
 A more impressive baseline is that of the Simple Content-Based approach, 
 outlined earlier in the paper. This recommender uses information exclusively
-from the descriptions of the products and ignores the recommender graphs 
+from the descriptions of the products and ignores the recommendation graphs 
 entirely. A third, somewhat similar baseline comes from the Neighborhood 
 Content-based variant, which looks at the content similarity between 
 neighborhoods of products.
@@ -556,7 +566,7 @@ The first baseline is in fact an upper bound of sorts on the mapping. This
 baseline recommender is called the One Model Recommender. Unlike the other
 baselines, this recommender is not a valid one, as it cheats by using
 information from the unpartitioned graph. The One Model Recommender learns a
-latent concept space over the entire recommender graph by allowing the random
+latent concept space over the entire recommendation graph by allowing the random
 walkers to traverse it before it is partitioned. In every other respect, it is
 the same as the LSI Recommender. However, since products from both catalogues
 are represented in the same concept space, there is no need for a mapping
