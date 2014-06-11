@@ -263,11 +263,19 @@ element for each term in its description.
 A key feature of tf-idf is that terms appearing in many item descriptions are
 discounted via the idf factor. Conversely, rare terms will have larger tf-idf
 values. These features help capture the most relevant words in each description.
-We now define the $ContentSimilarity$ between items $A$ and $B$ as
+
+We can further improve our content similarity function by considering the
+bigrams that appear in item descriptions. To exploit this fact, we construct
+another tf-idf vector for each item, this one corresponding to the observed
+bigrams. Combining these tf-idf vectors, we define the $ContentSimilarity$
+between items $A$ and $B$ as
 \begin{align}
-ContentSimilarity(A,B) = \vec{\tau}(A) \cdot \vec{\tau}(B)
+ContentSimilarity(A,B) = \vec{\tau}_1(A) \cdot \vec{\tau}_1(B) + \beta \cdot
+\vec{\tau}_2(A) \cdot \vec{\tau}_2(B),
 \end{align}
-where $\vec{\tau}(A)$ is the tf-idf vector representation of item $A$.
+where $\vec{\tau}_1(A)$ is the unigram tf-idf vector and $\vec{\tau}_2(A)$ is
+the bigram tf-idf vector representations of item $A$, and $\beta$ is a
+parameter. We find that that $\beta=0.3$ works well for our data.
 
 Using this content-based similarity function, we construct the following
 inter-catalogue recommendation algorithm, which we call the $ContentBased
@@ -360,6 +368,7 @@ relations. We must therefore ask whether we can more fully utilize the given
 graphical information to discover these latent features in order to choose
 better inter-catalogue associations.
 
+\subsubsection*{Simulating User Data}
 A common approach to learning latent features is to apply matrix factorization
 techniques to user-item data, as in many CF methods \cite{Koren2009}. But,
 user-item data, a prerequisite for such techniques, in not available to us here.
@@ -375,13 +384,13 @@ another arbitrary product. We can simulate this with a random walker that, by
 construction has a preference for an item $A$, and therefore, begins her walk at
 that item on the recommendation graph. At each step in the walk, she is equally
 likely to visit any of the items that share an edge with the presently occupied
-item or stay at the present item. There is also a small chance at each step that
-the walker will teleport back to item $A$. In the language of Topic-Sensitive
-PageRank, item $A$ is the sole nonzero entry in the walker's personalization
-vector. We create our synthetic user-item data by performing such a random walk
-for each node in the graph. That is, each node has a random walk in which it is
-the sole nonzero entry in the walker's personalization vector. In this way, we
-simulate a user for each item in each graph partition.
+item or stay at the present item.  There is also a small chance at each step
+that the walker will teleport back to item $A$. In the language of
+Topic-Sensitive PageRank, item $A$ is the sole nonzero entry in the walker's
+personalization vector. We create our synthetic user-item data by performing
+such a random walk for each node in the graph. That is, each node has a random
+walk in which it is the sole nonzero entry in the walker's personalization
+vector. In this way, we simulate a user for each item in each graph partition.
 
 Constructing our random walk in this way provides an important benefit. In the
 context of the random walk, the recommendation graph may be considered a {\em
@@ -391,9 +400,14 @@ begins at $A$ and can only teleport to $A$, she is effectively confined to a
 strongly connected subgraph of the recommendation graph. This subgraph is
 therefore, by construction, {\em irreducible}.  Importantly, according to the
 {\em Fundamental Theorem of Markov Chains}, any finite, aperiodic, irreducible
-Markov chain has a unique stationary distribution \cite{Norris1998}.
+Markov chain has a unique stationary distribution \cite{Norris1998}. For our
+data, we find that 30 steps with a 5\% probability of teleporting back to the
+origin item yields a good approximation of the true stationary distribution. We
+then interpret the distribution associated with each item as the preference data
+assoicated with a particular user.
 
-We may then construct a synthetic $N \times N$ user-item matrix $M$ with rows
+\subsubsection*{Extracting Latent Features}
+We may now construct a synthetic $N \times N$ user-item matrix $M$ with rows
 representing items and columns representing users, which are in fact the
 stationary distributions discovered from our random walks. This matrix has at
 least one notable advantage over most real user-item matrices---it is not
@@ -420,11 +434,14 @@ typically written as
 M \approx U_k \Sigma_k V^T_k,
 \end{align}
 where the rows of $U_k$ and $V_k$ are the items and users represented in a
-$k$-dimensional concept space, respectively.  Rank-reducing following the
-application of SVD in this way is a common technique used in information
-retrieval and is often referred to as {\em Latent Semantec Indexing} (LSI)
-\cite{Deerwester1990}.
+$k$-dimensional concept space, respectively. For our data, we find that $k=16$
+yields good results across all categories, striking a balance between
+information loss and the tractability of mapping concept spaces (see below).
+Rank-reducing following the application of SVD in this way is a common technique
+used in information retrieval and is often referred to as {\em Latent Semantec
+Indexing} (LSI) \cite{Deerwester1990}.
 
+\subsubsection*{Concept Space Mapping}
 Using random walks to simulate user data, followed by the application of LSI, is
 indeed an effective way to encode information from a recommendation graph into a
 latent feature space. But what is the relationship between latent feature
@@ -452,10 +469,35 @@ a concept $j$ of a catalogue $C$ is represented by the super-tf-idf vector
 \vec{s}(j,C) = \sum_{i \in C}{v(i)_j \cdot \vec{\tau}(i)},
 \end{align}
 where $v(i)_j$ is the $j$\textsuperscript{th} component of item $i$'s latent
-feature vector. These super-tf-idf vectors act as a proxy for the concept. We
-approximate the mapping between two concept spaces by taking inner products of
-super-tf-idf vectors. The details of this mapping process are provided in a
-subsequent section.
+feature vector. Note that since the components $v(i)_j$ may be positive or
+negative so too can the elements of a concept's super-tf-idf vector, in
+constrast to the elements of an individual item's tf-idf vector which are
+necessarily greater than or equal to zero. Also note that we compute both
+$\vec{s}_1$ and $\vec{s}_2$, which correpond to unigram and bigram super-tf-idf
+vectors, respectively, for each concept. These super-tf-idf vectors then act as
+proxies for the concept.
+
+With these proxy representations of the concepts for the concept spaces of two
+catalogues $C_1$ and $C_2$, we construct a matrix $A$ of inner-products of
+super-tf-idf vectors.  Specifically, the matrix elements of $A$ are given by
+\begin{align}
+A_{ij}(C_1,C_2) = \vec{s}_1(i,C_1) \cdot \vec{s}_1(j,C_2) + \beta \cdot
+\vec{s}_2(i,C_1) \cdot \vec{s}_2(j,C_2),
+\end{align}
+where $i$ is a concept from $C_1$ and $j$ is a concept from $C_2$ and $\beta$ is
+the same parameters as before (again, we find $\beta=0.3$ works well).  We may
+now use this matrix to transform the vector representation of an item in one
+concept space into a vector representation in another concept space.
+
+It is important to note that the transformation matrix $A$ is not orthogonal, and
+therefore, does not preserve vector norms. We address this issue by normalizing
+all feature vectors, both foreign and domestic, in the concept space following
+the transformation. This radially projects all items onto the surface of sphere
+within the 16-dimensional concept space. Now when ranking an item's neighbors by
+distance, we are actually ranking neighbors by angular separation. That is, we
+are ranking neighbors by their cosine similarity in concept space. After
+experimenting with various normalization schemes we find that this approach
+works best.
 
 Together, these steps comprise the $LatentFeatureRecommender$. First, we
 simulate user sessions by randomly walking the recommendation graphs. Second, we
@@ -466,162 +508,56 @@ catalogue within the concept space of another catalogue. These nearest neighbors
 are then the predicted recommendations between products across the two
 catalogues.
 
-%Now for a concept such as {\em formalness}, the words ``sophisticated'' or
-%``classy'' may have high value since products with those descriptive words would
-%also have a large amount of the {\em formalness} concept in their latent feature
-%vectors. 
+\subsubsection*{Popularity}
+The $LatentFeatureRecommender$ can be significantly improved by incorporating
+the notion of item {\em popularity}. The idea is that a more popular item is
+more likely to appear as a recommendation independent of how similar it is.  We
+see signs of this in the undirected recommendation graphs from www.macys.com.
+Although each product has at most four outgoing recommendations on its details
+page, we see that some products have over one hundred incoming recommendations.
+But how might we define {\em popularity}? A reasonable definition would
+introduce a quantity that is correlated with the number of users that indicate a
+preference for an item. Like all user data, this is not publicly available
+information.  Once again, however, we can leverage the recommendation graph to
+infer an approximate popularity metric for each item.
 
-\section*{Implementation}
-Let us dig deeper into the details of the LSI approach described above. There 
-are a number of implementation decisions that, in all, dramatically affect the
-performance of this method.
+We define item popularity as
+\begin{align}
+\rho(A) = \mathrm{log}(1 + \mathrm{deg}(A)),
+\end{align}
+where $\mathrm{deg}(A)$ is the degree of the item $A$ within its recommendation
+graph.  We find this quanity to be useful in improving the
+$LatentFeatureRecommender$ in several ways.
 
-\subsection*{Random Walks}
-The first step of the LSI approach is to simulate user sessions by randomly
-walking the recommendation graphs. There are a few ways this could be
-implemented.  One method is to randomly assign a random walker a starting node
-and then allow it to randomly walk the edges, with a probability of termination
-at each step.  Running this many times is a straight-forward model of user
-sessions.
+We begin with an attempt to seprate the notion of item similarity from that of
+item popularity. The idea that more popular items are more likely to be
+recommended than less popular items motivates an alternative mode for conducting
+our random walks over a recommendation graph in order to better isolate item
+similarity. We do this by adjusting the probability of transitioning to an item
+on the graph by making it inversely proportional to that item's popularity
+$\rho$. Stationary distributions learned from these alternative random walks
+better reflect item-item similarity. We find that removing item popularity from
+our simulated user data results in better success when mapping between the
+derived concept spaces (as evidenced by the improved precision and recall
+discussed in the next section).
 
-To speed up the simulation, we calculate a series of product-specific stationary
-distributions. As with any random walk technique, we first interpret the
-recommendation graph as a transition matrix. In this walk, for each product we
-create a product-specific transition matrix which has added teleportation edges
-back the that product. We calculate the stationary distributions of each of
-these matrices, one per product. We use these product-specific stationary
-distributions as our user sessions. Since there is only one user session per
-product, we have many fewer sessions than we would with a real dataset. However,
-each of these stationary distributions can be interpreted as an aggregation of
-an infinite number of random walkers starting at each node and travelling until
-a random termination time, as in the original model.
+Next, we reincorporate popularity by modifying how we search for nearest
+neighbors in concept space. Instead of simply ranking neighbors by distance, we
+now rank by distance divided by $\rho$.  In this context, having defined
+popularity as the logorithm of node degree reduces the liklihood that one or two
+very popular items will always appear as the best recommendations when using
+this weighted ranking policy. 
 
-This process requires a couple of parameters. The first is the number of steps
-used to approximate each product-specific statinary distribution. The second
-parameter is the likelihood of teleporting to the special product. For our
-purposes we use 30 steps and a teleportation probability of 5\%.
+The third way in which popularity is used is determining the number
+recommendations alotted per product. We assume that a popular product in one
+catalogue is likely to be a popular product in another catalogue. Specifically,
+the number of predicted inter-catalogue recommendations made per item is
+made directly proportional to the item's value of $\rho$.
 
-\subsection*{Singular Value Decomposition}
-Unlike Principal Compenent Analysis, standard LSI does not include any
-preprocessing of the data, such as subtracting the mean from each column of the
-product-session matrix. A major reason for this is that LSI is typically applied
-to natural language processing problems, where the rows are terms, and there is
-one term per word in the vocabulary. This otherwise sparse matrix becomes dense
-if the mean is subtracted, making many NLP datasets untractable to work with. 
-Our datast, on the other hand, has significantly fewer rows and columns and is
-already dense. Therefore, there is little added cost to subtracting the
-means. We include this preprocessing step and find that we get better results
-because of it.
-
-Another design decision is in the size of the truncation of the matrices learned
-from SVD. This number dictates the number of latent concepts learned for LSI.
-Too few concepts fail to capture enough detail to make accurate representations
-of each product. Too many make mapping between concepts challenging. We found a
-good balance at 16 concepts. 
-
-[Graphs of concepts]
-
-\subsection*{Concept Mapping}
-A tricky operation of this procedure is the concept mapping. We attempt to find
-the best linear transformation from one concept space to the other. We do this
-by representing each concept as a vector of words in the vocabulary, each
-weighted with how well it represents the concept. We construct this by weighing
-the tf-idf of each word in a product's description by how well that word
-represents the concept. Note that products can have a positive or negative value
-for each concept, thus the word representation of concpets are also positive and
-negative. 
-
-With these concept representations, we construct an innner-product matrix. The
-value of a cell (i, j) in the matrix is the dot product of concept i in the
-first space with concept j in the second. The columns and rows of the resulting
-matrix represent the relative similarity of the descriptive words between two
-concepts.  But the scale of this matrix can be very large. If the inner-product
-matrix is used without any normalization as the linear transformation between
-the concept spaces, the scale of the transformed products will be inconsistent
-with those originally in that space. 
-
-One way to normalize is to normalize each column of the inner-product matrix by
-the L1 norm. This preserves the L1 norm of products after the transformation,
-but does not preserve the L2 norm. Similarly, we can normalize the columns by
-the L2 norm. Neither of these methods preserve the L2 norm, which would be ideal
-as we find the nearest neighbors in the other concept space by their L2
-distance.
-
-Another approach is to orthogonalize the inner-product matrix. That is, find the
-orthogonal matrix nearest to the inner-product matrix. Nearness is defined by
-the NORM FUNCTION on the difference of the two matrices. This orthogonal matrix
-does perserve the L2 norm of the vectors it transforms, however the
-transformation is an approximation of the ideal inner-product matrix and can
-distort the relative mapping from one concept to the others.
-
-A third approach to normalizing aims to preserve the angle of the inner-product
-transformation. For this approach, we remove the issue of scale by normalizing
-all products in the mapped-to space to be unit lenght. Then, after transforming
-the products from the other catalogue, we normmalize them as well. Thus the
-scales for both sets of products are the same and the angles of the
-inner-product transformation are preserved, at the expense of discarding the
-norms of all products in their product spaces. This is equivalent to calculating
-the cosine similarity between products without any normalization, as cosine
-similarity is indeifferent to scale. We find that this method of normalization
-performs the best.
-
-Further gains can be seen if we consider bigrams in the description as well as
-the unigrams. Here, we treat bigrams as a separate set dimensions to represent
-each concept. These are included in the inner product between two concepts,
-weighted compared to the unigrams by a parameter $\beta$. $\beta = 0.3$ improves the
-performance of the concept mapping.
-
-\subsection*{Popularity}
-The most effective addition to the LSI procedure is incorporating the popularity
-of products. We do not know a priori how popular an item is as we do not have
-explicit user data. However, we can use the recommendation graphs to model the
-popularity of each item. The assumption is that a retailer will recommend
-popular products more frequently than unpopular ones.
-
-We imagine that recommendation graphs are constructed as follows: A retailer first
-builds a similarity matrix, using a collaborative filtering method. In this
-matrix, all similarity relationships are symmetric. Next, the retailer modifies
-the values of the matrix to include popularity. As a simple model, we say that
-the popularity-modified similarity score from Product i to Proudct j is the
-simple similarity score at (i, j) multiplied by the popularity of Product j. In
-this way, more popular items are more frequently recommended. 
-
-We see signs of this in the undirected recommendation graphs. Although each product
-has at most four outgoing recommendations on macys.com, we see that some
-products have over one hundred incoming recommendations. With this in mind, we
-approximate the popularity of each product as the logarithm of the degree of
-that product in its undirected recommendation graph. We choose to model it as the
-logarithm because a few of the products tend to have degrees in the hundreds.
-Without some way of scaling back these popularities, these few very popular
-products tend to take over all recommendations.
-
-[Graph of popularity]
-
-Assuming this model of recommendation graph construction, which separates similarity
-from popularity, we seek to isolate similarity from the recommendation graph. Since
-popular products were promoted for popularity, we demote them when walking the
-graphs to create user sessions. In practice, we divide the likelihood of walking
-an edge by the popularity of the product on the other side of that edge. Thus
-the concepts learned on that matrix better represent products independent of
-popularity. 
-
-Proceeding as before, we find the nearest products in concept space. However,
-before deeming the nearest neighbors to be the best recommendations, we divide
-the distance to each product by its popularity. Since we model distance in 
-concept space to be inversely proportional to similarity, this reincorporation
-of popularity is analagous to multiplying similarity by popularity, as done in
-the original construction of the recommendation graph.
-
-A final way in which we incorporate popularity is in the number of
-recommendations alotted per product. Since we model the recommendation graph as an
-undirected graph, different nodes have different degrees. A product that is
-popular within its catalogue is likely to be more popular across catalogues as
-well. Therefore, we allow popular products to have more recommendations across
-the two catalogues, proportional to their popularity.
-
-In all, these popularity additions significantly boost performance in the
-experiment. The results of this, along with the other modifications outlined in
-this section, can be seen in the following section on performance.
+In all, these popularity additions significantly boost the performance of the
+\linebreak $LatentFeatureRecommender$. The results of this, along with
+comparisons to the other inter-catalogue  recommeder algorithms described in
+this section, are provided in the following section.
 
 \section*{Performance}
 \subsection*{Baselines}
