@@ -511,15 +511,15 @@ catalogues.
 \subsubsection*{Popularity}
 The $LatentFeatureRecommender$ can be significantly improved by incorporating
 the notion of item {\em popularity}. The idea is that a more popular item is
-more likely to appear as a recommendation independent of how similar it is.  We
-see signs of this in the undirected recommendation graphs from www.macys.com.
-Although each product has at most four outgoing recommendations on its details
-page, we see that some products have over one hundred incoming recommendations.
-But how might we define {\em popularity}? A reasonable definition would
-introduce a quantity that is correlated with the number of users that indicate a
-preference for an item. Like all user data, this is not publicly available
-information.  Once again, however, we can leverage the recommendation graph to
-infer an approximate popularity metric for each item.
+more likely to be recommended, independent of how similar it is. We see signs of
+this in the undirected recommendation graphs from www.macys.com. Although each
+product has at most four outgoing recommendations on its details page, we see
+that some products have over one hundred incoming recommendations. But how
+might we define {\em popularity}? A reasonable definition would introduce a
+quantity that is correlated with the number of users that indicate a preference
+for an item. Like all user data, this is not publicly available information.
+Once again, however, we can leverage the recommendation graph to infer an
+approximate popularity metric for each item.
 
 We define item popularity as
 \begin{align}
@@ -534,7 +534,7 @@ item popularity. The idea that more popular items are more likely to be
 recommended than less popular items motivates an alternative mode for conducting
 our random walks over a recommendation graph in order to better isolate item
 similarity. We do this by adjusting the probability of transitioning to an item
-on the graph by making it inversely proportional to that item's popularity
+on the graph by making it inversely proportional to that item's popularity,
 $\rho$. Stationary distributions learned from these alternative random walks
 better reflect item-item similarity. We find that removing item popularity from
 our simulated user data results in better success when mapping between the
@@ -553,6 +553,33 @@ recommendations alotted per product. We assume that a popular product in one
 catalogue is likely to be a popular product in another catalogue. Specifically,
 the number of predicted inter-catalogue recommendations made per item is
 made directly proportional to the item's value of $\rho$.
+
+This assumption is corroborated in the data. The following histogram shows the
+number of gold-standard recommendations connected to the top 25 most popular
+items, ranked by their value of $\rho$. The histogram also compares the
+distribution of predicted recommendations to these items by the
+$LatentFeatureRecomender$ with and without popularity taken into account. With
+popularity, the predictions follow a similar distribution to the gold-standard
+recommendations over these popular items. 
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=1.0\textwidth]{PopularityHistogram.png}
+	\caption{The top 25 most popular items and how many times they appear in
+    recommendations. Here we compare the distribution of gold-standard
+    recommendations (red) to the recommendations predicted by the
+    $LatentFeatureRecommender$ with (blue) and without (yellow) popularity. The
+    yellow bars are small and barely visible.}
+    \label{fig:PopularityHistogram}
+\end{figure}
+
+Note that without popularity, the recommendations are scattered more uniformly
+over the thousands of items in the two catalogues, and so the number of times
+these 25 items are recommended is significantly smaller (hardly visible in the
+plot). This is because the recommendations are soley based on the similarity in
+latent concept space and popular items are not inherently more similar to other
+items. This recommender in fact still performs better than the 
+$ContentBasedRecommender$, however it fails to exploit this trend in the data.
 
 In all, these popularity additions significantly boost the performance of the
 \linebreak $LatentFeatureRecommender$. The results of this, along with
