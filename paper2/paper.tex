@@ -429,17 +429,17 @@ Using random walks to simulate user data, followed by the application of LSI, is
 indeed an effective way to encode information from a recommendation graph into a
 latent feature space. But what is the relationship between latent feature
 vectors derived from disconnected graph partitions? In principle, there is no
-guarantee of any relationship between such latent spaces in the same way that
+guarantee of any relationship between such concept spaces in the same way that
 there is no guarantee of any relationship between two arbitrary, disconnected
 recommendation graphs. Nonetheless, our hypothesis is that a relationship
-between such latent spaces often will exist due to the effectiveness of the
+between these concept spaces often will exist due to the effectiveness of the
 underlying CF techniques that generate the graphs to capture meaningful
 item-item associations. Put another way, we believe that the most fundamental
 latent dimensions along which products in a category such as Women's swimsuits
 vary will be common to many swimsuit catalogues. If this is indeed true, then it
-might be possible to learn a mapping between these latent spaces.
+might be possible to learn a mapping between these concept spaces.
 
-If a mapping between the latent spaces associated with two catalogues were
+If a mapping between the concept spaces associated with two catalogues were
 known, we could translate all items into a common space and then choose
 inter-catalogue edges between item pairs that are nearest to one another in
 concept space. To learn these mapping, we must revisit the notion of content
