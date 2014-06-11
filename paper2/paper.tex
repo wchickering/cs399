@@ -238,12 +238,12 @@ prediction algorithms.
 The most straightforward approach to inter-retailer recommendations is a
 content-based approach. Retail products typically have a description that can be
 used to construct a textual content-based similarity function. One can then
-consider all pairwise product combinations across retailers, but within a common
-category, and choose recommendations between items with sufficiently high
-similarity.
+consider all pairwise product combinations across the two retailers, but within
+a common category, and choose recommendations between items with sufficiently
+high similarity.
 
 Toward this end, we borrow the concept of {\em Term Frequency--Inverse Document
-Frequency} (tfidf) from the information retrieval community. In using tf-idf, we
+Frequency} (tfidf) from the information retrieval community. In using tfidf, we
 are considering each item description to be a ``document''.  Thus we define the
 tfidf of a term $t$ within an item description $d$ that's part of a combined
 category catalogue $C$ (i.e. the catalogue consisting of all items in both
@@ -259,10 +259,10 @@ $C$ with descriptions containing at least one instance of term $t$.  We can now
 represent each item as a sparse vector of tfidf values, which has a nonzero
 element for each term in its description.
 
-A key feature of tfidf that is useful here is how terms that appear in many item
-descriptions are discounted via the idf factor. Conversely, rare terms will have
-larger tfidf values. We now define the $ContentSimilarity$ between items $A$ and
-$B$ as
+A key feature of tfidf is that terms appearing in many item descriptions are
+discounted via the idf factor. Conversely, rare terms will have larger tfidf
+values. These features help capture the most relevant words in each description.
+We now define the $ContentSimilarity$ between items $A$ and $B$ as
 \begin{align}
 ContentSimilarity(A,B) = v_A \cdot v_B
 \end{align}
@@ -272,8 +272,8 @@ respectively.
 Using this content-based similarity function, we construct the following
 inter-catalogue recommendation algorithm, which we call the $ContentBased
 Recommender$. For each product in each catalogue, calculate its
-$ContentSimilarity$ with each and every product in the other catalogue. Predict
-recommendations between this product and the top two most similar products in
+$ContentSimilarity$ with every product in the other catalogue. Predict
+recommendations between this product and the two most similar products in
 the other catalogue. The reason for choosing the top two most similar products
 originates from our knowledge that most items listed on www.macy.com are
 associated with four recommended items. Thus, by choosing two edges per item per
@@ -285,11 +285,11 @@ algorithms.
 The $ContentBasedRecommender$ deserves a few more comments. For starters, the
 use of an inner product, which is bounded only by the length of the tfidf
 vectors, is not fundamental to this algorithm. A bounded similarity function
-such as cosine similarity could have been used instead without qualitatively
+such as cosine similarity could have been used instead, without qualitatively
 changing the results discussed later in this report. This is because the lengths
 of the product descriptions have little variation, and therefore, the vector
 norms of the tfidf vectors have little variation. Finally, we mention that while
-this algorithm is quadratic in the number items, it can be executed relatively
+this algorithm is quadratic in the number of items, it can be executed relatively
 efficiently using matrix multiplication, which trades time for space (i.e.
 memory). Furthermore, confining our experiments to individual categories reduces
 the impact of the quadratic time complexity. In our case, Macy's entire
@@ -307,8 +307,8 @@ terms are as different as ``black'' and ``white.'' Another issue is that the
 best recommendation for a product may not even be the most similar product. For
 instance, a striped black-and-white button-up shirt could be an excellent
 recommendation associated with a blue checkered button-up, even though the two
-products are clearly different and would presumably use signficantly different
-terms their descriptions.
+products are different and would presumably use signficantly different terms in
+their descriptions.
 
 We can begin to address these issues by leveraging the recommendations we
 already have between products within a single partition. One approach is to
@@ -338,14 +338,14 @@ recommendations, this approach can help both of the shortcomings of
 $ContentBasedRecommender$ previously mentioned. Since a neighborhood includes
 several items, each with descriptions that potentially use different
 vocabularies, there is a higher likelihood that the neighborhood contains
-multiple synonyms for the underlying concept that captures their similarity. At
-the same time, this decreases the likelihood of false negatives due to different
-vocabularies. Presumably, a retailer's recommendation graph include information
-from user behavior that is not expressed in product descriptions. Re-examining
-the button-up shirts example, the neighborhood of a striped shirt may include
-checkered shirts and vice versa.  In this case, the two neighborhoods might
-share the words ``striped'' and ``checkered'' and thus the two previously
-dissimilar shirts would now be considered more similar.
+multiple synonyms for the underlying concept that captures their similarity.
+This therefore decreases the likelihood of false negatives due to different
+vocabularies between a pair of items. Presumably, a retailer's recommendation
+graph includes information from user behavior that is not expressed in product
+descriptions. Re-examining the button-up shirts example, the neighborhood of a
+striped shirt may include checkered shirts and vice versa.  In this case, the
+two neighborhoods might share the words ``striped'' and ``checkered'' and thus
+the two previously dissimilar shirts would now be considered more similar.
 
 \subsection*{\em LatentConceptRecommender}
 Although the $NeighborhoodRecommender$ alleviates some of the issues of 
@@ -392,14 +392,14 @@ To map concepts from one catalogue to another, we must revisit
 content-similarity. In this case, we represent each concept (rather than each
 product) as a vector of words. To represent a concept in terms of the
 vocabulary, we calculate the value of each word by summing the
-tf-idf of that word for each product $P$, weighted by the projection of $P$ on
+tfidf of that word for each product $P$, weighted by the projection of $P$ on
 our concept in concept-space. That is:
 
 \begin{align}
 C_w = \sum\limits_{P} \text{tfidf}(w)\times P_C
 \end{align}
 where $C_w$ is the value of concept $C$'s representation in dimension $w$, the
-sum is over all products $P$ in the catalgoue, tfidf($w$) is the tf-idf score
+sum is over all products $P$ in the catalgoue, tfidf($w$) is the tfidf score
 for word $w$, and $P_C$ is the projection of $P$ on concpet $C$'s axis in
 concept-space.
 
