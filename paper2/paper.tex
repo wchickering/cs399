@@ -129,7 +129,7 @@ directionality of the original edges, we are discarding important information.
 It would therefore be worthwhile to consider the more difficult problem of
 connecting directed recommendation graphs in a future study.
 
-\section*{Experiments}
+\section*{Experiment}
 Our goal is to develop methods for connecting initially disconnected
 recommendation graphs. Given two online retailers, each with a website
 displaying their items along with several other {\em recommended} items from
@@ -228,44 +228,70 @@ and recall are relevant metrics, relative performance as measured by {\em
 2-precision} and {\em 2-recall} better captures the effectiveness of these
 prediction algorithms.
 
-\section*{Constructing Recommendations}
-Recommending products between different catalogues is a difficult task.
-Typically, recommendations are constructed by leveraging user behavior
-with a collaborative filtering technique. At the most basic level, If a large
-number of users view or purchase both Product A and Product B, the two products
-are recommended for each other. Unfortunately, for this problem there are no
-user data between the two unconnected catalogues.
+\section*{Algorithms}
 
-\subsection*{Content Based Similarity}
-A simple approach that does not rely on user data is to recommend products that
-have similar content. Each product page includes a short description which we 
-can use to construct a textual content-based similarity function. To do this, 
-we represent each product as a vector of tf-idf values for each word in its 
-description. By using tf-idf, we reduce the relevance of frequent words and 
-boost that of rare ones. This emphasizes the words that better represent this 
-product versus all the other ones in the catalogue. The vector representations 
-are the length of the vocabulary. These are sparse vectors as most words do 
-not appear in any given product description. With this tf-idf represenation,
-we can define the $ContentSimiarity$ functoin as follows:
+\subsection*{\em ContentBasedRecommender}
+The most straightforward approach to inter-retailer recommendations is a
+content-based approach. Retail products typically have a description that can be
+used to construct a textual content-based similarity function. One can then
+consider all pairwise product combinations across retailers, but within a common
+category, and choose recommendations between items with sufficiently high
+similarity.
 
+Toward this end, we borrow the concept of {\em Term Frequency--Inverse Document
+Frequency} (tfidf) from the information retrieval community. In using tf-idf, we
+are considering each item description to be a ``document''.  Thus we define the
+tfidf of a term $t$ within an item description $d$ that's part of a combined
+category catalogue $C$ (i.e. the catalogue consisting of all items in both
+retailers' catalogues for a particular common category) as
 \begin{align}
-ContentSimilarity(P_1, P_2) &= v_1 \cdot v_2
+\mathrm{tfidf}(t,d,C) = f(t,d) \times
+\mathrm{log}\frac{\left|C\right|}{\left|\left\{d \in C : t \in
+d\right\}\right|},
 \end{align}
-where $P_1$ and $P_2$ are the products being compared and $v_1$ and $v_2$ are
-their representations as tf-idf vectors.
+where $f(t,d)$ is the number of occurances of term $t$ in item description $d$,
+and $\left|\left\{d \in C : t \in d\right\}\right|$ is the number of items in
+$C$ with descriptions containing at least one instance of term $t$.  We can now
+represent each item as a sparse vector of tfidf values, which has a nonzero
+element for each term in its description.
 
-This similarity function yields the following recommendation algorithm which we
-call the $ContentBased Recommender$: For each product, calculate its
-$ContentSimilarity$ score with each of the products in the other catalogue.
-Predict recommendations between this product and the top 2 most similar products 
-in the other catalogue.  
+A key feature of tfidf that is useful here is how terms that appear in many item
+description are discounted via the idf factor. Conversely, rare terms will have
+larger tfidf values. We now define the $ContentSimilarity$ between items $A$ and
+$B$ as
+\begin{align}
+ContentSimilarity(A,B) = v_A \cdot v_B
+\end{align}
+where $v_A$ and $v_B$ are the tfidf vector representations of items $A$ and $B$,
+respectively.
 
-While this is a quadric-time operation, it can be executed efficiently using 
-matrix multiplication. Furthermore, the division into different categories 
-reduces the impact of the quadratic effect. In our case, the entire Macy's 
-catalogue consists of over $60,000$ products, making a quadratic time algorithm 
-slow. However, the average category has only one to two thousand products, which
-is a significantly more manageable size for quadratic operations.
+Using this content-based similarity function, we construct the following
+inter-catalogue recommendation algorithm, which we call the $ContentBased
+Recommender$. For each product in each catalogue, calculate its
+$ContentSimilarity$ with each and every product in the other catalogue. Predict
+recommendations between this product and the top two most similar products in
+the other catalogue. The reason for choosing the top two most similar products
+originates from our knowledge that most items listed on www.macy.com are
+associated with four recommended items. Thus, by choosing two edges per item per
+partition, we will predict approximately the same number of edges that were lost
+during the partition. This relatively straightforward algorithm serves as a
+baseline against which to compare the performance of other more sophisticated
+algorithms.
+
+The $ContentBasedRecommender$ deserves a few more comments. For starters, the
+use of an inner product, which is bounded only by the length of the tfidf
+vectors, is not fundamental to this algorithm. A bounded similarity function
+such as cosine similarity could have been used instead without qualitatively
+changing the results discussed later in this report. This is because the lengths
+of the product descriptions have little variation, and therefore, the vector
+norms of the tfidf vectors have little variation. Finally, we mention that while
+this algorithm is quadratic in the number items, it can be executed relatively
+efficiently using matrix multiplication, which trades time for space (i.e.
+memory). Furthermore, confining our experiments to individual categories reduces
+the impact of the quadratic time complexity. In our case, Macy's entire
+catalogue consists of over $60,000$ products, making a quadratic time algorithm
+challenging. However, the average category has about two thousand products,
+which is a significantly more manageable.
 
 \subsection*{Leveraging Recommendations}
 This $ContentBased Recommender$ is limited in a few ways. For one, it attempts
