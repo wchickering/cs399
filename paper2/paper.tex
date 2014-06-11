@@ -31,7 +31,7 @@
 
 \begin{document}                        % This is where the document begins
 
-\title{A Technique for Inter-Catalogue Recommendations}
+\title{A Technique for Inter-Retailer Recommendations}
 \author{Bill Chickering and Jamie Irvine\\
 CS 399 with Anand Rajaraman\\
 Stanford University}
@@ -39,9 +39,12 @@ Stanford University}
 \maketitle
 
 \section*{Abstract}
-\emph{Abstracts are abstract. They confront you. There was a reviewer a
-while back who wrote that my papers didn't have any beginning or any end. He
-didn't mean it as a compliment, but it was.} --Jackson Pollock
+\emph{The problem of making recommendation across retailers using only publicly
+available information is explored. Experiments are conducted using real data in
+which several recommender algorithms are compared. A novel latent feature
+inter-retailer recommender algorithm that leverages public intra-retailer
+recommendation information is described and shown to outperform a nontrivial
+content-based approach.}
 
 \section*{Introduction}
 A key challenge in retail is choosing which items to incorporate into one's
@@ -366,7 +369,7 @@ could be the salient feature it has in common with an associated recommendation.
 These sort of abstract, perhaps ineffable, features can be essential to
 item-item relations. We must therefore ask whether we can more fully utilize the
 given graphical information to discover these latent features in order to choose
-better inter-catalogue associations.
+better inter-catalogue recommendations.
 
 \subsubsection*{Simulating User Data}
 A common approach to learning latent features is to apply matrix factorization
@@ -588,59 +591,51 @@ this section, are provided in the following section.
 
 \section*{Performance}
 \subsection*{Baselines}
-To understand how well our LSI recommender performs, we need good baselines
-for comparison.  The simplest and easiest to beat baseline is the Random 
-Recommender. This recommender randomly picks pairs of products, one from 
-each catalogue, and recommends them together. This should obviously be the 
-worst performing recommender but it gives us some sense of whether we are 
-doing anything intelligent in our choices of recommendation.
+In addition to the $ContentBasedRecommender$ and the $NeighborhoodRecommender$,
+we constructed and tested several other baseline algorithms to compare the
+$LatentFeatureRecommender$ against. These baselines show that the performance of
+$LatentFeatureRecommender$ is not due to a single mechanism but rather is the
+result of the mult-stage algorithm. In this section, we briefly outline these
+additional baselines.
 
-A more impressive baseline is that of the Simple Content-Based approach, 
-outlined earlier in the paper. This recommender uses information exclusively
-from the descriptions of the products and ignores the recommendation graphs 
-entirely. A third, somewhat similar baseline comes from the Neighborhood 
-Content-based variant, which looks at the content similarity between 
-neighborhoods of products.
+\subsubsection*{\em RandomRecommender}
+The simplest and least challenging baseline. This recommender randomly chooses a
+fixed number of recommendations for each item across catalogues.
 
-We construct a couple of other baselines to show that our performance is not
-exclusively due to any single feature of the recommender. One such baseline
-tests the effects of popularity alone. Incorporating popularity has a large 
-impact on the performance of any recommender and part of this is due simply 
-to the evaluation metric. Any time we connect to a popular product, we are 
-now two away from many more products, increasing the likelihood of getting a
-correct recommendation by the 2-precision standard. To ensure that these kinds 
-of effects are not the sole reason that our recommender performs well, 
-we construct the Popularity Recommender. This recommender simply recommends 
-that every product in one catalogue be connected to the two most popular 
-products from the other catalogue. This baseline shows how much of the LSI 
-recommender's performance is due simply to leveraging popularity and how 
-much is due to other factors, such as intelligently learning and mapping 
-latent concepts.
+\subsubsection*{\em PopularityRecommender}
+A baseline that exclusively exploits popularity $\rho$, without any other
+knowledge of the recommendation graphs or of item content. This recommender
+simply chooses, at random, one of the top three most popular items from the
+other catalogue as recommendations for each item in a catalogue. This baseline
+aims to demonstrate the efficacy of popularity alone.
 
-It is also informative to test the efficacy of the concept mapping, since this
-such a hard task. As in product-product content-similarity, it is difficult to
-capture similarity using descriptions alone. It is not even clear that a mapping 
-necessarily exists between two seperately learned concept spaces. The concepts 
-may represent fundamentally different things, which cannot be well mapped to 
-each other. We can measure the efficacy of the mapping by comparing it to a 
-couple of baselines. 
+\subsubsection*{\em RandomMapRecommender}
+This is the $LatentFeatureRecommender$ without the mapping stage. Instead it
+generates a random value between -1.0 and 1.0 for each element of the mapping
+matrix $A$. As such, it is still leveraging popularity $\rho$ in the same way as
+the $LatentFeatureRecommender$. This baseline aims to reveal the importance of
+the mapping stage.
 
-The first baseline is in fact an upper bound of sorts on the mapping. This
-baseline recommender is called the One Model Recommender. Unlike the other
-baselines, this recommender is not a valid one, as it cheats by using
-information from the unpartitioned graph. The One Model Recommender learns a
-latent concept space over the entire recommendation graph by allowing the random
-walkers to traverse it before it is partitioned. In every other respect, it is
-the same as the LSI Recommender. However, since products from both catalogues
-are represented in the same concept space, there is no need for a mapping
-between concept spaces.
+\subsubsection*{\em OneModelRecommender}
+This is not baseline but rather a cheat. This is the $LatentFeatureRecommender$
+except, for this experiment, we defer the graph partitioning until after we have
+performed our random walks and constructed a single concept space. Only then do
+we partition the items such that their latent feature vectors represent all
+items in a single concept space. The goal of this experiment is to determine how
+well our algorithm might do if a perfect concept mapping existed and we could
+somehow compute it.
 
-The second mapping-related baseline is the Random Mapper Recommender. As the
-name suggests, this recommender is identical to the LSI Recommender, except that
-it uses a randomly generated linear transformation to map between concept
-spaces. These two baselines represent (not strict) upper and lower bounds on how
-well the concept mapping performs. The results show how much of a bottleneck
-this step is.
+%Incorporating popularity has a large impact on the performance of any
+%recommender and part of this is due simply to the evaluation metric. Any time we
+%connect to a popular product, we are now two away from many more products,
+%increasing the likelihood of getting a correct recommendation by the 2-precision
+%standard. To ensure that these kinds of effects are not the sole reason that our
+%recommender performs well, we construct the Popularity Recommender. This
+%recommender simply recommends that every product in one catalogue be connected
+%to the two most popular products from the other catalogue. This baseline shows
+%how much of the LSI recommender's performance is due simply to leveraging
+%popularity and how much is due to other factors, such as intelligently learning
+%and mapping latent concepts.
 
 \subsection*{Results}
 [Number of products mapped to in different methods]
