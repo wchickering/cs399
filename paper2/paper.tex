@@ -136,36 +136,35 @@ displaying their items along with several other {\em recommended} items from
 their catalogue, we are presented with two disconnected recommendation graphs.
 We would like to associate ``good'' recommendations for items in one catalogue
 with items in the other catalogue. In this way, we are effectively introducing
-edges that connect the two recommendation graphs. Formulating this
-inter-retailer recommendations problem in terms of graphs offers insight in how
-to evaluate our recommendation choices as well as how to choose ``good''
-recommendations.  Leveraging the graph structure for evaluation is discussed in
-this section while exploiting the graph for the purpose of making better
-recommendations is addressed in a subsequent section.
+edges that connect the two recommendation graphs. Formulating the inter-retailer
+recommendation problem in terms of graphs offers insight on how to evaluate our
+recommendation choices as well as how to choose ``good'' recommendations.
+Leveraging the graph structure for evaluation is discussed in this section while
+exploiting the graph for the purpose of making better recommendations is
+addressed in a subsequent section, Recommender Algorithms.
 
-To evaluate our inter-retailer recommendation methods, we simulate the problem
-by randomly partitioning Macy's products into two disjoint sets. Given the
-original recommendation graph, each partition therefore corresponds to a graph
-cut. The edges in this graph cut form a {\em gold-standard} since it is assumed
-that these are indeed ``good'' recommendations. Our premise is that an ideal
-recommendation method could guess these gold-standard edges with high precision
-and recall.
+To evaluate our inter-retailer recommendation algorithms, we simulate the
+problem by randomly partitioning Macy's products into two disjoint sets. Given
+the original recommendation graph, each partition therefore corresponds to a
+graph cut. The edges in this graph cut form a {\em gold-standard} since it is
+assumed that these are indeed ``good'' recommendations. Our premise is that an
+ideal recommendation method could guess these gold-standard edges with high
+precision and recall.
 
 For each experiment, we choose a particular category from the Macy's catalogue
 (e.g. Women Activewear, Men Dress Shirts, etc.). Since most recommendations are
-between items in a common category, very few, though some, edges are lost by
-confining ourselves to an individual category. Edges that are lost in this way
-do not participate in the experiment and are not considered during evaluation.
-Also, we randomly partition the items in the category such that all items
-associated with a particular brand are entirely within a single partition. In
-this way, we preclude the easiest method of associating two items: recognizing
-a common brand. This is done to increase the difficulty and realism of the
-experiments.
+between items in a common category, very few edges are lost by confining
+ourselves to an individual category. Edges that are lost in this way do not
+participate in the experiment and are not considered during evaluation.  Also,
+we randomly partition the items in the category such that all items associated
+with a particular brand are entirely within a single partition. In this way, we
+preclude the easiest method of associating two items: recognizing a common
+brand. This is done to increase the difficulty and realism of the experiment.
 
 Having partitioned the graph of items, we now predict recommendation relations
 between items across the partitions. Each prediction algorithm has knowledge of
 all items in each partition, including their descriptions and all
-recommendations (i.e.  edges) between items in a common partition. In addition,
+recommendations (i.e.  edges) within a common partition. In addition,
 the algorithms may exploit the fact that most items listed at www.macys.com are
 accompanied by four recommended items. The algorithms do not have knowledge of
 the recommendations (i.e. edges) between items across partitions. Each
