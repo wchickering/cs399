@@ -559,16 +559,25 @@ this weighted ranking policy.
 The third way in which popularity is used is determining the number
 recommendations alotted per product. We assume that a popular product in one
 catalogue is likely to be a popular product in another catalogue. Specifically,
-the number of predicted inter-catalogue recommendations made per item is
+the number of predicted inter-catalogue recommendations predicted per item is
 made directly proportional to the item's value of $\rho$.
 
-This assumption is corroborated in the data. The following histogram shows the
-number of gold-standard recommendations connected to the top 25 most popular
-items, ranked by their value of $\rho$. The histogram also compares the
-distribution of predicted recommendations to these items by the
-$LatentFeatureRecomender$ with and without popularity taken into account. With
-popularity, the predictions follow a similar distribution to the gold-standard
-recommendations over these popular items. 
+This assumption is corroborated by the data. The following histogram shows the
+number of gold-standard recommendations associated with the top 25 most popular
+items, ranked by their value of $\rho$. The histogram also includes the
+distribution of predicted recommendations for these items by the
+$LatentFeatureRecommender$ both with and without popularity mechanisms. With
+popularity, the predictions follow a similar distribution to that of the
+gold-standard recommendations. Without popularity, the recommendations are
+scattered more uniformly over the thousands of items of each catalogue such that
+the number of times these 25 items are recommended is significantly smaller
+(barely visible in the plot). This is because the recommendations are based
+solely on similarity in concept space (after mapping) and popular items are not
+inherently more similar to other items. Importantly, the
+$LatentFeatureRecommender$ {\em without popularity} still outperforms the
+$ContentBasedRecommender$ demonstrating that while popularity is important, it
+is only one of several features that useful in choosing good inter-catalogue
+recommendations.
 
 \begin{figure}[!htbp]
     \centering
@@ -580,14 +589,6 @@ recommendations over these popular items.
     yellow bars are small and barely visible.}
     \label{fig:PopularityHistogram}
 \end{figure}
-
-Note that without popularity, the recommendations are scattered more uniformly
-over the thousands of items in the two catalogues, and so the number of times
-these 25 items are recommended is significantly smaller (hardly visible in the
-plot). This is because the recommendations are soley based on the similarity in
-latent concept space and popular items are not inherently more similar to other
-items. This recommender in fact still performs better than the 
-$ContentBasedRecommender$, however it fails to exploit this trend in the data.
 
 In all, these popularity additions significantly boost the performance of the
 \linebreak $LatentFeatureRecommender$. The results of this, along with
