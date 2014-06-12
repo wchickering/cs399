@@ -678,12 +678,12 @@ discussed in the next section).
 
 Next, we reincorporate popularity by modifying how we search for nearest
 neighbors in concept space. Instead of simply ranking neighbors by distance, we
-now rank by distance divided by $\rho$.  In this context, having defined
-popularity as the logorithm of node degree reduces the liklihood that one or two
-very popular items will always appear as the best recommendations when using
-this weighted ranking policy. 
+now rank by distance divided by $\rho$, thus promoting popular items.  In this
+context, having defined popularity as the logorithm of node degree reduces the
+liklihood that one or two very popular items will always appear as the best
+recommendations when using this weighted ranking policy. 
 
-The third way in which popularity is used is determining the number
+The third way in which popularity is used is determining the number of
 recommendations alotted per product. We assume that a popular product in one
 catalogue is likely to be a popular product in another catalogue. Specifically,
 the number of predicted inter-catalogue recommendations predicted per item is
@@ -691,7 +691,7 @@ made directly proportional to the item's value of $\rho$.
 
 This assumption is corroborated by the data. The following histogram shows the
 number of gold-standard recommendations associated with the top 25 most popular
-items, ranked by their value of $\rho$. The histogram also includes the
+items, as determinded by $\rho$. The histogram also includes the
 distribution of predicted recommendations for these items by the
 $LatentFeatureRecommender$ both with and without popularity mechanisms. With
 popularity, the predictions follow a similar distribution to that of the
@@ -702,8 +702,8 @@ the number of times these 25 items are recommended is significantly smaller
 solely on similarity in concept space (after mapping) and popular items are not
 inherently more similar to other items. Importantly, the
 $LatentFeatureRecommender$ {\em without popularity} still outperforms the
-$ContentBasedRecommender$ demonstrating that while popularity is important, it
-is only one of several features that useful in choosing good inter-catalogue
+$ContentBasedRecommender$, demonstrating that while popularity is important, it
+is only one of several features that are useful in choosing good inter-catalogue
 recommendations.
 
 \begin{figure}[!htbp]
