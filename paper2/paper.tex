@@ -415,15 +415,15 @@ then interpret the distribution associated with each item as the preference data
 assoicated with a particular user.
 
 \subsubsection*{Extracting Latent Features}
-We may now construct a synthetic $N \times N$ user-item matrix $M$ with rows
+We may now construct a synthetic $N \times N$ item-user matrix $M$ with rows
 representing items and columns representing users, which are in fact the
 stationary distributions discovered from our random walks. This matrix has at
-least one notable advantage over most real user-item matrices---it is not
+least one notable advantage over most real item-user matrices---it is not
 sparse.  Rather, each synthetic user has a finite value associated with every
 item that is reachable from its origin item in the graph. Unlike the typical CF
 scenario, we may therefore employ SVD as our matrix factorization technique
-since our user-item matrix is virtually complete (i.e. nearly void of empty
-entries).  Using SVD, we factor our user-item matrix as
+since our item-user matrix is virtually complete (i.e. nearly void of empty
+entries).  Using SVD, we factor our item-user matrix as
 \begin{align}
 M = U \Sigma V^T,
 \end{align}
@@ -450,9 +450,9 @@ used in information retrieval and is often referred to as {\em Latent Semantec
 Indexing} (LSI) \cite{Deerwester1990}.
 
 Figures 1 and 2 show the top and bottom most relevant items for two of the sixteen
-concepts learned for the Women's Dresses category. Note that concepts learned by
-SVD range from positive to negative, representing the two extremes of the
-concept. 
+concepts learned in this way on the Women's Dresses category. Note that concepts
+learned by SVD range from positive to negative, representing the two extremes of
+the concept, therefore it is relevant to look at both the top and bottom items.
 
 \begin{figure}
 \centering
@@ -584,7 +584,7 @@ vectors derived from disconnected graph partitions? In principle, there is no
 guarantee of any relationship between such concept spaces in the same way that
 there is no guarantee of any relationship between two arbitrary, disconnected
 recommendation graphs. Nonetheless, our hypothesis is that a relationship
-between these concept spaces often will exist due to the effectiveness of the
+between these concept spaces will often exist due to the effectiveness of the
 underlying CF techniques that generate the graphs to capture meaningful
 item-item associations. Put another way, we believe that the most fundamental
 latent dimensions along which products in a category such as Women's swimsuits
@@ -594,11 +594,11 @@ might be possible to learn a mapping between these concept spaces.
 If a mapping between the concept spaces associated with two catalogues were
 known, we could translate all items into a common space and then choose
 inter-catalogue edges between item pairs that are nearest to one another in
-concept space. To learn these mapping, we must revisit the notion of content
+concept space. To learn these mappings, we must revisit the notion of content
 similarity. Once again, we utilize tf-idf vectors. This time, however, we weight
 an item $i$'s tf-idf vector $\vec{\tau}(i)$ by the elements in its latent
 feature vector $\vec{v}(i)$. In this way, we construct a dense {\em
-super-tf-idf} vector for each concept for each catalogue. Formally, we say that
+super-tf-idf} vector for each concept of each catalogue. Formally, we say that
 a concept $j$ of a catalogue $C$ is represented by the super-tf-idf vector
 \begin{align}
 \vec{s}(j,C) = \sum_{i \in C}{v(i)_j \cdot \vec{\tau}(i)},
@@ -626,13 +626,13 @@ concept space into a vector representation in another concept space.
 
 It is important to note that the transformation matrix $A$ is not orthogonal, and
 therefore, does not preserve vector norms. We address this issue by normalizing
-all feature vectors, both foreign and domestic, in the concept space following
-the transformation. This radially projects all items onto the surface of sphere
-within the 16-dimensional concept space. Now when ranking an item's neighbors by
-distance, we are actually ranking neighbors by angular separation. That is, we
-are ranking neighbors by their cosine similarity in concept space. After
-experimenting with various normalization schemes we find that this approach
-works best.
+all feature vectors, both foreign and domestic, in the concept space followingj
+the transformation. This radially projects all items onto the surface of a
+hypersphere in the 16-dimensional concept space. Now, when ranking an item's
+neighbors by distance, we are actually ranking neighbors by angular separation.
+That is, we are ranking neighbors by their cosine similarity in concept space.
+After experimenting with various normalization schemes we find that this
+approach works best.
 
 Together, these steps comprise the $LatentFeatureRecommender$. First, we
 simulate user sessions by randomly walking the recommendation graphs. Second, we
@@ -678,10 +678,11 @@ discussed in the next section).
 
 Next, we reincorporate popularity by modifying how we search for nearest
 neighbors in concept space. Instead of simply ranking neighbors by distance, we
-now rank by distance divided by $\rho$.  In this context, having defined
-popularity as the logorithm of node degree, instead of simply node degree,
-reduces the liklihood that one or two very popular items will always appear as
-the best recommendations when using this weighted ranking policy. 
+now rank by distance divided by $\rho$, thus promoting popular items.  In this
+context, having defined popularity as the logorithm of node degree, instead of
+simply node degree, reduces the liklihood that one or two very popular items
+will always appear as the best recommendations when using this weighted ranking
+policy. 
 
 The third way in which popularity is used is determining the number of
 recommendations alotted per product. We assume that a popular product in one
@@ -691,7 +692,7 @@ made directly proportional to the item's value of $\rho$.
 
 This assumption is corroborated by the data. The following histogram shows the
 number of gold-standard recommendations associated with the top 25 most popular
-items, ranked by their value of $\rho$. The histogram also includes the
+items, as determinded by $\rho$. The histogram also includes the
 distribution of predicted recommendations for these items by the
 $LatentFeatureRecommender$ both with and without popularity mechanisms. With
 popularity, the predictions follow a similar distribution to that of the
@@ -702,8 +703,8 @@ the number of times these 25 items are recommended is significantly smaller
 solely on similarity in concept space (after mapping) and popular items are not
 inherently more similar to other items. Importantly, the
 $LatentFeatureRecommender$ {\em without popularity} still outperforms the
-$ContentBasedRecommender$ demonstrating that while popularity is important, it
-is only one of several features that useful in choosing good inter-catalogue
+$ContentBasedRecommender$, demonstrating that while popularity is important, it
+is only one of several features that are useful in choosing good inter-catalogue
 recommendations.
 
 \begin{figure}[!htbp]
