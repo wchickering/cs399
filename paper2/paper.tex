@@ -415,15 +415,15 @@ then interpret the distribution associated with each item as the preference data
 assoicated with a particular user.
 
 \subsubsection*{Extracting Latent Features}
-We may now construct a synthetic $N \times N$ user-item matrix $M$ with rows
+We may now construct a synthetic $N \times N$ item-user matrix $M$ with rows
 representing items and columns representing users, which are in fact the
 stationary distributions discovered from our random walks. This matrix has at
-least one notable advantage over most real user-item matrices---it is not
+least one notable advantage over most real item-user matrices---it is not
 sparse.  Rather, each synthetic user has a finite value associated with every
 item that is reachable from its origin item in the graph. Unlike the typical CF
 scenario, we may therefore employ SVD as our matrix factorization technique
-since our user-item matrix is virtually complete (i.e. nearly void of empty
-entries).  Using SVD, we factor our user-item matrix as
+since our item-user matrix is virtually complete (i.e. nearly void of empty
+entries).  Using SVD, we factor our item-user matrix as
 \begin{align}
 M = U \Sigma V^T,
 \end{align}
@@ -450,9 +450,9 @@ used in information retrieval and is often referred to as {\em Latent Semantec
 Indexing} (LSI) \cite{Deerwester1990}.
 
 Figures 1 and 2 show the top and bottom most relevant items for two of the sixteen
-concepts learned for the Women's Dresses category. Note that concepts learned by
-SVD range from positive to negative, representing the two extremes of the
-concept. 
+concepts learned in this way on the Women's Dresses category. Note that concepts
+learned by SVD range from positive to negative, representing the two extremes of
+the concept, therefore it is relevant to look at both the top and bottom items.
 
 \begin{figure}
 \centering
