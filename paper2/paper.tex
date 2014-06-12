@@ -584,7 +584,7 @@ vectors derived from disconnected graph partitions? In principle, there is no
 guarantee of any relationship between such concept spaces in the same way that
 there is no guarantee of any relationship between two arbitrary, disconnected
 recommendation graphs. Nonetheless, our hypothesis is that a relationship
-between these concept spaces often will exist due to the effectiveness of the
+between these concept spaces will often exist due to the effectiveness of the
 underlying CF techniques that generate the graphs to capture meaningful
 item-item associations. Put another way, we believe that the most fundamental
 latent dimensions along which products in a category such as Women's swimsuits
@@ -594,11 +594,11 @@ might be possible to learn a mapping between these concept spaces.
 If a mapping between the concept spaces associated with two catalogues were
 known, we could translate all items into a common space and then choose
 inter-catalogue edges between item pairs that are nearest to one another in
-concept space. To learn these mapping, we must revisit the notion of content
+concept space. To learn these mappings, we must revisit the notion of content
 similarity. Once again, we utilize tf-idf vectors. This time, however, we weight
 an item $i$'s tf-idf vector $\vec{\tau}(i)$ by the elements in its latent
 feature vector $\vec{v}(i)$. In this way, we construct a dense {\em
-super-tf-idf} vector for each concept for each catalogue. Formally, we say that
+super-tf-idf} vector for each concept of each catalogue. Formally, we say that
 a concept $j$ of a catalogue $C$ is represented by the super-tf-idf vector
 \begin{align}
 \vec{s}(j,C) = \sum_{i \in C}{v(i)_j \cdot \vec{\tau}(i)},
@@ -626,13 +626,13 @@ concept space into a vector representation in another concept space.
 
 It is important to note that the transformation matrix $A$ is not orthogonal, and
 therefore, does not preserve vector norms. We address this issue by normalizing
-all feature vectors, both foreign and domestic, in the concept space following
-the transformation. This radially projects all items onto the surface of sphere
-within the 16-dimensional concept space. Now when ranking an item's neighbors by
-distance, we are actually ranking neighbors by angular separation. That is, we
-are ranking neighbors by their cosine similarity in concept space. After
-experimenting with various normalization schemes we find that this approach
-works best.
+all feature vectors, both foreign and domestic, in the concept space followingj
+the transformation. This radially projects all items onto the surface of a
+hypersphere in the 16-dimensional concept space. Now, when ranking an item's
+neighbors by distance, we are actually ranking neighbors by angular separation.
+That is, we are ranking neighbors by their cosine similarity in concept space.
+After experimenting with various normalization schemes we find that this
+approach works best.
 
 Together, these steps comprise the $LatentFeatureRecommender$. First, we
 simulate user sessions by randomly walking the recommendation graphs. Second, we
