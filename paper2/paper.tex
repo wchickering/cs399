@@ -210,7 +210,7 @@ separated by five edges. We therefore introduce the notion of {\em 2-precision},
 \\\text{\em 2-recall} &= \left|\left\{(u,v) \in L | d_P(u,v) \leq 2
 \right\}\right|
 \\\text{\em 2-}F_1 &= 2\cdot \frac{\text{\em 2-precision} \cdot \text{\em
-2-recall}}{\text{\em 2-precision} + \text{\em 2-recall}}
+2-recall}}{\text{\em 2-precision} + \text{\em 2-recall}},
 \end{align}
 where $P$ is the set of predicted edges, $L$ is the set of lost edges (i.e.
 those in the cut resulting from the partition), $d_L(u,v)$ is the shortest
@@ -801,18 +801,43 @@ $LatentFeature$ & .036 & .060 & .045 &
     \label{fig:RecommenderPerformance} 
 \end{figure}
 
+\pagebreak
 \section*{Conclusion}
-We tried a few different methods for creating recommendations between
-retailers. We find that this one is the best.
-The last method uses an unconventional approach that adds some value in the
-process. These results could be used in real life for these problems, since all
-of the data exists.
+In this study, we address the problem of determining inter-retailer, or
+inter-catalogue, item-item associations. We frame this problem as a recommender
+problem, which motivates a relatively straightforward experiment in which a
+candidate algorithm must connect two recommendation graphs by guessing edges
+between them.
 
-\section*{Future Work}
-Incorporate more data such as customer reviews. Use computer vision techniques.
-Focus more on popular hubs model.
+In this work, we introduced a novel technique for predicting item-item
+associations across retailers. This technique employs {\em Topic-Sensitive
+PageRank} on a publicly available recommendation graph to generate simulated
+user data. With this data, we perform {\em Latent Semantec Indexing} to learn a
+latent feature space for items from in a particular online catalogue. By
+generalizing the notion of {\em Term Frequency---Inverse Document Frequency}
+score, we construct proxy tf-idf vectors for the latent dimensions, or {\em
+concepts}, associated with a particular catalogue. This, in turn, allows us to
+construct a transformation matrix such that vectors in one catalogue's concept
+space can be transformed into another catalogue's concept space. Inter-catalogue
+associations can then be made by finding pairs of items that are a minimal
+distance apart in a common concept space.
 
-\section*{Appendix}
+This technique is improved upon by incorporating the notion of item {\em
+popularity} $\rho$, which we define in this context to be the logarithm of the
+item's degree within its associated recommendation graph. We show that $\rho$
+can be used in multiple ways to improve the performance of an inter-retailer
+recommender system.
+
+Finally, we compared our latent inter-catalogue recommender system to several
+nontrival baseline algorithms and find that it outperforms all of them in both
+standard precision and recall of gold-standard inter-catalogue edges as well as
+another combination of informative metrics we call {\em 2-precision} and {\em
+2-recall}.
+
+Making accurate item-item associations across retailers using only publicly
+available information is a challenging problem. The ability to accurately
+identity these relationships, however, could potentially provide a retailer or
+other service provider with valuable business intelligence. 
 
 \begin{thebibliography}{9}
 
@@ -852,5 +877,7 @@ Richard Harshman.
     \emph{American Society for Information Science} \textbf{41}, 391-407, 1990.
 
 \end{thebibliography}
+
+\section*{Appendix}
 
 \end{document}
