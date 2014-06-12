@@ -759,18 +759,6 @@ items in a single concept space. The goal of this experiment is to determine how
 well our algorithm might do if a perfect concept mapping existed and we could
 somehow compute it.
 
-%Incorporating popularity has a large impact on the performance of any
-%recommender and part of this is due simply to the evaluation metric. Any time we
-%connect to a popular product, we are now two away from many more products,
-%increasing the likelihood of getting a correct recommendation by the 2-precision
-%standard. To ensure that these kinds of effects are not the sole reason that our
-%recommender performs well, we construct the Popularity Recommender. This
-%recommender simply recommends that every product in one catalogue be connected
-%to the two most popular products from the other catalogue. This baseline shows
-%how much of the LSI recommender's performance is due simply to leveraging
-%popularity and how much is due to other factors, such as intelligently learning
-%and mapping latent concepts.
-
 \subsection*{Results}
 
 \begin{table}
@@ -805,6 +793,19 @@ further illustrated in the following figure.}
     outperforms the other recommenders in this score.} 
     \label{fig:RecommenderPerformance} 
 \end{figure}
+
+Table (1) shows the results of all inter-catalogue recommenders across all
+categories. For example, the {\em precision} column lists the sum, across all
+categories, of correctly predicted edges divided by the sum, across all
+categories, of predicted edges. We first point out that both $Neighborhood$ and
+$LatentFeature$ outperform $ContentBased$ by all metrics. This makes clear the
+utility of leveraging information from the recommendation when making
+inter-catalogue recommendations. Next, we notice that $Neighborhood$ actually
+outperforms $LatentFeature$ in {\em precision} by 10\% and in {\em 2-recall} by
+about 5\%. Importantly, however, $LatentFeature$ bests $Neighborhood$ in the key
+metric {\em 2-}$F_1$ by about 12\%. 
+
+
 \pagebreak
 \section*{Conclusion}
 In this study, we address the problem of determining inter-retailer, or
