@@ -40,7 +40,7 @@ Stanford University}
 
 \section*{Abstract}
 \emph{The problem of making recommendation across retailers using only publicly
-available information is explored. Several inter-retailer recommender algortihms
+available information is explored. Several inter-retailer recommender algorithms
 are presented. Each is compared in an experiment conducted with real data. A 
 novel latent feature recommender that leverages public intra-retailer
 recommendation information is described and shown to outperform a nontrivial
@@ -620,7 +620,7 @@ A_{ij}(C_1,C_2) = \vec{s}_1(i,C_1) \cdot \vec{s}_1(j,C_2) + \beta \cdot
 \vec{s}_2(i,C_1) \cdot \vec{s}_2(j,C_2),
 \end{align}
 where $i$ is a concept from $C_1$ and $j$ is a concept from $C_2$ and $\beta$ is
-the same parameters as before (again, we find $\beta=0.3$ works well).  We may
+the same parameter as before (again, we find $\beta=0.3$ works well).  We may
 now use this matrix to transform the vector representation of an item in one
 concept space into a vector representation in another concept space.
 
@@ -679,9 +679,10 @@ discussed in the next section).
 Next, we reincorporate popularity by modifying how we search for nearest
 neighbors in concept space. Instead of simply ranking neighbors by distance, we
 now rank by distance divided by $\rho$, thus promoting popular items.  In this
-context, having defined popularity as the logorithm of node degree reduces the
-liklihood that one or two very popular items will always appear as the best
-recommendations when using this weighted ranking policy. 
+context, having defined popularity as the logorithm of node degree, instead of
+simply node degree, reduces the liklihood that one or two very popular items
+will always appear as the best recommendations when using this weighted ranking
+policy. 
 
 The third way in which popularity is used is determining the number of
 recommendations alotted per product. We assume that a popular product in one
