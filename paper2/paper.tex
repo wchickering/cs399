@@ -772,49 +772,31 @@ somehow compute it.
 %and mapping latent concepts.
 
 \subsection*{Results}
-[Number of products mapped to in different methods]
-\begin{center}
-\begin{tabular}{ | l | c | c | c |}
-\hline
-Normalization & 2-Precision & 2-Recall & 2-F1 Score \\ \hline\hline
-L1 normalize each column of matrix &&&\\ \hline
-L2 normalize each column of matrix &&&\\ \hline
-Orthogonalize matrix &&&\\ \hline
-Normalize products in concept space &&&\\ \hline
-\end{tabular}
-\end{center}
 
 \begin{center}
-\begin{tabular}{ | l | c | c | c |}
+\begin{tabular}{ | l || c | c | c || c | c | c |}
 \hline
-Method & 2-Precision & 2-Recall & 2-F1 Score \\ \hline\hline
-Random &&&\\ \hline
-Simple Content-based &&&\\ \hline
-Neighborhood Content-based &&&\\ \hline
-One Model &&&\\ \hline
-Random concept mapping &&&\\ \hline
-Popularity &&&\\ \hline
-LSI &&&\\ \hline
-\hspace*{0.5cm} + Normalized concept mapping &&&\\ \hline
-\hspace*{0.5cm} + Zero-mean SVD &&&\\ \hline
-\hspace*{0.5cm} + Bigrams from descriptions &&&\\ \hline
-\hspace*{0.5cm} + Discounted popularity from random walks &&&\\ \hline
-\hspace*{0.5cm} + Popularity for finding nearest neighbors &&&\\ \hline
-\hspace*{0.5cm} + Number of recommendations based on popularity &&&\\ \hline
+Recommender & Precision & Recall & F1 Score & 2-Precision & 2-Recall & 2-F1 Score \\ \hline\hline
+$RandomRecommender$ & .002 & .001 & .001 & .021 & .008 & .012 \\ \hline
+$PopularityRecommender$ & .016 & .019 & .017 & .080 & .096 & .087 \\ \hline
+$RandomMapRecommender$ & .014 & .019 & .016 & .070 & .095 & .081 \\ \hline
+$OneModelRecommender$ & .103 & .132 & .116 & .404 & .410 & .407 \\ \hline
+$ContentBasedRecommender$ & .014 & .020 & .016 & .115 & .186 & .142 \\ \hline
+$NeighborhoodRecommneder$ & .040 & .060 & .048 & .137 & .240 & .175 \\ \hline
+$LatentFeatureRecommender$ & .036 & .060 & .045 & .174 & .228 & .197 \\ \hline
 
 \end{tabular}
 \end{center}
 
-\begin{center}
-\begin{tabular}{ | l | c | c | c | c | c | c |}
-\hline
-Category & 1-Precision & 1-Recall & 1-F1 Score & 2-Precision & 2-Recall & 2-F1 Score \\ \hline\hline
-Men's Shirts &&&&&&\\ \hline
-Women's Dresses &&&&&&\\ \hline
-\end{tabular}
-\end{center}
-
-Analysis/descriptions for each of these tables
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.65\textwidth]{RecommenderPerformance.png}
+	\caption{The performance of the three main recommenders in terms of
+    2-metrics across all categories. We emphasize the 2-F1 Score as our most
+    important single metric of comparison. We see that the $LatentFeatureRecommender$
+    outperforms the other recommenders in this score.} 
+    \label{fig:RecommenderPerformance} 
+\end{figure}
 
 \section*{Conclusion}
 We tried a few different methods for creating recommendations between
