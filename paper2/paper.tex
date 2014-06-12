@@ -664,7 +664,7 @@ where $\mathrm{deg}(A)$ is the degree of the item $A$ within its recommendation
 graph.  We find this quanity to be useful in improving the
 $LatentFeatureRecommender$ in several ways.
 
-We begin with an attempt to seprate the notion of item similarity from that of
+We begin with an attempt to separate the notion of item similarity from that of
 item popularity. The idea that more popular items are more likely to be
 recommended than less popular items motivates an alternative mode for conducting
 our random walks over a recommendation graph in order to better isolate item
@@ -679,7 +679,7 @@ discussed in the next section).
 Next, we reincorporate popularity by modifying how we search for nearest
 neighbors in concept space. Instead of simply ranking neighbors by distance, we
 now rank by distance divided by $\rho$, thus promoting popular items.  In this
-context, having defined popularity as the logorithm of node degree, instead of
+context, having defined popularity as the logarithm of node degree, instead of
 simply node degree, reduces the liklihood that one or two very popular items
 will always appear as the best recommendations when using this weighted ranking
 policy. 
@@ -839,18 +839,18 @@ problem, which motivates a relatively straightforward experiment in which a
 candidate algorithm must connect two recommendation graphs by guessing edges
 between them.
 
-In this work, we introduced a novel technique for predicting item-item
-associations across retailers. This technique employs {\em Topic-Sensitive
-PageRank} on a publicly available recommendation graph to generate simulated
-user data. With this data, we perform {\em Latent Semantec Indexing} to learn a
-latent feature space for items from in a particular online catalogue. By
-generalizing the notion of {\em Term Frequency---Inverse Document Frequency}
-score, we construct proxy tf-idf vectors for the latent dimensions, or {\em
-concepts}, associated with a particular catalogue. This, in turn, allows us to
-construct a transformation matrix such that vectors in one catalogue's concept
-space can be transformed into another catalogue's concept space. Inter-catalogue
-associations can then be made by finding pairs of items that are a minimal
-distance apart in a common concept space.
+We introduced a novel technique for predicting item-item associations across
+retailers. This technique employs {\em Topic-Sensitive PageRank} on a publicly
+available recommendation graph to generate simulated user data. With this data,
+we perform {\em Latent Semantec Indexing} to learn a latent feature space for
+items in a particular online catalogue. By generalizing the notion of {\em Term
+Frequency---Inverse Document Frequency} score, we construct proxy tf-idf vectors
+for the latent dimensions, or {\em concepts}, associated with a particular
+catalogue. This, in turn, allows us to construct a transformation matrix such
+that vectors in one catalogue's concept space can be transformed into another
+catalogue's concept space. Inter-catalogue associations can then be made by
+finding pairs of items that are a minimal distance apart in a common concept
+space.
 
 This technique is improved upon by incorporating the notion of item {\em
 popularity} $\rho$, which we define in this context to be the logarithm of the
