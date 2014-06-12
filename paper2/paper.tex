@@ -708,7 +708,7 @@ recommendations.
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=1.0\textwidth]{PopularityHistogram.png}
+    \includegraphics[width=1.0\textwidth]{PopularityHistogram2.png}
 	\caption{The top 25 most popular items and how many times they appear in
     recommendations. Here we compare the distribution of gold-standard
     recommendations (red) to the recommendations predicted by the
@@ -773,6 +773,7 @@ somehow compute it.
 
 \subsection*{Results}
 
+\begin{table}
 \begin{center}
 \begin{tabular}{ | l || c | c | c || c | c | c |}
 \hline
@@ -787,20 +788,23 @@ $Neighborhood$ & .040 & .060 & .048 &
 \textbf{.137} & \textbf{.240} & \textbf{.175} \\ \hline 
 $LatentFeature$ & .036 & .060 & .045 &
 \textbf{.174} & \textbf{.228} & \textbf{.197} \\ \hline
-
 \end{tabular}
+\caption{The performance of each of the recommenders across all categories. The
+first five are the baseline recommenders outlined in the previous section. The
+final three are the recommenders of interest, described in the Recommender
+Algorithms section. The scores in bold are the most important results and are 
+further illustrated in the following figure.}
 \end{center}
-
+\end{table}
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=0.65\textwidth]{RecommenderPerformance.png}
+    \includegraphics[width=0.65\textwidth]{RecommenderPerformance2.png}
 	\caption{The performance of the three main recommenders in terms of
     2-metrics across all categories. We emphasize the 2-F1 Score as our most
     important single metric of comparison. We see that the $LatentFeatureRecommender$
     outperforms the other recommenders in this score.} 
     \label{fig:RecommenderPerformance} 
 \end{figure}
-
 \pagebreak
 \section*{Conclusion}
 In this study, we address the problem of determining inter-retailer, or
@@ -877,7 +881,5 @@ Richard Harshman.
     \emph{American Society for Information Science} \textbf{41}, 391-407, 1990.
 
 \end{thebibliography}
-
-\section*{Appendix}
 
 \end{document}
