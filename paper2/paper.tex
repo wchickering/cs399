@@ -774,14 +774,15 @@ outperforms $LatentFeature$ in {\em precision} by 10\% and in {\em 2-recall} by
 about 5\%. Importantly, however, $LatentFeature$ bests $Neighborhood$ in the key
 metric {\em 2-}$F_1$ by about 12\%.
 
-Of course, $Random$ does quite poorly. Interestingly, $Popularity$ and
-$RandomMap$ have comparable performance and score almost half as well as
-$LatentFeature$. The fact that their results are similar is not suprising,
-however, since they are both relying entirely on item popularity $\rho$.
-$Popularity$ utilizes $\rho$ explicity by connecting each item to one of the
-most popular items in the other catalogue. $RandomMap$, on the otherhand,
-employs $\rho$ in an identical manner to that by $LatentFeature$. This reveals
-that popularity alone accounts for nearly half of $LatentFeature$'s success.
+Of course, $Random$ does quite poorly, emphasizing the difficulty of the
+problem. Interestingly, $Popularity$ and $RandomMap$ have comparable performance
+and score almost half as well as $LatentFeature$. The fact that their results
+are similar is not suprising, however, since they are both relying entirely on
+item popularity $\rho$.  $Popularity$ utilizes $\rho$ explicity by connecting
+each item to one of the most popular items in the other catalogue. $RandomMap$,
+on the otherhand, employs $\rho$ in an identical manner to that by
+$LatentFeature$. This reveals that popularity alone accounts for nearly half of
+$LatentFeature$'s success.
 
 
 \begin{table}
@@ -823,7 +824,7 @@ $OneModel$ is limited by the rank reduction stage of the algorithm, which
 discards a large amount of information. $LatentFeature$ benefits from this stage
 since by discarding dimensions, the subsequent mapping problem becomes more
 tractable. Nonetheless, it is interesting that $OneModel$ outperforms
-$LatentFeature$ by a about a factor of 2. Given that $OneModel$ is a cheat that
+$LatentFeature$ by about a factor of 2. Given that $OneModel$ is a cheat that
 involves perfectly mapped concept spaces, we can consider it a loose upperbound
 for $LatentFeature$ (at least when working with 16 dimensions). It might,
 therefore, be possible to signficantly improve the performance of
@@ -844,29 +845,26 @@ retailers. This technique employs {\em Topic-Sensitive PageRank} on a publicly
 available recommendation graph to generate simulated user data. With this data,
 we perform {\em Latent Semantec Indexing} to learn a latent feature space for
 items in a particular online catalogue. By generalizing the notion of {\em Term
-Frequency---Inverse Document Frequency} score, we construct proxy tf-idf vectors
-for the latent dimensions, or {\em concepts}, associated with a particular
+Frequency---Inverse Document Frequency}, we construct proxy tf-idf vectors for
+the latent dimensions, or {\em concepts}, associated with a particular
 catalogue. This, in turn, allows us to construct a transformation matrix such
 that vectors in one catalogue's concept space can be transformed into another
 catalogue's concept space. Inter-catalogue associations can then be made by
 finding pairs of items that are a minimal distance apart in a common concept
-space.
-
-This technique is improved upon by incorporating the notion of item {\em
+space. This technique is improved upon by incorporating the notion of item {\em
 popularity} $\rho$, which we define in this context to be the logarithm of the
-item's degree within its associated recommendation graph. We show that $\rho$
+item's degree within its associated recommendation graph.  We show that $\rho$
 can be used in multiple ways to improve the performance of an inter-retailer
 recommender system.
 
 Finally, we compared our latent inter-catalogue recommender system to several
-nontrival baseline algorithms and find that it outperforms all of them in both
+nontrival baseline algorithms. We showed that it outperforms all of them in
 standard precision and recall of gold-standard inter-catalogue edges as well as
-another combination of informative metrics we call {\em 2-precision} and {\em
-2-recall}.
+in two more informative metrics we call {\em 2-precision} and {\em 2-recall}.
 
 Making accurate item-item associations across retailers using only publicly
 available information is a challenging problem. The ability to accurately
-identity these relationships, however, could potentially provide a retailer or
+identify these relationships, however, could potentially provide a retailer or
 other service provider with valuable business intelligence. 
 
 \begin{thebibliography}{9}
