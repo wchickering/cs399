@@ -449,6 +449,133 @@ Rank-reducing following the application of SVD in this way is a common technique
 used in information retrieval and is often referred to as {\em Latent Semantec
 Indexing} (LSI) \cite{Deerwester1990}.
 
+Figures 1 and 2 show the top and bottom most relevant items for two of the sixteen
+concepts learned for the Women's Dresses category. Note that concepts learned by
+SVD range from positive to negative, representing the two extremes of the
+concept. 
+
+\begin{figure}
+\centering
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept1_pos1.jpg}
+\label{fig:sub1}
+\end{subfigure}%
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept1_pos2.jpg}
+\label{fig:sub2}
+\end{subfigure}
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept1_pos3.jpg}
+\label{fig:sub2}
+\end{subfigure}
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept1_pos4.jpg}
+\label{fig:sub2}
+\end{subfigure}
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept1_pos5.jpg}
+\label{fig:sub2}
+\end{subfigure}
+\subcaption{The top 5 items, representing the positive direction}
+
+\centering
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept1_neg1.jpg}
+\label{fig:sub1}
+\end{subfigure}%
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept1_neg2.jpg}
+\label{fig:sub2}
+\end{subfigure}
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept1_neg3.jpg}
+\label{fig:sub2}
+\end{subfigure}
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept1_neg4.jpg}
+\label{fig:sub2}
+\end{subfigure}
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept1_neg5.jpg}
+\label{fig:sub2}
+\end{subfigure}
+\subcaption{The bottom 5 items, representing the negative direction}
+\label{fig:conceptA}
+\title{Figure 1: The top and bottom items representing a concept in the Dresses
+category.  This concept could be characterized as modern and tiered in the
+positive direction, and gown-like and elegant in the negative direction.}
+\end{figure}
+
+\begin{figure}
+\centering
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept2_pos1.jpg}
+\label{fig:sub1}
+\end{subfigure}%
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept2_pos2.jpg}
+\label{fig:sub2}
+\end{subfigure}
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept2_pos3.jpg}
+\label{fig:sub2}
+\end{subfigure}
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept2_pos4.jpg}
+\label{fig:sub2}
+\end{subfigure}
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept2_pos5.jpg}
+\end{subfigure}
+\subcaption{The top 5 items, representing the positive direction}
+
+\centering
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept2_neg1.jpg}
+\label{fig:sub1}
+\end{subfigure}%
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept2_neg2.jpg}
+\label{fig:sub2}
+\end{subfigure}
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept2_neg3.jpg}
+\label{fig:sub2}
+\end{subfigure}
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept2_neg4.jpg}
+\label{fig:sub2}
+\end{subfigure}
+\begin{subfigure}{.18\textwidth}
+\centering
+\includegraphics[width=\linewidth]{concepts/concept2_neg5.jpg}
+\label{fig:sub2}
+\end{subfigure}
+\subcaption{The bottom 5 items, representing the negative direction}
+\title{Figure 2: The top and bottom items representing another different Dresses
+concept. This concept could be characterized as two-toned and playful in the
+positive direction, and belted and light in the negative direction.}
+\label{fig:conceptB} \end{figure}
+
 \subsubsection*{Concept Space Mapping}
 Using random walks to simulate user data, followed by the application of LSI, is
 indeed an effective way to encode information from a recommendation graph into a
@@ -586,7 +713,8 @@ recommendations.
     recommendations. Here we compare the distribution of gold-standard
     recommendations (red) to the recommendations predicted by the
     $LatentFeatureRecommender$ with (blue) and without (yellow) popularity. The
-    yellow bars are small and barely visible.}
+    yellow bars are small and barely visible. This plot was generated on the
+    Women's Dresses category.}
     \label{fig:PopularityHistogram}
 \end{figure}
 
@@ -644,49 +772,31 @@ somehow compute it.
 %and mapping latent concepts.
 
 \subsection*{Results}
-[Number of products mapped to in different methods]
-\begin{center}
-\begin{tabular}{ | l | c | c | c |}
-\hline
-Normalization & 2-Precision & 2-Recall & 2-F1 Score \\ \hline\hline
-L1 normalize each column of matrix &&&\\ \hline
-L2 normalize each column of matrix &&&\\ \hline
-Orthogonalize matrix &&&\\ \hline
-Normalize products in concept space &&&\\ \hline
-\end{tabular}
-\end{center}
 
 \begin{center}
-\begin{tabular}{ | l | c | c | c |}
+\begin{tabular}{ | l || c | c | c || c | c | c |}
 \hline
-Method & 2-Precision & 2-Recall & 2-F1 Score \\ \hline\hline
-Random &&&\\ \hline
-Simple Content-based &&&\\ \hline
-Neighborhood Content-based &&&\\ \hline
-One Model &&&\\ \hline
-Random concept mapping &&&\\ \hline
-Popularity &&&\\ \hline
-LSI &&&\\ \hline
-\hspace*{0.5cm} + Normalized concept mapping &&&\\ \hline
-\hspace*{0.5cm} + Zero-mean SVD &&&\\ \hline
-\hspace*{0.5cm} + Bigrams from descriptions &&&\\ \hline
-\hspace*{0.5cm} + Discounted popularity from random walks &&&\\ \hline
-\hspace*{0.5cm} + Popularity for finding nearest neighbors &&&\\ \hline
-\hspace*{0.5cm} + Number of recommendations based on popularity &&&\\ \hline
+Recommender & Precision & Recall & F1 Score & 2-Precision & 2-Recall & 2-F1 Score \\ \hline\hline
+$RandomRecommender$ & .002 & .001 & .001 & .021 & .008 & .012 \\ \hline
+$PopularityRecommender$ & .016 & .019 & .017 & .080 & .096 & .087 \\ \hline
+$RandomMapRecommender$ & .014 & .019 & .016 & .070 & .095 & .081 \\ \hline
+$OneModelRecommender$ & .103 & .132 & .116 & .404 & .410 & .407 \\ \hline
+$ContentBasedRecommender$ & .014 & .020 & .016 & .115 & .186 & .142 \\ \hline
+$NeighborhoodRecommneder$ & .040 & .060 & .048 & .137 & .240 & .175 \\ \hline
+$LatentFeatureRecommender$ & .036 & .060 & .045 & .174 & .228 & .197 \\ \hline
 
 \end{tabular}
 \end{center}
 
-\begin{center}
-\begin{tabular}{ | l | c | c | c | c | c | c |}
-\hline
-Category & 1-Precision & 1-Recall & 1-F1 Score & 2-Precision & 2-Recall & 2-F1 Score \\ \hline\hline
-Men's Shirts &&&&&&\\ \hline
-Women's Dresses &&&&&&\\ \hline
-\end{tabular}
-\end{center}
-
-Analysis/descriptions for each of these tables
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.65\textwidth]{RecommenderPerformance.png}
+	\caption{The performance of the three main recommenders in terms of
+    2-metrics across all categories. We emphasize the 2-F1 Score as our most
+    important single metric of comparison. We see that the $LatentFeatureRecommender$
+    outperforms the other recommenders in this score.} 
+    \label{fig:RecommenderPerformance} 
+\end{figure}
 
 \section*{Conclusion}
 In this study, we address the problem of determining inter-retailer, or
