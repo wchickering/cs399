@@ -723,6 +723,7 @@ In all, these popularity additions significantly boost the performance of the
 comparisons to the other inter-catalogue  recommeder algorithms described in
 this section, are provided in the following section.
 
+\pagebreak
 \section*{Performance}
 \subsection*{Baselines}
 In addition to the $ContentBasedRecommender$ and the $NeighborhoodRecommender$,
@@ -759,19 +760,28 @@ items in a single concept space. The goal of this experiment is to determine how
 well our algorithm might do if a perfect concept mapping existed and we could
 somehow compute it.
 
-%Incorporating popularity has a large impact on the performance of any
-%recommender and part of this is due simply to the evaluation metric. Any time we
-%connect to a popular product, we are now two away from many more products,
-%increasing the likelihood of getting a correct recommendation by the 2-precision
-%standard. To ensure that these kinds of effects are not the sole reason that our
-%recommender performs well, we construct the Popularity Recommender. This
-%recommender simply recommends that every product in one catalogue be connected
-%to the two most popular products from the other catalogue. This baseline shows
-%how much of the LSI recommender's performance is due simply to leveraging
-%popularity and how much is due to other factors, such as intelligently learning
-%and mapping latent concepts.
-
+\pagebreak
 \subsection*{Results}
+Table (1) shows the results of all inter-catalogue recommenders across all
+categories. For example, the {\em precision} column lists the sum, across all
+categories, of correctly predicted edges divided by the sum, across all
+categories, of predicted edges. We first point out that both $Neighborhood$ and
+$LatentFeature$ outperform $ContentBased$ by all metrics. This makes clear the
+utility of leveraging information from the recommendation when making
+inter-catalogue recommendations. Next, we notice that $Neighborhood$ actually
+outperforms $LatentFeature$ in {\em precision} by 10\% and in {\em 2-recall} by
+about 5\%. Importantly, however, $LatentFeature$ bests $Neighborhood$ in the key
+metric {\em 2-}$F_1$ by about 12\%.
+
+Of course, $Random$ does quite poorly. Interestingly, $Popularity$ and
+$RandomMap$ have comparable performance and score almost half as well as
+$LatentFeature$. The fact that their results are similar is not suprising,
+however, since they are both relying entirely on item popularity $\rho$.
+$Popularity$ utilizes $\rho$ explicity by connecting each item to one of the
+most popular items in the other catalogue. $RandomMap$, on the otherhand,
+employs $\rho$ in an identical manner to that by $LatentFeature$. This reveals
+that popularity alone accounts for nearly half of $LatentFeature$'s success.
+
 
 \begin{table}
 \begin{center}
@@ -805,7 +815,22 @@ further illustrated in the following figure.}
     outperforms the other recommenders in this score.} 
     \label{fig:RecommenderPerformance} 
 \end{figure}
-\pagebreak
+
+As expected, we find that $OneModel$ outperforms $LatentFeature$. Indeed, one
+might ask why $OneModel$ does not score even higher. The performance of
+$OneModel$ is limited by the rank reduction stage of the algorithm, which
+discards a large amount of information. $LatentFeature$ benefits from this stage
+since by discarding dimensions, the subsequent mapping problem becomes more
+tractable. Nonetheless, it is interesting that $OneModel$ outperforms
+$LatentFeature$ by a about a factor of 2. Given that $OneModel$ is a cheat that
+involves perfectly mapped concept spaces, we can consider it a loose upperbound
+for $LatentFeature$ (at least when working with 16 dimensions). It might,
+therefore, be possible to signficantly improve the performance of
+$LatentFeature$ by improving its concept space mapping stage.  At the same time,
+it is not at all clear that such a mapping in general even exists. Rather, the
+common existence of an approximate mapping is a hypothesis of the authors that
+is corroborated by our experimental results for the present dataset.
+
 \section*{Conclusion}
 In this study, we address the problem of determining inter-retailer, or
 inter-catalogue, item-item associations. We frame this problem as a recommender
