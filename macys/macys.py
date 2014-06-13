@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+"""
+Ad-hoc script for scraping product data from www.macys.com.
+"""
+
 import urllib
 import urllib2
 from bs4 import BeautifulSoup, NavigableString
