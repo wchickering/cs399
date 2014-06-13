@@ -22,13 +22,15 @@ verify_float () {
     fi
 }
 
+COMMAND=${0##*/}
+
 while test $# -gt 0; do
     case "$1" in
         -h|--help)
-            echo "$package - run experiment"
-            echo " "
-            echo "$package [options] application [arguments]"
-            echo " "
+            echo "$COMMAND - run edge predicting experiment(s)"
+            echo
+            echo "Usage: $COMMAND [options] ParentCategory Category"
+            echo
             echo "options:"
             echo "-h, --help                Show brief help"
             echo "-s, --start-stage=NUM     Specify the starting stage"
@@ -73,7 +75,7 @@ while test $# -gt 0; do
         -s)
             shift
             if test $# -gt 0; then
-                export START_STAGE=$1
+                START_STAGE=$1
                 verify_number $START_STAGE
             else
                 die "no starting stage specified"
@@ -81,14 +83,14 @@ while test $# -gt 0; do
             shift
             ;;
         --start-stage*)
-            export START_STAGE=`echo $1 | sed -e 's/^[^=]*=//g'`
+            START_STAGE=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_number $START_STAGE
             shift
             ;;
         -e)
             shift
             if test $# -gt 0; then
-                export END_STAGE=$1
+                END_STAGE=$1
                 verify_number $END_STAGE
             else
                 die "no ending stage specified"
@@ -96,197 +98,197 @@ while test $# -gt 0; do
             shift
             ;;
         --end-stage*)
-            export END_STAGE=`echo $1 | sed -e 's/^[^=]*=//g'`
+            END_STAGE=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_number $END_STAGE
             shift
             ;;
         --data*)
-            export DATA=`echo $1 | sed -e 's/^[^=]*=//g'`
+            DATA=`echo $1 | sed -e 's/^[^=]*=//g'`
             shift
             ;;
         --num-topics*)
-            export NUM_TOPICS=`echo $1 | sed -e 's/^[^=]*=//g'`
+            NUM_TOPICS=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_number $NUM_TOPICS
             shift
             ;;
         --edges-per-node*)
-            export EDGES_PER_NODE=`echo $1 | sed -e 's/^[^=]*=//g'`
+            EDGES_PER_NODE=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_float $EDGES_PER_NODE
             shift
             ;;
         --directed)
-            export DIRECTED_OPT='--directed'
+            DIRECTED_OPT='--directed'
             shift
             ;;
         --asymmetric)
-            export SYMMETRIC=0
+            SYMMETRIC=0
             shift
             ;;
         --no-sphere)
-            export SPHERE=0
+            SPHERE=0
             shift
             ;;
         --normalize)
-            export NORMALIZE_OPT="--normalize"
+            NORMALIZE_OPT="--normalize"
             shift
             ;;
         --no-ortho)
-            export ORTHO=0
+            ORTHO=0
             shift
             ;;
         --short-coeff*)
-            export SHORT_COEFF=`echo $1 | sed -e 's/^[^=]*=//g'`
+            SHORT_COEFF=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_float $SHORT_COEFF
             shift
             ;;
         --bigrams-coeff*)
-            export BIGRAMS_COEFF=`echo $1 | sed -e 's/^[^=]*=//g'`
+            BIGRAMS_COEFF=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_float $BIGRAMS_COEFF
             shift
             ;;
         --hood-coeff*)
-            export HOOD_COEFF=`echo $1 | sed -e 's/^[^=]*=//g'`
+            HOOD_COEFF=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_float $HOOD_COEFF
             shift
             ;;
         --alpha*)
-            export ALPHA=`echo $1 | sed -e 's/^[^=]*=//g'`
+            ALPHA=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_float $ALPHA
             shift
             ;;
         --beta*)
-            export BETA=`echo $1 | sed -e 's/^[^=]*=//g'`
+            BETA=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_float $BETA
-            export BETA_OPT="--beta=$BETA"
+            BETA_OPT="--beta=$BETA"
             shift
             ;;
         --tau*)
-            export TAU=`echo $1 | sed -e 's/^[^=]*=//g'`
+            TAU=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_float $TAU
             shift
             ;;
         --no-weight-in)
-            export WEIGHT_IN=0
+            WEIGHT_IN=0
             shift
             ;;
         --no-weight-out)
-            export WEIGHT_OUT=0
+            WEIGHT_OUT=0
             shift
             ;;
         --no-benchmarks)
-            export BENCHMARK_RANDOM=0
-            export BENCHMARK_POPULAR=0
-            export BENCHMARK_TFIDF_NOPOP=0
-            export BENCHMARK_TFIDF=0
-            export BENCHMARK_RANDMAP=0
-            export BENCHMARK_ONE=0
+            BENCHMARK_RANDOM=0
+            BENCHMARK_POPULAR=0
+            BENCHMARK_TFIDF_NOPOP=0
+            BENCHMARK_TFIDF=0
+            BENCHMARK_RANDMAP=0
+            BENCHMARK_ONE=0
             shift
             ;;
         --benchmark-random)
-            export BENCHMARK_RANDOM=1
-            export BENCHMARK_POPULAR=0
-            export BENCHMARK_TFIDF_NOPOP=0
-            export BENCHMARK_TFIDF=0
-            export BENCHMARK_RANDMAP=0
-            export BENCHMARK_ONE=0
+            BENCHMARK_RANDOM=1
+            BENCHMARK_POPULAR=0
+            BENCHMARK_TFIDF_NOPOP=0
+            BENCHMARK_TFIDF=0
+            BENCHMARK_RANDMAP=0
+            BENCHMARK_ONE=0
             shift
             ;;
         --benchmark-popular)
-            export BENCHMARK_RANDOM=0
-            export BENCHMARK_POPULAR=1
-            export BENCHMARK_TFIDF_NOPOP=0
-            export BENCHMARK_TFIDF=0
-            export BENCHMARK_RANDMAP=0
-            export BENCHMARK_ONE=0
+            BENCHMARK_RANDOM=0
+            BENCHMARK_POPULAR=1
+            BENCHMARK_TFIDF_NOPOP=0
+            BENCHMARK_TFIDF=0
+            BENCHMARK_RANDMAP=0
+            BENCHMARK_ONE=0
             shift
             ;;
         --benchmark-tfidf-nopop)
-            export BENCHMARK_RANDOM=0
-            export BENCHMARK_POPULAR=0
-            export BENCHMARK_TFIDF_NOPOP=1
-            export BENCHMARK_TFIDF=0
-            export BENCHMARK_RANDMAP=0
-            export BENCHMARK_ONE=0
+            BENCHMARK_RANDOM=0
+            BENCHMARK_POPULAR=0
+            BENCHMARK_TFIDF_NOPOP=1
+            BENCHMARK_TFIDF=0
+            BENCHMARK_RANDMAP=0
+            BENCHMARK_ONE=0
             shift
             ;;
         --benchmark-tfidf)
-            export BENCHMARK_RANDOM=0
-            export BENCHMARK_POPULAR=0
-            export BENCHMARK_TFIDF_NOPOP=0
-            export BENCHMARK_TFIDF=1
-            export BENCHMARK_RANDMAP=0
-            export BENCHMARK_ONE=0
+            BENCHMARK_RANDOM=0
+            BENCHMARK_POPULAR=0
+            BENCHMARK_TFIDF_NOPOP=0
+            BENCHMARK_TFIDF=1
+            BENCHMARK_RANDMAP=0
+            BENCHMARK_ONE=0
             shift
             ;;
         --benchmark-randonmap)
-            export BENCHMARK_RANDOM=0
-            export BENCHMARK_POPULAR=0
-            export BENCHMARK_TFIDF_NOPOP=0
-            export BENCHMARK_TFIDF=0
-            export BENCHMARK_RANDMAP=1
-            export BENCHMARK_ONE=0
+            BENCHMARK_RANDOM=0
+            BENCHMARK_POPULAR=0
+            BENCHMARK_TFIDF_NOPOP=0
+            BENCHMARK_TFIDF=0
+            BENCHMARK_RANDMAP=1
+            BENCHMARK_ONE=0
             shift
             ;;
         --benchmark-onemodel)
-            export BENCHMARK_RANDOM=0
-            export BENCHMARK_POPULAR=0
-            export BENCHMARK_TFIDF_NOPOP=0
-            export BENCHMARK_TFIDF=0
-            export BENCHMARK_RANDMAP=0
-            export BENCHMARK_ONE=1
+            BENCHMARK_RANDOM=0
+            BENCHMARK_POPULAR=0
+            BENCHMARK_TFIDF_NOPOP=0
+            BENCHMARK_TFIDF=0
+            BENCHMARK_RANDMAP=0
+            BENCHMARK_ONE=1
             shift
             ;;
         --no-main)
-            export MAIN_EXPERIMENT=0
+            MAIN_EXPERIMENT=0
             shift
             ;;
         --no-popularity-added)
-            export POPULARITY_FLAG=0
+            POPULARITY_FLAG=0
             shift
             ;;
         --no-popularity-removed)
-            export REMOVE_POP_FLAG=0
+            REMOVE_POP_FLAG=0
             shift
             ;;
         --lda)
-            export MODEL_TYPE="lda"
+            MODEL_TYPE="lda"
             shift
             ;;
         --no-partition-by-brand)
-            export PARTITION_BY_BRAND_FLAG=0
+            PARTITION_BY_BRAND_FLAG=0
             shift
             ;;
         --tourney-mapper*)
-            export TOURNEY_MAPPER=`echo $1 | sed -e 's/^[^=]*=//g'`
+            TOURNEY_MAPPER=`echo $1 | sed -e 's/^[^=]*=//g'`
             shift
             ;;
         --no-zero-mean)
-            export ZERO_MEAN_FLAG=0
+            ZERO_MEAN_FLAG=0
             shift
             ;;
         --min-pop*)
-            export MIN_POP=`echo $1 | sed -e 's/^[^=]*=//g'`
+            MIN_POP=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_float $MIN_POP
             shift
             ;;
         --neighbor-limit*)
-            export NEIGHBOR_LIMIT=`echo $1 | sed -e 's/^[^=]*=//g'`
+            NEIGHBOR_LIMIT=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_number $NEIGHBOR_LIMIT
-            export NEIGHBOR_LIMIT_OPT="--neighbor-limit=$NEIGHBOR_LIMIT"
+            NEIGHBOR_LIMIT_OPT="--neighbor-limit=$NEIGHBOR_LIMIT"
             shift
             ;;
         --min-component-size*)
-            export MIN_COMPONENT_SIZE=`echo $1 | sed -e 's/^[^=]*=//g'`
+            MIN_COMPONENT_SIZE=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_number $MIN_COMPONENT_SIZE
             shift
             ;;
         --eval-k*)
-            export EVAL_K=`echo $1 | sed -e 's/^[^=]*=//g'`
+            EVAL_K=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_number $EVAL_K
             shift
             ;;
         --seed*)
-            export SEED=`echo $1 | sed -e 's/^[^=]*=//g'`
+            SEED=`echo $1 | sed -e 's/^[^=]*=//g'`
             verify_number $SEED
             shift
             ;;
@@ -297,7 +299,7 @@ while test $# -gt 0; do
 done
 
 if [ $# -lt 2 ]; then
-    die "Usage: $0 [options] ParentCategory Category"
+    die "Usage: $COMMAND [options] ParentCategory Category"
 fi
 
 PARENTCAT=$1
