@@ -17,6 +17,9 @@ import os
 import time
 import signal
 
+# local modules
+from Mall import Mall
+
 # params
 categories_fname = 'categories.json'
 imageFileTemplate = 'data/images/%d.jpg'
@@ -229,6 +232,12 @@ def processCategory(category, db_conn):
     return insertCnt
 
 def main():
+    # create Mall object
+    mall = Mall()
+    mall.registerRetailer(db_fname, 'macys')
+
+
+
     # connect to db
     print 'Connecting to %s. . .' % db_fname
     db_conn = sqlite3.connect(db_fname)
